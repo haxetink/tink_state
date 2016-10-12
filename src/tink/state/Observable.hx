@@ -3,7 +3,7 @@ package tink.state;
 using tink.CoreApi;
 
 @:forward
-abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> {
+abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   
   public var value(get, never):T;
   
@@ -23,7 +23,21 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> {
     return new Observable<R>(
       function () return f(this.value),
       this.changed
-    );    
+    );
+  
+  public function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Option<Outcome<R, Error>>>
+	return combine(that, f).mapAsync(function (x) return x);
+  
+  public function mapAsync<R>(f:T->Promise<R>):Observable<Option<Outcome<R, Error>>> {
+    var ret = new State(None),
+	    link:CallbackLink = null;
+	bind(function (data) {
+		link.dissolve();
+		ret.set(None);
+		link = f(data).handle(function (r) ret.set(Some(r)));
+	});
+    return ret;
+  } 
     
   public function bind(?options:{ ?direct: Bool }, cb:Callback<T>):CallbackLink
     return 
@@ -96,11 +110,9 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> {
   @:from static function ofConstant<T>(value:T):Observable<T> 
     return new Observable(function () return value, new Signal(function (_) return null));
   
-  @:noUsing static public function state<T>(init:T):State<T> 
-    return new State(init);
 }
 
-private interface ObservableObject<T> {
+interface ObservableObject<T> {
   public var changed(get, null):Signal<Noise>;
   public var value(get, never):T;  
 }
@@ -131,27 +143,4 @@ private class BasicObservable<T> implements ObservableObject<T> {
     this.changed = changed.filter(function (_) return valid && !(valid = false));//the things you do for neat output ...
   }
     
-}
-
-private class State<T> extends BasicObservable<T> {
-  
-  var _value:T;
-  var _changed:SignalTrigger<Noise>;
-  
-  public function new(value) {
-    this._value = value;
-    super(_get, _changed = Signal.trigger());
-  }
-  
-  public function observe():Observable<T>
-    return this;
-  
-  function _get()
-    return _value;
-    
-  public function set(value) 
-    if (value != this._value) {
-      this._value = value;
-      this._changed.trigger(Noise);
-    }
 }
