@@ -18,6 +18,18 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       function () return f(this.value, that.value), 
       this.changed.join(that.changed)
     );
+    
+  public function join(that:Observable<T>) {
+    var lastA = null;
+    return combine(that, function (a, b) {
+      var ret = 
+        if (lastA == a) b;
+        else a;
+        
+      lastA = a;
+      return ret;
+    });
+  }
   
   public function map<R>(f:T->R) 
     return new Observable<R>(
@@ -25,17 +37,22 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       this.changed
     );
   
-  public function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Option<Outcome<R, Error>>>
-	return combine(that, f).mapAsync(function (x) return x);
+  public function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>
+     return combine(that, f).mapAsync(function (x) return x);
   
-  public function mapAsync<R>(f:T->Promise<R>):Observable<Option<Outcome<R, Error>>> {
-    var ret = new State(None),
-	    link:CallbackLink = null;
-	bind(function (data) {
-		link.dissolve();
-		ret.set(None);
-		link = f(data).handle(function (r) ret.set(Some(r)));
-	});
+  public function mapAsync<R>(f:T->Promise<R>):Observable<Promised<R>> {
+    var ret = new State(Loading),
+        link:CallbackLink = null;
+        
+    bind(function (data) {
+      link.dissolve();
+      ret.set(Loading);
+      link = f(data).handle(function (r) ret.set(switch r {
+        case Success(v): Done(v);
+        case Failure(v): Failed(v);
+      }));
+    });
+    
     return ret;
   } 
     
@@ -105,11 +122,16 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     for (o in old) o();
     
     scheduled = [];
-  }
-    
-  @:from static function ofConstant<T>(value:T):Observable<T> 
+  }  
+  @:noUsing @:from static public function const<T>(value:T):Observable<T> 
     return new Observable(function () return value, new Signal(function (_) return null));
   
+}
+
+enum Promised<T> {
+  Loading;
+  Done(result:T);
+  Failed(error:Error);
 }
 
 interface ObservableObject<T> {
