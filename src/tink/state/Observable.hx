@@ -124,7 +124,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     scheduled = [];
   }  
   @:noUsing @:from static public function const<T>(value:T):Observable<T> 
-    return new Observable(function () return value, new Signal(function (_) return null));
+    return new ConstObservable(value);
   
 }
 
@@ -135,8 +135,24 @@ enum Promised<T> {
 }
 
 interface ObservableObject<T> {
-  public var changed(get, null):Signal<Noise>;
+  public var changed(get, never):Signal<Noise>;
   public var value(get, never):T;  
+}
+
+private class ConstObservable<T> implements ObservableObject<T> {
+  
+  static var NEVER = new Signal<Noise>(function (_) return null);
+  
+  public var value(get, null):T;
+    inline function get_value()
+      return value;
+      
+  public var changed(get, null):Signal<Noise>;
+    inline function get_changed()
+      return NEVER;
+      
+  public function new(value)
+    this.value = value;
 }
 
 private class BasicObservable<T> implements ObservableObject<T> {

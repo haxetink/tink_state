@@ -35,7 +35,7 @@ class RunTests extends TestCase {
 	
 	var log = [];
 	combined.bind(function (x) switch x {
-		case Some(Success(v)): log.push(v);
+		case Done(v): log.push(v);
 		default:
 	});
 	
