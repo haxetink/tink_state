@@ -2,6 +2,7 @@ package ;
 
 import haxe.unit.TestCase;
 import haxe.unit.TestRunner;
+import tink.state.Promised;
 import tink.state.Observable;
 import tink.state.State;
 

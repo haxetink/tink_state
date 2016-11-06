@@ -11,13 +11,13 @@ abstract State<T>(StateObject<T>) to Observable<T> {
     this = new StateObject(value);
 	
   public inline function observe():Observable<T>
-	return this;
+    return this;
   
   @:to public function toCallback():Callback<T>
-	return this.set;
+    return this.set;
 	
   @:from static function ofConstant<T>(value:T):State<T> 
-	return new State(value);
+    return new State(value);
   
 }
 

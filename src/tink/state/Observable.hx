@@ -1,5 +1,7 @@
 package tink.state;
 
+import tink.state.Promised;
+
 using tink.CoreApi;
 
 @:forward
@@ -31,7 +33,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     });
   }
   
-  public function map<R>(f:T->R) 
+  public function map<R>(f:Transform<T, R>) 
     return new Observable<R>(
       function () return f(this.value),
       this.changed
@@ -55,6 +57,34 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     
     return ret;
   } 
+  
+  public function switchSync<R>(cases:Array<{ when: T->Bool, then: Lazy<Observable<R>> }>, dfault:Lazy<Observable<R>>):Observable<R> {
+    var trigger = Signal.trigger();
+    
+    function fire(_)
+      trigger.trigger(Noise);
+    
+    this.changed.handle(fire);
+    
+    return new Observable(function () {
+      
+      var matched = dfault,
+          value = value;
+          
+      for (c in cases) 
+        if (c.when(value)) {
+          matched = c.then;
+          break;
+        }
+        
+      var ret = matched.get();
+      
+      ret.changed.next().handle(fire);
+      
+      return ret.value;
+          
+    }, trigger);
+  }
     
   public function bind(?options:{ ?direct: Bool }, cb:Callback<T>):CallbackLink
     return 
@@ -123,15 +153,26 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     
     scheduled = [];
   }  
+  
   @:noUsing @:from static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);
-  
+      
 }
 
-enum Promised<T> {
-  Loading;
-  Done(result:T);
-  Failed(error:Error);
+//typedef Transform<T, R> = T->R;
+
+@:callable
+abstract Transform<T, R>(T->R) {
+  
+  @:from static function ofNaive<T, R>(f:T->R):Transform<Promised<T>, Promised<R>> 
+    return function (p) return switch p {
+      case Failed(e): Failed(e);
+      case Loading: Loading;
+      case Done(v): Done(f(v));
+    }
+  
+  @:from static function ofExact<T, R>(f:T->R):Transform<T, R>
+    return cast f;
 }
 
 interface ObservableObject<T> {
