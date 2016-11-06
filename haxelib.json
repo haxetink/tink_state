@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Initial release.",
-	"version": "0.0.0",
+	"releasenote": "Add Gate for synchronization.",
+	"version": "0.1.0",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
