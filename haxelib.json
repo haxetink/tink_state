@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Add Gate for synchronization.",
-	"version": "0.1.0",
+	"releasenote": "Do not forward changes signal anymore.",
+	"version": "0.2.0",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
