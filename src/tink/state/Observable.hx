@@ -4,13 +4,15 @@ import tink.state.Promised;
 
 using tink.CoreApi;
 
-@:forward
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   
   public var value(get, never):T;
   
     @:to inline function get_value()
       return this.value;
+      
+  function changed()
+    return this.changed;
   
   public inline function new(get, changed)
     this = new BasicObservable<T>(get, changed);
@@ -18,7 +20,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   public function combine<A, R>(that:Observable<A>, f:T->A->R) 
     return new Observable<R>(
       function () return f(this.value, that.value), 
-      this.changed.join(that.changed)
+      this.changed.join(that.changed())
     );
     
   public function join(that:Observable<T>) {
@@ -79,7 +81,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         
       var ret = matched.get();
       
-      ret.changed.next().handle(fire);
+      ret.changed().next().handle(fire);
       
       return ret.value;
           
