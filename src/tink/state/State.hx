@@ -4,14 +4,21 @@ import tink.state.Observable.ObservableObject;
 
 using tink.CoreApi;
 
-@:forward(value, set)
+@:forward(set)
 abstract State<T>(StateObject<T>) to Observable<T> {
 	
+  public var value(get, never):T;
+    @:to function get_value() return observe().value;
+  
   public inline function new(value) 
     this = new StateObject(value);
 	
-  public inline function observe():Observable<T>
+  public function observe():Observable<T>
     return this;
+    
+  @:impl static public function toggle(s:StateObject<Bool>) {
+    s.set(!s.value);
+  }
   
   @:to public function toCallback():Callback<T>
     return this.set;

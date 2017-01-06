@@ -6,11 +6,24 @@ using tink.CoreApi;
 
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   
+  static var stack = new List();
+  
   public var value(get, never):T;
   
-    @:to inline function get_value()
-      return this.value;
-      
+    @:to function get_value() {
+      var before = stack.first();
+        
+      stack.push(this);
+      var ret = this.value;
+      switch Std.instance(before, AutoObservable) {
+        case null: 
+        case v:
+          v.subscribeTo(this);
+      }
+      stack.pop();
+      return ret;
+    }
+          
   function changed()
     return this.changed;
   
@@ -93,15 +106,15 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       switch options {
         case null | { direct: null | false }:
           
-          cb.invoke(this.value); 
-          this.changed.handle(function () cb.invoke(this.value));
+          cb.invoke(value); 
+          this.changed.handle(function () cb.invoke(value));
           
         default: 
                       
           var scheduled = false,
               active = true,
               update = function () if (active) {
-                cb.invoke(this.value);
+                cb.invoke(value);
                 scheduled = false;
               }
           
@@ -156,12 +169,14 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     scheduled = [];
   }  
   
+  @:from static public function auto<T>(f:Void->T):Observable<T>
+    return new AutoObservable(f);
+  
   @:noUsing @:from static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);
       
 }
 
-//typedef Transform<T, R> = T->R;
 
 @:callable
 abstract Transform<T, R>(T->R) {
@@ -198,6 +213,37 @@ private class ConstObservable<T> implements ObservableObject<T> {
     this.value = value;
 }
 
+private class AutoObservable<T> extends BasicObservable<T> {
+  
+  var trigger:SignalTrigger<Noise>;
+  var dependencies:Array<{}> = [];
+  var links:Array<CallbackLink> = [];
+  
+  public function new(getValue:Void->T) {
+    
+    this.trigger = Signal.trigger();
+    this.trigger.asSignal().handle(function () {
+      dependencies = [];
+      for (l in links)
+        l.dissolve();
+      links = [];
+    });
+    
+    super(function () {  
+      return getValue();
+    }, trigger);
+  }
+  
+  public function subscribeTo<X>(observable:ObservableObject<X>) 
+    switch dependencies.indexOf(observable) {
+      case -1:
+        dependencies.push(observable);
+        links.push(observable.changed.handle(trigger.trigger));
+      default:
+    }
+
+}
+
 private class BasicObservable<T> implements ObservableObject<T> {
   
   var getValue:Void->T;
@@ -210,7 +256,6 @@ private class BasicObservable<T> implements ObservableObject<T> {
       return changed;
       
   public var value(get, never):T;
-  
     function get_value() {
       if (!valid) {
         cache = getValue();
