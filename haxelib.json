@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Do not forward changes signal anymore.",
-	"version": "0.2.0",
+	"releasenote": "Implement automatic observables.",
+	"version": "0.3.0",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
