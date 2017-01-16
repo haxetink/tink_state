@@ -23,7 +23,16 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       stack.pop();
       return ret;
     }
-          
+      
+  public function nextTime(check:T->Bool):Future<T> {
+    var ret = Future.trigger();
+    var binding = bind(function (v) {
+      if (check(v)) ret.trigger(v);
+    });
+    ret.asFuture().handle(binding);
+    return ret;
+  }
+    
   function changed()
     return this.changed;
   
@@ -168,6 +177,34 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     
     scheduled = [];
   }  
+  
+  @:from static inline function ofConvertible<T>(o: { function toObservable():Observable<T>; } )
+    return o.toObservable();
+    
+  @:from static function ofPromised<T>(p:Promise<Observable<T>>):Observable<Promised<T>> {
+    
+    var state:Promised<Observable<T>> = Loading;
+    var changed = Signal.trigger();
+    
+    p.handle(function (o) {
+      switch o {
+        case Success(data):
+          state = Done(data);
+          data.changed().handle(changed.trigger);
+        case Failure(e):
+          state = Failed(e);
+      }
+      changed.trigger(Noise);
+    });
+    return new Observable(
+      function () return switch state {
+        case Loading: Loading;
+        case Done(o): Done(o.value);
+        case Failed(e): Failed(e);
+      },
+      changed
+    );
+  }
   
   @:from static public function auto<T>(f:Void->T):Observable<T>
     return new AutoObservable(f);
