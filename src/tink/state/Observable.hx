@@ -14,27 +14,26 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       var before = stack.first();
         
       stack.push(this);
-      var ret = this.value;
+      var p = this.poll();
       switch Std.instance(before, AutoObservable) {
         case null: 
         case v:
-          v.subscribeTo(this);
+          p.b.handle(v.invalidate);
       }
       stack.pop();
-      return ret;
+      return p.a;
     }
-          
-  function changed()
-    return this.changed;
-  
+        
   public inline function new(get, changed)
-    this = new BasicObservable<T>(get, changed);
+    this = new SignalObservable<T>(get, changed);
     
-  public function combine<A, R>(that:Observable<A>, f:T->A->R) 
-    return new Observable<R>(
-      function () return f(this.value, that.value), 
-      this.changed.join(that.changed())
-    );
+  public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
+    return new SimpleObservable<R>(function () {
+      var p = this.poll(),
+          q = that.poll();
+          //
+      return new Pair(f(p.a, q.a), p.b.first(q.b));
+    });
     
   public function join(that:Observable<T>) {
     var lastA = null;
@@ -48,19 +47,17 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     });
   }
   
-  public function map<R>(f:Transform<T, R>) 
-    return new Observable<R>(
-      function () return f(this.value),
-      this.changed
-    );
+  public function map<R>(f:Transform<T, R>):Observable<R>
+    return new TransformObservable<T, R>(f, this);
   
   public function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>
      return combine(that, f).mapAsync(function (x) return x);
   
+
   public function mapAsync<R>(f:T->Promise<R>):Observable<Promised<R>> {
     var ret = new State(Loading),
         link:CallbackLink = null;
-        
+
     bind(function (data) {
       link.dissolve();
       ret.set(Loading);
@@ -73,51 +70,57 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return ret;
   } 
   
-  public function switchSync<R>(cases:Array<{ when: T->Bool, then: Lazy<Observable<R>> }>, dfault:Lazy<Observable<R>>):Observable<R> {
-    var trigger = Signal.trigger();
-    
-    function fire(_)
-      trigger.trigger(Noise);
-    
-    this.changed.handle(fire);
-    
-    return new Observable(function () {
+  inline function poll()
+    return this.poll();
+  
+  public function switchSync<R>(cases:Array<{ when: T->Bool, then: Lazy<Observable<R>> } > , dfault:Lazy<Observable<R>>):Observable<R> 
+    return new SimpleObservable(function () {
       
-      var matched = dfault,
-          value = value;
-          
-      for (c in cases) 
-        if (c.when(value)) {
-          matched = c.then;
+      var p = this.poll();
+      
+      for (c in cases)
+        if (c.when(p.a)) {
+          dfault = c.then;
           break;
         }
         
-      var ret = matched.get();
+      var p2 = dfault.get().poll();
       
-      ret.changed().next().handle(fire);
-      
-      return ret.value;
-          
-    }, trigger);
-  }
+      return new Pair(p2.a, p.b.first(p2.b));
+    });
     
   public function bind(?options:{ ?direct: Bool }, cb:Callback<T>):CallbackLink
     return 
       switch options {
         case null | { direct: null | false }:
           
-          cb.invoke(value); 
-          this.changed.handle(function () cb.invoke(value));
+          var link:CallbackLink = null;
+          
+          function update(_:Noise) {
+            var next = this.poll();
+            cb.invoke(next.a);
+            next.b.handle(update);
+          }
+          
+          update(Noise);
+          
+          function () link.dissolve();
           
         default: 
-                      
+                   
           var scheduled = false,
               active = true,
-              update = function () if (active) {
-                cb.invoke(value);
-                scheduled = false;
-              }
+              updated:Callback<Noise> = null,
+              link:CallbackLink = null;
           
+          function update() 
+            if (active) {
+              var next = this.poll();
+              cb.invoke(next.a);
+              scheduled = false;
+              link = next.b.handle(updated);
+            }
+            
           function doSchedule() {
             if (scheduled) return;
             
@@ -125,10 +128,10 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
             schedule(update);
           }    
           
+          updated = doSchedule;
+          
           doSchedule();
               
-          var link = this.changed.handle(doSchedule);
-          
           return function () 
             if (active) {
               active = false;
@@ -177,6 +180,42 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       
 }
 
+private class TransformObservable<T, R> implements ObservableObject<R> {
+  
+  var transform:Transform<T, R>;
+  var source:ObservableObject<T>;
+  
+  public function new(transform, source) {
+    this.transform = transform;
+    this.source = source;
+  }
+  
+  public function poll():Pair<R, Future<Noise>> {
+    var p = source.poll();
+    return new Pair(transform(p.a), p.b);
+  }
+  
+}
+
+private class SimpleObservable<T> implements ObservableObject<T> {
+  
+  var _poll:Void->Pair<T, Future<Noise>>;
+  var cache:Pair<T, Future<Noise>>;
+  
+  function resetCache(_) cache = null;
+  
+  public function poll() {
+    if (cache == null) {
+      cache = _poll();
+      cache.b.handle(resetCache);
+    }
+    return cache;
+  }
+  
+  public function new(f) 
+    this._poll = f;
+  
+}
 
 @:callable
 abstract Transform<T, R>(T->R) {
@@ -193,80 +232,59 @@ abstract Transform<T, R>(T->R) {
 }
 
 interface ObservableObject<T> {
-  public var changed(get, never):Signal<Noise>;
-  public var value(get, never):T;  
+  function poll():Pair<T, Future<Noise>>;
 }
 
 private class ConstObservable<T> implements ObservableObject<T> {
   
-  static var NEVER = new Signal<Noise>(function (_) return null);
+  static var NEVER = new Future<Noise>(function (_) return null);
   
-  public var value(get, null):T;
-    inline function get_value()
-      return value;
-      
-  public var changed(get, null):Signal<Noise>;
-    inline function get_changed()
-      return NEVER;
-      
+  var p:Pair<T, Future<Noise>>;
+  
+  public function poll():Pair<T, Future<Noise>>
+    return this.p;
+  
   public function new(value)
-    this.value = value;
+    this.p = new Pair(value, NEVER);
 }
 
-private class AutoObservable<T> extends BasicObservable<T> {
+private class AutoObservable<T> extends SimpleObservable<T> {
   
-  var trigger:SignalTrigger<Noise>;
-  var dependencies:Array<{}> = [];
-  var links:Array<CallbackLink> = [];
+  var trigger:FutureTrigger<Noise>;
   
   public function new(getValue:Void->T) {
-    
-    this.trigger = Signal.trigger();
-    this.trigger.asSignal().handle(function () {
-      dependencies = [];
-      for (l in links)
-        l.dissolve();
-      links = [];
+    super(function () {
+      this.trigger = Future.trigger();
+      return new Pair(getValue(), this.trigger.asFuture());
     });
-    
-    super(function () {  
-      return getValue();
-    }, trigger);
   }
   
-  public function subscribeTo<X>(observable:ObservableObject<X>) 
-    switch dependencies.indexOf(observable) {
-      case -1:
-        dependencies.push(observable);
-        links.push(observable.changed.handle(trigger.trigger));
-      default:
-    }
-
+  public function invalidate() {
+    trigger.trigger(Noise);
+  }
+  
 }
 
-private class BasicObservable<T> implements ObservableObject<T> {
+private class SignalObservable<T> implements ObservableObject<T> {
   
   var getValue:Void->T;
-  var valid:Bool;
-  var cache:T;
+  var changed:Signal<Noise>;
   
-  public var changed(get, null):Signal<Noise>;  
+  var cache:Pair<T, Future<Noise>>;
   
-    inline function get_changed()
-      return changed;
-      
-  public var value(get, never):T;
-    function get_value() {
-      if (!valid) {
-        cache = getValue();
-        valid = true;
-      }
-      return cache;
+  function resetCache(_) cache = null;
+  
+  public function poll() {
+    if (cache == null) {
+      cache = new Pair(getValue(), changed.next());
+      cache.b.handle(resetCache);
     }
-    
+    return cache;
+  }
+  
   public function new(getValue, changed:Signal<Noise>) {
     this.getValue = getValue;
-    this.changed = changed.filter(function (_) return valid && !(valid = false));//the things you do for neat output ...
+    this.changed = changed;
   }
     
 }

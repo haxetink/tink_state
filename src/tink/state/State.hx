@@ -29,23 +29,33 @@ abstract State<T>(StateObject<T>) to Observable<T> {
 }
 
 private class StateObject<T> implements ObservableObject<T> {
-
+  
+  
+  var next:Pair<T, Future<Noise>>;
+  var trigger:FutureTrigger<Noise>;
+  
+  public function poll()
+    return next;
+  
   public var value(get, null):T;
     inline function get_value()
       return value;
-    
-  public var changed(get, never):Signal<Noise>;
-    inline function get_changed()
-      return _changed.asSignal();
-    
-  var _changed:SignalTrigger<Noise> = Signal.trigger();  
       
-  public function new(value) 
+  public function new(value) {
     this.value = value;
+    arm();
+  }
+  
+  function arm() {
+    this.trigger = Future.trigger();
+    this.next = new Pair(value, this.trigger.asFuture());    
+  }
   
   public function set(value) 
     if (value != this.value) {
       this.value = value;
-      this._changed.trigger(Noise);
+      var last = trigger;
+      arm();
+      last.trigger(Noise);
     }
 }
