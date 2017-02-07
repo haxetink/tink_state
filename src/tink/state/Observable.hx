@@ -4,35 +4,36 @@ import tink.state.Promised;
 
 using tink.CoreApi;
 
+abstract Measurement<T>(Pair<T, Future<Noise>>) from Pair<T, Future<Noise>> {
+  
+  public var value(get, never):T;
+    inline function get_value() return this.a;
+
+  public var becameInvalid(get, never):Future<Noise>;
+    inline function get_becameInvalid() return this.b;
+
+  public inline function new(value, becameInvalid)
+    this = new Pair(value, becameInvalid);
+}
+
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   
   static var stack = new List();
   
   public var value(get, never):T;
   
-    @:to function get_value() {
-      var before = stack.first();
-        
-      stack.push(this);
-      var p = this.poll();
-      switch Std.instance(before, AutoObservable) {
-        case null: 
-        case v:
-          p.b.handle(v.invalidate);
-      }
-      stack.pop();
-      return p.a;
-    }
+    @:to function get_value() 
+      return measure().value;
         
   public inline function new(get, changed)
     this = new SignalObservable<T>(get, changed);
     
   public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
     return new SimpleObservable<R>(function () {
-      var p = this.poll(),
-          q = that.poll();
-          //
-      return new Pair(f(p.a, q.a), p.b.first(q.b));
+      var p = measure(),
+          q = that.measure();
+          
+      return new Pair(f(p.value, q.value), p.becameInvalid.first(q.becameInvalid));
     });
     
   public function join(that:Observable<T>) {
@@ -70,44 +71,41 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return ret;
   } 
   
-  inline function poll()
-    return this.poll();
+  public function measure():Measurement<T> {
+    var before = stack.first();
+        
+    stack.push(this);
+    var p = this.poll();
+    trace([this, before]);
+    switch Std.instance(before, AutoObservable) {
+      case null: 
+      case v:
+        p.b.handle(v.invalidate);
+    }
+    stack.pop();
+    return p;
+  }
   
   public function switchSync<R>(cases:Array<{ when: T->Bool, then: Lazy<Observable<R>> } > , dfault:Lazy<Observable<R>>):Observable<R> 
     return new SimpleObservable(function () {
       
-      var p = this.poll();
+      var p = measure();
       
       for (c in cases)
-        if (c.when(p.a)) {
+        if (c.when(p.value)) {
           dfault = c.then;
           break;
         }
         
-      var p2 = dfault.get().poll();
+      var p2 = dfault.get().measure();
       
-      return new Pair(p2.a, p.b.first(p2.b));
+      return new Pair(p2.value, p.becameInvalid.first(p2.becameInvalid));
     });
     
   public function bind(?options:{ ?direct: Bool }, cb:Callback<T>):CallbackLink
     return 
       switch options {
         case null | { direct: null | false }:
-          
-          var link:CallbackLink = null;
-          
-          function update(_:Noise) {
-            var next = this.poll();
-            cb.invoke(next.a);
-            next.b.handle(update);
-          }
-          
-          update(Noise);
-          
-          function () link.dissolve();
-          
-        default: 
-                   
           var scheduled = false,
               active = true,
               updated:Callback<Noise> = null,
@@ -115,10 +113,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
           
           function update() 
             if (active) {
-              var next = this.poll();
-              cb.invoke(next.a);
+              trace('update $this');
+              var next = measure();
+              cb.invoke(next.value);
               scheduled = false;
-              link = next.b.handle(updated);
+              link = next.becameInvalid.handle(updated);
             }
             
           function doSchedule() {
@@ -136,7 +135,21 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
             if (active) {
               active = false;
               link.dissolve();
-            }
+            }          
+          
+        default: 
+          var link:CallbackLink = null;
+          
+          function update(_:Noise) {
+            var next = measure();
+            cb.invoke(next.value);
+            link = next.becameInvalid.handle(update);
+          }
+          
+          update(Noise);
+          
+          function () link.dissolve();          
+
       }
       
   static var scheduled:Array<Void->Void> = 
@@ -171,9 +184,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     
     scheduled = [];
   }  
+  static public function create<T>(f):Observable<T> 
+    return new SimpleObservable(f);
   
-  @:from static public function auto<T>(f:Void->T):Observable<T>
-    return new AutoObservable(f);
+  static public function auto<T>(f:Void->T, ?pos:haxe.PosInfos):Observable<T>
+    return new AutoObservable(f, pos);
   
   @:noUsing @:from static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);
@@ -251,15 +266,23 @@ private class ConstObservable<T> implements ObservableObject<T> {
 private class AutoObservable<T> extends SimpleObservable<T> {
   
   var trigger:FutureTrigger<Noise>;
+  var pos:haxe.PosInfos;
   
-  public function new(getValue:Void->T) {
+  public function new(getValue:Void->T, ?pos:haxe.PosInfos) {
+    this.pos = pos;
     super(function () {
+      haxe.Log.trace("recalculate", pos);
       this.trigger = Future.trigger();
       return new Pair(getValue(), this.trigger.asFuture());
     });
   }
   
+  @:keep public function toString() {
+    return 'Auto@${pos.fileName}:${pos.lineNumber}';
+  }
+
   public function invalidate() {
+    haxe.Log.trace("invalidate", pos);
     trigger.trigger(Noise);
   }
   
