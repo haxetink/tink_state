@@ -55,14 +55,14 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
      return combine(that, f).mapAsync(function (x) return x);
   
 
-  public function mapAsync<R>(f:T->Promise<R>):Observable<Promised<R>> {
+  public function mapAsync<R>(f:Transform<T, Promise<R>>):Observable<Promised<R>> {
     var ret = new State(Loading),
         link:CallbackLink = null;
 
     bind(function (data) {
       link.dissolve();
       ret.set(Loading);
-      link = f(data).handle(function (r) ret.set(switch r {
+      link = f.apply(data).handle(function (r) ret.set(switch r {
         case Success(v): Done(v);
         case Failure(v): Failed(v);
       }));
@@ -152,7 +152,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       }
       
   static var scheduled:Array<Void->Void> = 
-    #if (!macro && (js || tink_runloop)) 
+    #if (js || tink_runloop) 
       [];
     #else
       null;
@@ -167,10 +167,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         #if tink_runloop
           tink.RunLoop.current.atNextStep(updateAll);
         #elseif js
-          try
-            js.Browser.window.requestAnimationFrame(function (_) updateAll())
-          catch (e:Dynamic)
-            haxe.Timer.delay(updateAll, 0);
+          js.Browser.window.requestAnimationFrame(function (_) updateAll());
         #else
           throw 'this should be unreachable';
         #end
@@ -179,7 +176,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     }
   
   static public function updateAll() {
-    if (scheduled == null) return;
     var old = scheduled;
     scheduled = null;
     
@@ -210,7 +206,7 @@ private class TransformObservable<T, R> implements ObservableObject<R> {
   
   public function poll():Pair<R, Future<Noise>> {
     var p = source.poll();
-    return new Pair(transform(p.a), p.b);
+    return new Pair(transform.apply(p.a), p.b);
   }
   
 }
@@ -235,18 +231,29 @@ private class SimpleObservable<T> implements ObservableObject<T> {
   
 }
 
-@:callable
 abstract Transform<T, R>(T->R) {
-  
+  inline function new(f) 
+    this = f;
+
+  public inline function apply(value:T):R 
+    return this(value);
+
+  @:from static function ofNaiveAsync<T, R>(f:T->Promise<R>):Transform<Promised<T>, Promise<R>> 
+    return new Transform(function (p:Promised<T>):Promise<R> return switch p {
+      case Failed(e): e;
+      case Loading: new Future(function (_) return null);
+      case Done(v): f(v);
+    });
+
   @:from static function ofNaive<T, R>(f:T->R):Transform<Promised<T>, Promised<R>> 
-    return function (p) return switch p {
+    return new Transform(function (p) return switch p {
       case Failed(e): Failed(e);
       case Loading: Loading;
       case Done(v): Done(f(v));
-    }
+    });
   
   @:from static function ofExact<T, R>(f:T->R):Transform<T, R>
-    return cast f;
+    return new Transform(f);
 }
 
 interface ObservableObject<T> {
