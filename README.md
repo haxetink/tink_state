@@ -43,7 +43,7 @@ function map<In, Out>(o:Observable<In>, transform:In->Out):Observable<Out>
       var m = o.measure();
           
       return {
-        value: transform(m),
+        value: transform(m.value),
         becameInvalid: m.becameInvalid,
       }
     }
@@ -62,7 +62,7 @@ function combine<A, B, C>(a:Observable<A>, b:Observable<B>, combinator:A->B->C):
           mb = b.measure();
          
       return {
-        value: combinator(a, b),
+        value: combinator(ma.value, mb.value),
         becameInvalid: ma.becameInvalid || mb.becameInvalid 
         // the || operator on two futures creates a new future that triggers as soon as one of its operands trigger
       }
