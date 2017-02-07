@@ -152,7 +152,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       }
       
   static var scheduled:Array<Void->Void> = 
-    #if (js || tink_runloop) 
+    #if (!macro && (js || tink_runloop)) 
       [];
     #else
       null;
@@ -167,7 +167,10 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         #if tink_runloop
           tink.RunLoop.current.atNextStep(updateAll);
         #elseif js
-          js.Browser.window.requestAnimationFrame(function (_) updateAll());
+          try
+            js.Browser.window.requestAnimationFrame(function (_) updateAll())
+          catch (e:Dynamic)
+            haxe.Timer.delay(updateAll, 0);
         #else
           throw 'this should be unreachable';
         #end
