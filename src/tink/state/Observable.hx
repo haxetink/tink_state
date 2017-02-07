@@ -76,7 +76,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         
     stack.push(this);
     var p = this.poll();
-    trace([this, before]);
+    
     switch Std.instance(before, AutoObservable) {
       case null: 
       case v:
@@ -113,7 +113,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
           
           function update() 
             if (active) {
-              trace('update $this');
               var next = measure();
               cb.invoke(next.value);
               scheduled = false;
@@ -187,8 +186,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public function create<T>(f):Observable<T> 
     return new SimpleObservable(f);
   
-  static public function auto<T>(f:Void->T, ?pos:haxe.PosInfos):Observable<T>
-    return new AutoObservable(f, pos);
+  @:from static public function auto<T>(f:Void->T):Observable<T>
+    return new AutoObservable(f);
   
   @:noUsing @:from static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);
@@ -266,23 +265,15 @@ private class ConstObservable<T> implements ObservableObject<T> {
 private class AutoObservable<T> extends SimpleObservable<T> {
   
   var trigger:FutureTrigger<Noise>;
-  var pos:haxe.PosInfos;
   
-  public function new(getValue:Void->T, ?pos:haxe.PosInfos) {
-    this.pos = pos;
+  public function new(getValue:Void->T) {
     super(function () {
-      haxe.Log.trace("recalculate", pos);
       this.trigger = Future.trigger();
       return new Pair(getValue(), this.trigger.asFuture());
     });
   }
-  
-  @:keep public function toString() {
-    return 'Auto@${pos.fileName}:${pos.lineNumber}';
-  }
 
   public function invalidate() {
-    haxe.Log.trace("invalidate", pos);
     trigger.trigger(Noise);
   }
   
