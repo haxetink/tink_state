@@ -25,6 +25,7 @@ class TestBasic extends TestCase {
         case null:
         case v: 
           v();
+          Observable.updateAll();
       }
       
     var combined = sa.observe().combineAsync(sb, function (a, b):Promise<String> {
