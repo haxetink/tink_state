@@ -46,7 +46,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
      return combine(that, f).mapAsync(function (x) return x);  
 
   public function mapAsync<R>(f:Transform<T, Promise<R>>):Observable<Promised<R>> 
-    return flatten(map(f).map(ofPromise));
+    return map(f).map(ofPromise).flatten();
   
   public function measure():Measurement<T> {
     var before = stack.first();
@@ -162,10 +162,18 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     
     scheduled = [];
   } 
+  
+  static inline function lift<T>(o:Observable<T>) return o;
 
-  static public function flatten<T>(o:Observable<Observable<T>>) 
+  @:impl static public function deliver<T>(o:ObservableObject<Promised<T>>, initial:T):Observable<T>
+    return lift(o).map(function (p) return switch p {
+      case Done(v): initial = v;
+      default: initial;
+    });
+
+  @:impl static public function flatten<T>(o:ObservableObject<Observable<T>>) 
     return create(function () {
-      var m = o.measure();
+      var m = lift(o).measure();
       var m2 = m.value.measure();
       return new Measurement(m2.value, m.becameInvalid || m2.becameInvalid);
     });
@@ -200,8 +208,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return new AutoObservable(f);
   
   @:noUsing @:from static public function const<T>(value:T):Observable<T> 
-    return new ConstObservable(value);
-      
+    return new ConstObservable(value);      
 }
 
 abstract Computation<T>({ f: Void->T }) {
@@ -211,12 +218,12 @@ abstract Computation<T>({ f: Void->T }) {
   public inline function perform() 
     return this.f();
 
-  @:from static public function async<T>(f:Void->Promise<T>):Computation<Promised<T>> {
+  @:from static function async<T>(f:Void->Promise<T>):Computation<Promised<T>> {//Something tells me this is rather inefficient ...
     var o = Observable.auto(new Computation(f)).map(Observable.ofPromise);
     return function () return o.value.value;
   }
 
-  @:from static public function plain<T>(f:Void->T):Computation<T>
+  @:from static function plain<T>(f:Void->T):Computation<T>
     return new Computation(f);
 }
 
@@ -236,8 +243,7 @@ private class SimpleObservable<T> implements ObservableObject<T> {
   }
   
   public function new(f) 
-    this._poll = f;
-  
+    this._poll = f;  
 }
 
 abstract Transform<T, R>(T->R) {
@@ -286,15 +292,12 @@ private class AutoObservable<T> extends SimpleObservable<T> {
   
   var trigger:FutureTrigger<Noise>;
   
-  public function new(comp:Computation<T>) {
+  public function new(comp:Computation<T>)
     super(function () {
       this.trigger = Future.trigger();
       return new Measurement(comp.perform(), this.trigger.asFuture());
     });
-  }
 
-  public function invalidate() {
-    trigger.trigger(Noise);
-  }
-  
+  public function invalidate() 
+    trigger.trigger(Noise);  
 }
