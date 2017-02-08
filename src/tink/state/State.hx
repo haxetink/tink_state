@@ -31,7 +31,7 @@ abstract State<T>(StateObject<T>) to Observable<T> {
 private class StateObject<T> implements ObservableObject<T> {
   
   
-  var next:Pair<T, Future<Noise>>;
+  var next:Measurement<T>;
   var trigger:FutureTrigger<Noise>;
   
   public function poll()
@@ -48,7 +48,7 @@ private class StateObject<T> implements ObservableObject<T> {
   
   function arm() {
     this.trigger = Future.trigger();
-    this.next = new Pair(value, this.trigger.asFuture());    
+    this.next = new Measurement(value, this.trigger.asFuture());    
   }
   
   public function set(value) 
