@@ -153,6 +153,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     }
   
   static public function updateAll() {
+    if (scheduled == null)
+      return;
     var old = scheduled;
     scheduled = null;
     
