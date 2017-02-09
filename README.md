@@ -147,9 +147,7 @@ abstract Measurement<T> from Pair<T, Future<Noise>> {
 }
 ```
 
-They are practically the same as in the introduction, except that they are abstracts. 
-
-With that, let's take a look at observables:
+They are practically the same as in the introduction, except that they are abstracts. With that settled, here comes the center piece:
 
 ```haxe
 abstract Observable<T> {
@@ -177,11 +175,15 @@ abstract Observable<T> {
 
 Let's take it from the top. First of all, there is a convenience getter to get an observable's value directly, which really just uses the `measure` method we've already familiarized ourselves with in the introduction.
 
-After that, things become a little more complicated, so we'll look at them step by step.
+After that, things become a little more complicated, so we'll look into them step by step.
 
 #### Binding
 
-Using an observable's `bind` method we can create a "binding" to a callback. If you're not familiar with `tink_core`: the binding can be undone by calling the `dissolve` method of the returned `CallbackLink`. If we create the binding with `{ direct: true }`, then every time the observable changes, the callback is called immediately. The default behavior though is to invalidate the binding and schedule an update at a later time (chosen depending on the current platform). Using `Observable.updateAll()` you can forcibly update all currently invalid bindings.
+Using an observable's `bind` method we can create a "binding" to a callback. If you're not familiar with `tink_core`: a `CallbackLink` represents the link between a callback and the place it was registered and can be undone using its `dissolve` method. 
+
+If we create the binding with `{ direct: true }`, then every time the observable changes, the callback is called immediately. This can be pretty inefficient though. Assume the callback is bound to to an observable that combines two states and you update both of them, then the callback fires twice - once after both states were updated, but once inbetween. Performance considerations aside, it may also be that the callback inbetween receives non-sensical data. 
+
+Therefore, the default behavior is to invalidate the binding and schedule an update at a later time (chosen depending on the current platform, e.g. `requestAnimationFrame` in JavaScript). Using `Observable.updateAll()` you can forcibly update all currently invalid bindings.
 
 #### Asynchrony
 
