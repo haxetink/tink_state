@@ -2,7 +2,7 @@
 
 At the core of `tink_state` stands the notion of an "observable". There are various definitions of what that is and [ReactiveX](http://reactivex.io/) practically monopolized the meaning within the realm of programming. The result - while being a fine display of technical prowess - exhibits a complexity that often scares away developers who could hugely benefit from reactive programming. Which is quite ironic, because reactiveness promisses simplicity.
 
-This library is an attempt to deliver on that promise. To make things simple:
+This library is an attempt to deliver on that promise. If you are familiar with ReactiveX, empty your cup: in `tink_state` an **observable is not a stream** (if you want streams, check out [`tink_streams`](https://github.com/haxetink/tink_streams/tree/pure)). Rather than providing a swiss army knife of functional programming, observables are conveived based on the fundamental meaning of the word:
 
 ## Let's start at the very beginning
 
@@ -108,11 +108,11 @@ This way we do not have to manage dependent states ourself. Instead, we use diff
 The above introduction leaves out a few details:
 
 1. How to modify any state (we have only discussed how to measure it and how to operate on it)
-2. How to efficiently apply state changes
+2. How to efficiently react to state changes
 
 ### State
 
-If there is "a piece of state" that you own, this is how you would represent it:
+If there is "a piece of state" that you own, you can construct a `State` defined like so:
 
 ```haxe
 abstract State<T> to Observable<T> {
@@ -126,8 +126,7 @@ abstract State<T> to Observable<T> {
 }
 ```
 
-
-Basiscally a `State` can act as an `Observable` but it also exposes a `set` function whereby you can update it. When exposing a state to the outside world it's best to expose it as an `Observable` so that you alone can update it.
+As we see, a `State` can act as an `Observable` but it also exposes a `set` function whereby you can update it. When exposing a state to the outside world it's best to expose it as an `Observable` so that you alone can update it.
 
 ### Observable
 
