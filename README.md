@@ -186,7 +186,7 @@ Using an observable's `bind` method we can create a "binding" to a callback. If 
 
 #### Asynchrony
 
-Before we continue to the next methods, notice that some of them accept a plain function or `Transform` or `Computation` that produce a `Promise<R>` and return an `Observable<Promised<R>>`. Here is what a `Promised` value looks like:
+Before we continue to the next methods, notice that some of them accept a plain function or `Transform` or `Computation` that produce a `Promise<R>` and finally return an `Observable<Promised<R>>`. Here is what a `Promised` value looks like:
 
 ```haxe
 enum Promised<T> {
@@ -196,7 +196,7 @@ enum Promised<T> {
 }
 ```
 
-We want this because it `Observable<Promised<R>>` is a more handy representation of `Observable<Promised<T>>`. The latter nests two asynchronous data structures and that results in all kinds of issues. for starters, here is what we'd have to do to get data from the it:
+We want this because it `Observable<Promised<R>>` is a more handy representation of `Observable<Promised<T>>`. The latter nests two asynchronous data structures and that results in all kinds of issues. For starters, here is what we'd have to do to get data from the it:
 
 ```haxe
 o.bind(function (promise:Promise<X>) {
