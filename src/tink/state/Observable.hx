@@ -134,7 +134,9 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     #else
       null;
     #end
-  
+  #if js
+    static var hasRAF:Bool = untyped __js__("typeof window != 'undefined' && 'requestAnimationFrame' in window");
+  #end
   static function schedule(f:Void->Void) 
     switch scheduled {
       case null:
@@ -144,7 +146,10 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         #if tink_runloop
           tink.RunLoop.current.atNextStep(updateAll);
         #elseif js
-          js.Browser.window.requestAnimationFrame(function (_) updateAll());
+          if (hasRAF)
+            js.Browser.window.requestAnimationFrame(function (_) updateAll());
+          else
+            Callback.defer(f);
         #else
           throw 'this should be unreachable';
         #end
