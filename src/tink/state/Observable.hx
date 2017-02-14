@@ -134,9 +134,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     #else
       null;
     #end
+
   #if js
     static var hasRAF:Bool = untyped __js__("typeof window != 'undefined' && 'requestAnimationFrame' in window");
   #end
+
   static function schedule(f:Void->Void) 
     switch scheduled {
       case null:
@@ -182,16 +184,15 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       var m2 = m.value.measure();
       return new Measurement(m2.value, m.becameInvalid || m2.becameInvalid);
     });
-  
+  static var counter = 0;
   static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>> {
     if (p == null) 
       throw 'Expected Promise but got null';
 
     var value = Loading,
-        becameInvalid:Future<Noise> = p.map(function (_) return Noise);
-
+        becameInvalid = Lazy.ofFunc(p.map.bind(function (_) return Noise));
+    
     return create(function () {
-      
       if (p != null) {
         p.handle(function (o) {
           value = switch o {
@@ -200,14 +201,13 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
           }
           becameInvalid = ConstObservable.NEVER;
         });
-        p = null;
       }
       return new Measurement(value, becameInvalid);
     });
   }
 
-  static public function create<T>(f):Observable<T> 
-    return new SimpleObservable(f);
+  static public function create<T>(f, ?pos:haxe.PosInfos):Observable<T> 
+    return new SimpleObservable(f, pos);
   
   static public function auto<T>(f:Computation<T>):Observable<T>
     return new AutoObservable(f);
@@ -235,20 +235,32 @@ abstract Computation<T>({ f: Void->T }) {
 private class SimpleObservable<T> implements ObservableObject<T> {
   
   var _poll:Void->Measurement<T>;
+  var pos:haxe.PosInfos;
   var cache:Measurement<T>;
   
   function resetCache(_) cache = null;
   
   public function poll() {
-    if (cache == null) {
-      cache = _poll();
+    var count = 0,
+        last = null;
+    while (cache == null) {
+      var cache = cache = _poll();
+      if (last == cache) 
+        throw 'Polling loops on the same value';
+      
+      last = cache;
       cache.becameInvalid.handle(resetCache);
+
+      if (count++ >= 100)
+        throw 'Polling not concluded after 100 iterations';      
     }
     return cache;
   }
   
-  public function new(f) 
+  public function new(f, ?pos:haxe.PosInfos) { 
     this._poll = f;  
+    this.pos = pos;
+  }
 }
 
 abstract Transform<T, R>(T->R) {
