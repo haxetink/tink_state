@@ -2,7 +2,7 @@
 
 At the core of `tink_state` stands the notion of an "observable". There are various definitions of what that is and [ReactiveX](http://reactivex.io/) practically monopolized the meaning within the realm of programming. The result - while being a fine display of technical prowess - exhibits a complexity that often scares away developers who could hugely benefit from reactive programming. Which is quite ironic, because reactiveness promisses simplicity.
 
-This library is an attempt to deliver on that promise. To make things simple:
+This library is an attempt to deliver on that promise. If you are familiar with ReactiveX, empty your cup: in `tink_state` an **observable is not a stream** (if you want streams, check out [`tink_streams`](https://github.com/haxetink/tink_streams/tree/pure)). Rather than providing a swiss army knife of functional programming, observables are conceived based on the fundamental meaning of the word:
 
 ## Let's start at the very beginning
 
@@ -74,18 +74,21 @@ Et voilà, we can combine two things that change over time to one. Let's see how
 
 ```haxe
 typedef Player = {
-  inventory:Observable<Iterable<Item>>(),
+  inventory:Observable<Iterable<Item>>,
   health:Observable<{ cur:Int, max: Int }>,
 }
 
 import haxe.ds.Option;
 
-var character:Player = ...;
+function isFull(health)
+  return health.cur >= health.max;
+  
+var player:Player = ...;
 var nextHealthPotion = combine(
-  character.inventory, 
-  character.health, 
+  player.inventory, 
+  player.health, 
   function (inventory, health) {
-    if (health.cur >= health.max) return None;
+    if (isFull(health)) return None;
     for (item in inventory)
       switch Std.instance(item, HealthPotion) {
         case null:
@@ -105,11 +108,11 @@ This way we do not have to manage dependent states ourself. Instead, we use diff
 The above introduction leaves out a few details:
 
 1. How to modify any state (we have only discussed how to measure it and how to operate on it)
-2. How to efficiently apply state changes
+2. How to efficiently react to state changes
 
 ### State
 
-If there is "a piece of state" that you own, this is how you would represent it:
+If there is "a piece of state" that you own, you can construct a `State` defined like so:
 
 ```haxe
 abstract State<T> to Observable<T> {
@@ -118,17 +121,12 @@ abstract State<T> to Observable<T> {
   function set(value:T):Void;
   function observe():Observable<T>; 
   
-  @:impl static function toggle(s:StateObject<Bool>):Bool;
-  
   @:to function toCallback():Callback<T>;
   @:from static private function ofConstant<T>(value:T):State<T>;
 }
 ```
 
-
-Basiscally a `State` can act as an `Observable` but it also exposes a `set` function whereby you can update it. When exposing a state to the outside world it's best to expose it as an `Observable` so that you alone can update it.
-
-Don't let the `toggle` function freak you out. It is a so called ["selective function"](https://haxe.org/manual/types-abstract-selective-functions.html) that exists only on boolean states and allows you to write things like `flag.toggle()`.
+As we see, a `State` can act as an `Observable` but it also exposes a `set` function whereby you can update it. When exposing a state to the outside world it's best to expose it as an `Observable` so that you alone can update it.
 
 ### Observable
 
@@ -149,7 +147,47 @@ abstract Measurement<T> from Pair<T, Future<Noise>> {
 }
 ```
 
-They are practically the same as in the introduction, except that they are abstracts. Before moving on to observables themselves, let's look at two helpers used to deal with asynchronicity and errors:
+They are practically the same as in the introduction, except that they are abstracts. With that settled, here comes the center piece:
+
+```haxe
+abstract Observable<T> {
+  
+  @:to var value(get, never):T;
+  function measure():Measurement<T>;  
+  
+  function bind(?options:{ ?direct: Bool }, cb:Callback<T>):CallbackLink;
+  static function updateAll():Void;  
+  
+  @:impl static function deliver<T>(o:Observable<Promised<T>>, initial:T):Observable<T>;
+  
+  static function create<T>(f:Void->Measurement<T>):Observable<T>;
+  static function auto<T>(f:Computation<T>):Observable<T>;
+  @:from static function const<T>(value:T):Observable<T>;     
+  
+  function map<R>(f:Transform<T, R>):Observable<R>;
+  function mapAsync<R>(f:Transform<T, Promise<R>>):Observable<Promised<R>>;
+  
+  function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>;
+  function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>;
+
+}
+```
+
+Let's take it from the top. First of all, there is a convenience getter to get an observable's value directly, which really just uses the `measure` method we've already familiarized ourselves with in the introduction.
+
+After that, things become a little more complicated, so we'll look into them step by step.
+
+#### Binding
+
+Using an observable's `bind` method we can create a "binding" to a callback. If you're not familiar with `tink_core`: a `CallbackLink` represents the link between a callback and the place it was registered and can be undone using its `dissolve` method. 
+
+If we create the binding with `{ direct: true }`, then every time the observable changes, the callback is called immediately. This can be pretty inefficient though. Assume the callback is bound to to an observable that combines two states and you update both of them, then the callback fires twice - once after both states were updated, but once inbetween. Performance considerations aside, it may also be that the callback inbetween receives non-sensical data. 
+
+Therefore, the default behavior is to invalidate the binding and schedule an update at a later time (chosen depending on the current platform, e.g. `requestAnimationFrame` in JavaScript). Using `Observable.updateAll()` you can forcibly update all currently invalid bindings.
+
+#### Asynchrony
+
+Before we continue to the next methods, notice that some of them accept a plain function or `Transform` or `Computation` that produce a `Promise<R>` and finally return an `Observable<Promised<R>>`. Here is what a `Promised` value looks like:
 
 ```haxe
 enum Promised<T> {
@@ -157,41 +195,136 @@ enum Promised<T> {
   Done(result:T);
   Failed(error:Error);
 }
-
-abstract Transform<T, R> {
-  function apply(value:T):R;
-  
-  @:from static private function ofNaive<T, R>(f:T->R):Transform<Promised<T>, Promised<R>>;
-  @:from static private function ofExact<T, R>(f:T->R):Transform<T, R>;
-}
 ```
 
-The `Promised` enum is meant to represent a value that was "promised": a value resulting from an asynchronous operation. It may still be `Loading` or already `Done` or in fact the operation may have `Failed`.
-
-The definition of a `Transform` may look somewhat intimidating. What it really means is a function that converts values of type `T` to type `V`. In fact we see that any `T->R` is such a transform. However any `T->R` can also act as a `Transform<Promised<T>, Promised<R>>`, which is done by calling the function only if the input is `Done`. If you find this a little confusing, don't worry. An example will be added shortly.
-
-Finally, let's look at the center piece:
+We want this because it `Observable<Promised<R>>` is a more handy representation of `Observable<Promised<T>>`. The latter nests two asynchronous data structures and that results in all kinds of issues. For starters, here is what we'd have to do to get data from the it:
 
 ```haxe
-abstract Observable<T> {
-  
-  var value(get, never):T;
-      
-  function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>;
-  function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>;
-  
-  function map<R>(f:Transform<T, R>):Observable<R>;
-  function mapAsync<R>(f:T->Promise<R>):Observable<Promised<R>>;
-  
-  function measure():Measurement<T>;  
-  function bind(?options:{ ?direct: Bool }, cb:Callback<T>):CallbackLink;
+o.bind(function (promise:Promise<X>) {
+  //now we are loading
+  promise.handle(function (o) {
+    //now it is loaded
+    switch o {
+      case Success(d)://and succeeded
+      case Failure(e)://and failed
+    }
+  }
+});
+```
 
-  static function updateAll():Void;
-  static function create<T>(f:Void->Measurement<T>):Observable<T>;
-  
-  @:from static function auto<T>(f:Void->T):Observable<T>;
-  @:from static function const<T>(value:T):Observable<T>;     
+Instead, we can do this:
+
+```haxe
+o.bind(function (promised:Promised<X>) switch promised {
+  case Loading://now we are loading
+  case Done(d)://now it is loaded and succeeded
+  case Failure(e)://now it is loaded and failed
+});
+```
+
+Not only is it more concise, it also deals with another problem: in the first case, we can get called back with a new `promise` even though the previous one did not even trigger yet. And in fact - even though unlikely - the second promise can potentially be faster than the first, which means that we'll get the result of the first after the second and so we have to keep track of order and what not. Luckily, all this is taken care of.
+
+Using so called ["selective function"](https://haxe.org/manual/types-abstract-selective-functions.html) we can also tell an `Observable<Promised<T>>` to `deliver` on its promise by providing an `initial` value and thus giving us an `Observable<T>` that starts out with the initial value and only updates when data is successfully loaded.
+
+##### Computation
+
+A computation really just means something that can produce a value and `Observable.auto` consumes computations to create observables. It is defined like so:
+
+```haxe
+abstract Computation<T> {
+  function perform():T;
+
+  @:from static private function async<T>(f:Void->Promise<T>):Computation<Promised<T>>;
+  @:from static private function plain<T>(f:Void->T):Computation<T>;
 }
 ```
 
-... to be continued.
+So we see that a plain function `Void->T` can act as a `Computation<T>`. However `Void->Promise<T>` will act as `Computation<Promised<T>>`, meaning that a function that returns a promise acts as a computation that produces a promised value. This means if we call `Observable.auto` with a function that produces a `Promise<T>`, we will get an `Observable<Promised<T>>` rather than the undesirable `Observable<Promise<T>>`.
+
+##### Transform
+
+The general idea of transforms is very similar to computations, except that transforms take an input and produce an output.
+
+```haxe
+abstract Transform<T, R> {
+  function apply(value:T):R;
+
+  @:from static private function naiveAsync<T, R>(f:T->Promise<R>):Transform<Promised<T>, Promise<R>>;
+  @:from static private function naive<T, R>(f:T->R):Transform<Promised<T>, Promised<R>>;
+  @:from static private function plain<T, R>(f:T->R):Transform<T, R>;
+}
+```
+
+So a transform really just maps values of type `T` to values of type `R` and a plain `T->R` function will do. There is however a way to "lift" so called *naive* transforms as needed. What that means that a function that assumes a plain `T` will be automatically wrapped into a transform that can accept `Promised<T>`. This way you don't have to deal with errors or loading states but can operate on the actual values directly.
+
+Transforms are used in both `map` and `mapAsync`, the former being very much like the simple version in the introduction and the latter just being an asynchronous version to prevent winding up with `Observable<Promise<R>>` but get `Observable<Promised<R>>` instead.
+
+Suppose we have a translation service:
+
+```haxe
+function translate(word:String, fromLanguage:String, toLanguage:String):Promise<String>; 
+```
+
+And we have an `Observable<String>` that represents user input.
+
+```haxe
+var input:Observable<String> = ...
+input
+  .mapAsync(function (word:String) return translate(word, "English", "Spanish"))
+  .mapAsync(function (word:String) return translate(word, "Spanish", "German"))
+  .mapAsync(function (word:String) return translate(word, "German", "Russian"))
+  .mapAsync(function (word:String) return translate(word, "Russian", "English"))
+  .deliver("Loading ...").bind(function (v:String) trace(v));
+```
+
+As you can see, we always deal only with `String` despite the fact that `$type(input.mapAsync(function (word:String) return translate(word, "English", "Spanish")))` is actually `Observable<Promised<String>>`.
+
+#### Creation
+
+Aside from constructing a `State`, there are three other methods of creating observables:
+
+1. From a function that creates measurements with `Observable.create`. Under the hood this is wrapped into an object that provides some caching and other niceties.
+2. From a constant with `Observable.const` Any constant can act as an observable. It will obviously return the same measurement again and again.
+3. In an automagic way, simply through calling `Observable.auto` with a `Computation<T>` that determines the new value.
+
+##### Automagic Observables
+
+Automagic observables work by executing the function to calculate the new value while tracking which other observables are accessed in the process. If any of those becomes in valid, the resulting observable becomes invalid too.
+
+Here's how we might write the `nextHealthPotion` function above:
+
+```haxe
+var nextHealthPotion = Observable.auto(function () {
+  if (isFull(player.health.value)) return None;
+  for (item in player.inventory.value)
+    switch Std.instance(item, HealthPotion) {
+      case null:
+      case v: return Some(v);
+    }
+  return None;
+}); 
+```
+
+That might not seem like a big advantage, but suppose the result should depend on some other observables:
+
+```haxe
+var nextHealthPotion = Observable.auto(function () {
+  if (isFull(player.health.value)) return None;
+  if (player.isStunned.value) return None;
+  for (item in player.inventory.value)
+    switch Std.instance(item, HealthPotion) {
+      case null:
+      case v: return Some(v);
+    }
+  return None;
+}); 
+```
+
+We could get the same result by calling `combine` which is quite a bit more work than adding a line of code to your calculation.
+
+###### Caveats
+
+Everything comes with limitations and costs attached. Things to be aware of when using `Observable.auto`:
+
+- The resulting observable only tracks changes in other observables it accesses. So for example `Observable.auto(function () { return Date.now() })` will never update.
+- While they make your code much more concise, it becomes far less implicit how exactly observables are wired together. If you want to be explicit, you can always fall back to `map`/`mapAsync` and `combine`/`combineAsync`.
