@@ -1,0 +1,4 @@
+# @install: echo local
+-D tink_state=0.0.0
+-cp src
+-lib tink_core

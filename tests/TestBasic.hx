@@ -25,7 +25,6 @@ class TestBasic extends TestCase {
         case null:
         case v: 
           v();
-          Observable.updateAll();
       }
       
     var combined = sa.observe().combineAsync(sb, function (a, b):Promise<String> {
@@ -35,13 +34,13 @@ class TestBasic extends TestCase {
     });
     
     var log = [];
-    combined.bind(function (x) switch x {
+    combined.bind({ direct: true }, function (x) switch x {
       case Done(v): log.push(v);
       default:
     });
     
-    function expect(a:Array<String>) {
-      assertEquals(a.join(' --- '), log.join(' --- '));
+    function expect(a:Array<String>, ?pos) {
+      assertEquals(a.join(' --- '), log.join(' --- '), pos);
       log = [];
     }
     

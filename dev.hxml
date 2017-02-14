@@ -1,0 +1,7 @@
+-lib tink_core
+-lib travix
+-lib hxnodejs
+-cp src
+-cp tests
+-js bin/tests.js
+-main RunTests
