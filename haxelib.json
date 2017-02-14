@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Implement automatic observables.",
-	"version": "0.3.0",
+	"releasenote": "Simplified implementation, improved async support and other improvements.",
+	"version": "0.4.0",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
