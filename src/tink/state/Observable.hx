@@ -6,7 +6,7 @@ using tink.CoreApi;
 
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   
-  static var stack = new List();
+  static var stack = new List<ObservableObject<Dynamic>>();
   
   public var value(get, never):T;
   
