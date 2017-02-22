@@ -292,11 +292,11 @@ interface ObservableObject<T> {
   function poll():Measurement<T>;
 }
 
-private class ConstObservable<T> implements ObservableObject<T> {
+class ConstObservable<T> implements ObservableObject<T> {
   
   static public var NEVER = new Future<Noise>(function (_) return null);
   
-  var m:Measurement<T>;
+  public var m(default, null):Measurement<T>;
   
   public function poll()
     return this.m;
