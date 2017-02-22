@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Guard against polling loops, immediate promises and similar oddities.",
-	"version": "0.4.1",
+	"releasenote": "Expose constant observables for reasons I'm not proud of.",
+	"version": "0.4.2",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
