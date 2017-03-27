@@ -15,7 +15,7 @@ class TestArrays extends TestBase {
       log = [];
 
     function getLog()
-      return log.join(',').replace('undefined', '-');
+      return log.join(',').replace('undefined', '-').replace('null', '-');
 
     function report(name:String) return function (v:Int) log.push('$name:$v');
 
@@ -44,7 +44,7 @@ class TestArrays extends TestBase {
       a.push(i);
 
     assert(getLog() == 'l:101,l:102,l:103,l:104,l:105,l:106,l:107,l:108,l:109,l:110');
-    
+
     done();
   }
 }

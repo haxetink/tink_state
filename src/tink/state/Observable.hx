@@ -129,7 +129,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       }
       
   static var scheduled:Array<Void->Void> = 
-    #if (js || tink_runloop) 
+    #if (js || tink_runloop || (haxe_ver >= 3.3)) 
       [];
     #else
       null;
@@ -152,6 +152,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
             js.Browser.window.requestAnimationFrame(function (_) updateAll());
           else
             Callback.defer(f);
+        #elseif (haxe_ver >= 3.3)
+          Callback.defer(f);
         #else
           throw 'this should be unreachable';
         #end

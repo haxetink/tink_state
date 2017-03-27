@@ -1,7 +1,7 @@
 {
     "version": "0.1.0",
     "command": "haxe",
-    "args": ["dev.hxml", "--next", "-cmd", "haxelib run travix node"],
+    "args": ["dev.hxml", "--next", "-cmd", "haxelib run travix neko"],
     "problemMatcher": {
         "owner": "haxe",
         "pattern": {

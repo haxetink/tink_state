@@ -31,7 +31,7 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
   }
 
   public function observe(index:Int) 
-    return observable(function () return items[index], function (_, c) return switch c {
+    return observable(function () return items[index], function (_, c) return @:privateAccess switch c {
       case Remove(i, { length: l }): i <= index && items.length + l > index;
       case Insert(i, { length: l }): i <= index && items.length > index;
       case Update(i, items): i <= index && index <= i + items.length;
