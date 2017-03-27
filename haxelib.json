@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Expose constant observables for reasons I'm not proud of.",
-	"version": "0.4.2",
+	"releasenote": "Added observable maps and arrays.",
+	"version": "0.5.0",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
