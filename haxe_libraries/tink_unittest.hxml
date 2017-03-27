@@ -1,0 +1,5 @@
+# @install: lix --silent download haxelib:tink_unittest#0.2.0 into tink_unittest/0.2.0/haxelib
+-D tink_unittest=0.2.0
+-cp ${HAXESHIM_LIBCACHE}/tink_unittest/0.2.0/haxelib/src
+
+-lib tink_testrunner

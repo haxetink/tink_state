@@ -1,14 +1,10 @@
 package;
 
-import haxe.unit.TestCase;
-import tink.state.Promised;
-import tink.state.Observable;
-import tink.state.State;
+import tink.state.*;
 
-using tink.CoreApi;
-
-class TestAuto extends TestCase {
-  function test() {
+class TestAuto extends TestBase {
+  @:describe("")
+  public function test() {
     var s1 = new State(4),
         s2 = new State(5);
     
@@ -18,17 +14,18 @@ class TestAuto extends TestCase {
       s1.value + s2.value; 
     });
     
-    assertEquals(9, o.value);
+    assert(9 == o.value);
     s1.set(10);
-    assertEquals(15, o.value);
+    assert(15 == o.value);
     s1.set(11);
-    assertEquals(16, o.value);
+    assert(16 == o.value);
     s1.set(1);
     s2.set(2);
     s2.set(3);
-    assertEquals(4, o.value);
+    assert(4 == o.value);
     var old = calls;
-    assertEquals(4, o.value);
-    assertEquals(old, calls);
+    assert(4 == o.value);
+    assert(old == calls);
+    done();
   }
 }

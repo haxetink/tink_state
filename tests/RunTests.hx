@@ -4,18 +4,14 @@ import haxe.unit.TestRunner;
 
 class RunTests {
 
-  
-
-  static function main() {
-    var runner = new TestRunner();
-  
-    runner.add(new TestBasic());
-    runner.add(new TestAuto());
-  
-    travix.Logger.exit(
-      if (runner.run()) 0
-      else 500
-    );
-  }
+  static function main() 
+    tink.testrunner.Runner.run(tink.unit.TestBatch.make([
+      new TestMaps(),
+      new TestAuto(),
+      new TestArrays(),
+    ]))
+      .handle(function(result) {
+        travix.Logger.exit(result.summary().failures.length);
+      });
   
 }
