@@ -27,8 +27,8 @@ class ObservableMap<K, V> implements Map.IMap<K, V> extends ObservableBase<Updat
       default: true;
     });
     
-    this.observableValues = observable(map.iterator, function (_, _) return true);
-    this.asString = observable(map.toString, function (_, _) return true);
+    this.observableValues = observable(map.iterator);
+    this.asString = observable(map.toString);
   }
   
   public function observe(key:K):Observable<Null<V>>

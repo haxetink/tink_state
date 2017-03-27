@@ -10,12 +10,15 @@ class ObservableBase<Change> {
     this.changes = _changes;
   }
 
-  function observable<Ret>(ret:Void->Ret, when:Ret->Change->Bool):Observable<Ret> 
+  function observable<Ret>(ret:Void->Ret, ?when:Ret->Change->Bool):Observable<Ret> 
     return Observable.create(function () {
-      var ret = ret();
+      var ret = ret();      
       return new Measurement(
         ret,
-        changes.filter(when.bind(ret), false).next().map(function (_) return Noise)
+        (
+          if (when == null) changes 
+          else changes.filter(when.bind(ret), false)
+        ).next().map(function (_) return Noise)
       );
     });    
 }

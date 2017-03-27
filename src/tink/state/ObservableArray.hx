@@ -9,18 +9,22 @@ private enum Change<T> {
 }
 
 class ObservableArray<T> extends ObservableBase<Change<T>> {
-  
-  var items:Array<T> = [];
-  var iter:Observable<Iterator<T>>;
-  var len:Observable<Int>;
+
+  var items:Array<T>;
+
+  public var observableValues(default, null):Observable<Iterator<T>>;
+  public var observableLength(default, null):Observable<Int>;
 
   public var length(get, never):Int;
-    inline function get_length() return len.value;
+    inline function get_length() return observableLength.value;
 
-  public function new() {
+  public function new(?items) {
+    this.items = if (items == null) [] else items;
+
     super();
-    this.iter = observable(items.iterator, function (_, _) return true);
-    this.len = observable(function () return items.length, function (_, c) return switch c {
+    
+    this.observableValues = observable(this.items.iterator);
+    this.observableLength = observable(function () return this.items.length, function (_, c) return switch c {
       case Update(_, _): false;
       default: true;
     });
@@ -28,7 +32,8 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
 
   public function observe(index:Int) 
     return observable(function () return items[index], function (_, c) return switch c {
-      case Remove(i, _) | Insert(i, _): i <= index;
+      case Remove(i, { length: l }): i <= index && items.length + l > index;
+      case Insert(i, { length: l }): i <= index && items.length > index;
       case Update(i, items): i <= index && index <= i + items.length;
     });
 
@@ -51,21 +56,23 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
       }
 
   public function splice(index:Int, length:Int) {
-    var ret = items.splice(index, len);
-    _changes.trigger(Remove(index, ret));
+    var ret = items.splice(index, length);
+    if (ret.length > 0)
+      _changes.trigger(Remove(index, ret));
     return ret;
   }
 
   public inline function insert(pos:Int, value:T) 
     insertMany(pos, [value]);
 
-  public function insertMany(pos:Int, values:Array<T>) {
-    this.items = this.items.slice(0, pos).concat(values).concat(this.items.slice(pos + values.length));
-    _changes.trigger(Insert(pos, values));
-  }
+  public function insertMany(pos:Int, values:Array<T>) 
+    if (values.length > 0) {
+      this.items = this.items.slice(0, pos).concat(values).concat(this.items.slice(pos));
+      _changes.trigger(Insert(pos, values));
+    }
 
   public inline function push(value:T) {
-    this.insert(this.length, value);
+    this.insert(items.length, value);
     return items.length;
   }
 
@@ -76,5 +83,9 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
     insert(0, value);
 
   public inline function shift() 
-    return splice(0, 1)[0];  
+    return splice(0, 1)[0]; 
+
+  public inline function join(sep:String) {
+    return observable(items.join.bind(sep));
+  }
 }
