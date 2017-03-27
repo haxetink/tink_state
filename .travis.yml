@@ -27,5 +27,11 @@ script:
   #- haxelib run travix flash
   #- haxelib run travix java
   #- haxelib run travix cpp
-  - haxelib run travix cs
-  - haxelib run travix php
+  #- haxelib run travix cs
+  #- haxelib run travix php
+
+env:
+  - secure: "U63GwhYD0gn3O8ajIQ3KtRpEKFW4U7QePSJB6wrZtioeylr0etzpp7bSS9ura6+7HE898TFr3/8T0BcHP5dPGYrpPbQlkSaSfTKvw9SV344iN6nQlHKc8r+3JrLlitzafIrv7Zd7DhglwAlExX8d9RSw7WmrzgRE97QjzEFPdV9aubOMLrLp14V9DNpF+FP0eH+V4n8x11ShG/ujlGUgWQcShgpCDUXO3L9Fd5Ni1tbdwEk/eNeldzPcs4DYeWATqXuAJvTfSDp9G+64X4h69N9KbnugcoClonwV7w7eIGIbqqYchNXeSVXToCO54w4koD75yrM9CADJ0VNzBM8irVjpfZmlFrXRtqP7tpe+VuxlVeiOzmrf3bErD0utCtEtDG0Ahh5HKTDCHR/CV3TkYBP9RO0YVlnz+pK0gIx/OAPiDyzjAf45iQu6Nr7VbdfYPbZ04wIzL1TVnzeIbHyJs8rKeSsGnw75HHsIXSrF9N1+iWvgxK8cmhJ95AbGAj+HTE1i6JhdTpG6Gs0mAH83G2AQTKBYwJLXkhnScgs5nBTI2gFj0M+yxSWrH705sSDQ5P0mAcBGGUBuFRXnmsMb1FEbYNz3oKlBUcYcZ/bXZplCpOzVOuXyxIqO2D788ayaRPk4e+lx1YVZVIifqZ9ZEvTYYPBah9gih6NJlZln4nA="
+  
+after_success:
+- haxelib run travix release
