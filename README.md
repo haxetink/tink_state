@@ -239,7 +239,7 @@ abstract Computation<T> {
 }
 ```
 
-So we see that a plain function `Void->T` can act as a `Computation<T>`. However `Void->Promise<T>` will act as `Computation<Promised<T>>`, meaning that a function that returns a promise acts as a computation that produces a promised value. This means if we call `Observable.auto` with a function that produces a `Promise<T>`, we will get an `Observable<Promised<T>>` rather than the undesirable `Observable<Promise<T>>`.
+So we see that a plain function `Void->T` can act as a `Computation<T>`. However `Void->Promise<T>` will act as `Computation<Promised<T>>`, meaning that any *function* that returns a *promise* can act as a *computation* that produces a *promised value*. This means if we call `Observable.auto` with a function that produces a `Promise<T>`, we will get an `Observable<Promised<T>>` rather than the undesirable `Observable<Promise<T>>`.
 
 ##### Transform
 
@@ -255,9 +255,9 @@ abstract Transform<T, R> {
 }
 ```
 
-So a transform really just maps values of type `T` to values of type `R` and a plain `T->R` function will do. There is however a way to "lift" so called *naive* transforms as needed. What that means that a function that assumes a plain `T` will be automatically wrapped into a transform that can accept `Promised<T>`. This way you don't have to deal with errors or loading states but can operate on the actual values directly.
+So a transform really just maps values of type `T` to values of type `R` and a plain `T->R` function will do. There is however a way to "lift" so called *naive* transforms as needed. What that means that a function that assumes a plain `T` will be automatically wrapped into a transform that can accept `Promised<T>`. This way you don't have to deal with errors or loading states but can operate on the actual values directly, while errors nicely propagate out of band.
 
-Transforms are used in both `map` and `mapAsync`, the former being very much like the simple version in the introduction and the latter just being an asynchronous version to prevent winding up with `Observable<Promise<R>>` but get `Observable<Promised<R>>` instead.
+Transforms are used in both `map` and `mapAsync`, the former being very much like the simple version in the introduction and the latter just being an asynchronous version to once again obtain `Observable<Promised<R>>` rather than `Observable<Promise<R>>`.
 
 Suppose we have a translation service:
 
@@ -284,7 +284,7 @@ As you can see, we always deal only with `String` despite the fact that `$type(i
 Aside from constructing a `State`, there are three other methods of creating observables:
 
 1. From a function that creates measurements with `Observable.create`. Under the hood this is wrapped into an object that provides some caching and other niceties.
-2. From a constant with `Observable.const` Any constant can act as an observable. It will obviously return the same measurement again and again.
+2. From a constant with `Observable.const`. Any constant can act as an observable. It will obviously return the same measurement again and again.
 3. In an automagic way, simply through calling `Observable.auto` with a `Computation<T>` that determines the new value.
 
 ##### Automagic Observables
