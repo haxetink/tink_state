@@ -23,6 +23,22 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
           
       return new Measurement(f(p.value, q.value), p.becameInvalid.first(q.becameInvalid));
     });
+
+  public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, check:T->Bool):Future<T> {
+    var ret = Future.trigger(),
+        waiting = options != null && options.butNotNow;
+
+    var link = bind({ direct: options != null && options.hires }, function (value) 
+      if (waiting) 
+        waiting = check(value);
+      else if (check(value)) 
+        ret.trigger(value)
+    );
+
+    ret.handle(link.dissolve);
+
+    return ret;
+  }
     
   public function join(that:Observable<T>) {
     var lastA = null;

@@ -170,6 +170,7 @@ abstract Observable<T> {
   function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>;
   function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>;
 
+  function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, check:T->Bool):Future<T>;
 }
 ```
 
@@ -278,6 +279,31 @@ input
 ```
 
 As you can see, we always deal only with `String` despite the fact that `$type(input.mapAsync(function (word:String) return translate(word, "English", "Spanish")))` is actually `Observable<Promised<String>>`.
+
+#### Awaiting the next time a condition is met
+
+With `nextTime` you create a `Future` that triggers when the provided condition is met for the very next time. Note that if the current value meets the condition, then the future is triggered with that value, but you can set `options.butNotNow` to `true` to delay triggering until the condition turns false and then true again. 
+
+Example:
+
+```haxe
+player.health
+  .nextTime({ butNotNow: true }, function (h) return h.cur < 0)
+  .handle(function () trace("You have just died!"));
+```
+
+The `options.hires` parameter is for the cases where the observable can switch very rapidly between these states, in which case direct binding is used internally.
+
+Example:
+
+```haxe
+var s = new State(0);
+var timer = new haxe.Timer(1);
+timer.run = function () s.set((s.value + 1) % 1000);
+s.observe().nextTime(function (value) value == 999).handle(function () trace('999!'));
+```
+
+Assuming the timer would really fire a 1000 times per second, it will be in the right state for about just one millisecond, so batched binding may never hit that interval. On states, hires binding is cheap, on combound observables this may not be the case however. Keep that in mind when deciding whether or not to use it.
 
 #### Creation
 

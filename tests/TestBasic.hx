@@ -1,15 +1,14 @@
 package;
 
-import haxe.unit.TestCase;
 import tink.state.Promised;
 import tink.state.Observable;
 import tink.state.State;
 
 using tink.CoreApi;
 
-class TestBasic extends TestCase {
-
-  function test() {
+class TestBasic extends TestBase {
+  @:describe("")
+  public function test() {
     var ta = Signal.trigger(),
         tb = Signal.trigger(),
         sa = new State(5),
@@ -39,8 +38,8 @@ class TestBasic extends TestCase {
       default:
     });
     
-    function expect(a:Array<String>, ?pos) {
-      assertEquals(a.join(' --- '), log.join(' --- '), pos);
+    function expect(a:Array<String>) {
+      assert(a.join(' --- ') == log.join(' --- '));
       log = [];
     }
     
@@ -57,6 +56,44 @@ class TestBasic extends TestCase {
     next();
     
     expect(['4 yo']);
+    done();
   }
   
+  @:describe("") public function testNextTime() {
+    var s = new State(5);
+    var o = s.observe();
+
+    var fired = 0;
+    function await(f:Future<Int>)
+      f.handle(function () fired++);
+
+    function set(value:Int) {
+      s.set(value);
+      Observable.updateAll();
+    }
+
+    await(o.nextTime({ hires: true, butNotNow: true }, function (x) return x == 5));
+    await(o.nextTime({ hires: true, }, function (x) return x == 5));
+    await(o.nextTime({ hires: true, butNotNow: true }, function (x) return x == 4));
+    await(o.nextTime({ hires: true, }, function (x) return x == 4));
+    
+    Observable.updateAll();
+
+    assert(fired == 1);
+    
+    set(4);
+    
+    assert(fired == 3);
+    
+    set(5);
+
+    assert(fired == 4);
+
+    set(4);
+    set(5);
+
+    assert(fired == 4);
+
+    done();
+  }
 }
