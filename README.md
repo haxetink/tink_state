@@ -1,5 +1,8 @@
 # Tinkerbell Reactive State Handling
 
+[![Build Status](https://travis-ci.org/haxetink/tink_state.svg?branch=master)](https://travis-ci.org/haxetink/tink_state)
+[![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg?maxAge=2592000)](https://gitter.im/haxetink/public)
+
 At the core of `tink_state` stands the notion of an "observable". There are various definitions of what that is and [ReactiveX](http://reactivex.io/) practically monopolized the meaning within the realm of programming. The result - while being a fine display of technical prowess - exhibits a complexity that often scares away developers who could hugely benefit from reactive programming. Which is quite ironic, because reactiveness promisses simplicity.
 
 This library is an attempt to deliver on that promise. If you are familiar with ReactiveX, empty your cup: in `tink_state` an **observable is not a stream** (if you want streams, check out [`tink_streams`](https://github.com/haxetink/tink_streams/tree/pure)). Rather than providing a swiss army knife of functional programming, observables are conceived based on the fundamental meaning of the word:
