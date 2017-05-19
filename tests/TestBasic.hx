@@ -6,8 +6,11 @@ import tink.state.State;
 
 using tink.CoreApi;
 
-class TestBasic extends TestBase {
-  @:describe("")
+@:asserts
+class TestBasic {
+  
+  public function new() {}
+  
   public function test() {
     var ta = Signal.trigger(),
         tb = Signal.trigger(),
@@ -38,8 +41,8 @@ class TestBasic extends TestBase {
       default:
     });
     
-    function expect(a:Array<String>) {
-      assert(a.join(' --- ') == log.join(' --- '));
+    function expect(a:Array<String>, ?pos:haxe.PosInfos) {
+      asserts.assert(a.join(' --- ') == log.join(' --- '), pos);
       log = [];
     }
     
@@ -56,10 +59,10 @@ class TestBasic extends TestBase {
     next();
     
     expect(['4 yo']);
-    done();
+    return asserts.done();
   }
   
-  @:describe("") public function testNextTime() {
+  public function testNextTime() {
     var s = new State(5);
     var o = s.observe();
 
@@ -79,21 +82,21 @@ class TestBasic extends TestBase {
     
     Observable.updateAll();
 
-    assert(fired == 1);
+    asserts.assert(fired == 1);
     
     set(4);
     
-    assert(fired == 3);
+    asserts.assert(fired == 3);
     
     set(5);
 
-    assert(fired == 4);
+    asserts.assert(fired == 4);
 
     set(4);
     set(5);
 
-    assert(fired == 4);
+    asserts.assert(fired == 4);
 
-    done();
+    return asserts.done();
   }
 }

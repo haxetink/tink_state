@@ -1,5 +1,5 @@
-# @install: lix --silent download https://back2dos:bambiliebtgloeckchen@github.com/haxetink/tink_streams/archive/6467e3c719cbaf9986ae6e777c1f88332e4d943e.tar.gz into tink_streams/0.2.0/github/6467e3c719cbaf9986ae6e777c1f88332e4d943e
--D tink_streams=0.2.0
--cp ${HAXESHIM_LIBCACHE}/tink_streams/0.2.0/github/6467e3c719cbaf9986ae6e777c1f88332e4d943e/src
+# @install: lix --silent download haxelib:tink_streams#0.2.1 into tink_streams/0.2.1/haxelib
+-D tink_streams=0.2.1
+-cp ${HAXESHIM_LIBCACHE}/tink_streams/0.2.1/haxelib/src
 
 -lib tink_core

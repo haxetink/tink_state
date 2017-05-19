@@ -4,8 +4,11 @@ import tink.state.*;
 
 using tink.CoreApi;
 
-class TestMaps extends TestBase {
-  @:describe("basic test")
+@:asserts
+class TestMaps {
+  
+  public function new() {}
+  
   public function testEntries() {
     var o = new ObservableMap([5 => 0, 6 => 0]);
 
@@ -23,13 +26,13 @@ class TestMaps extends TestBase {
     o.set(5, 3);
     o.set(4, 3);
 
-    assert('5:0,6:0,5:1,5:2,5:3' == a.join(','));
+    asserts.assert('5:0,6:0,5:1,5:2,5:3' == a.join(','));
 
     o.set(6, 1);
     o.set(6, 1);
     o.set(6, 2);
 
-    assert('5:0,6:0,5:1,5:2,5:3,6:1,6:2' == a.join(','));
+    asserts.assert('5:0,6:0,5:1,5:2,5:3,6:1,6:2' == a.join(','));
 
     a = [];
     unlink.dissolve();
@@ -42,18 +45,18 @@ class TestMaps extends TestBase {
     o.set(5, 3);
     o.set(4, 3);
 
-    assert('' == a.join(','));
+    asserts.assert('' == a.join(','));
 
     o.set(6, 1);
     o.set(6, 1);
     o.set(6, 2);
 
-    assert('' == a.join(','));
+    asserts.assert('' == a.join(','));
 
     Observable.updateAll();    
     
-    assert('5:3,6:2' == a.join(','));
+    asserts.assert('5:3,6:2' == a.join(','));
 
-    done();
+    return asserts.done();
   }
 }
