@@ -23,7 +23,7 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
 
     super();
     
-    this.observableValues = observable(this.items.iterator);
+    this.observableValues = observable(function () return this.items.iterator());
     this.observableLength = observable(function () return this.items.length, function (_, c) return switch c {
       case Update(_, _): false;
       default: true;

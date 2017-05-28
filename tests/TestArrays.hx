@@ -23,6 +23,7 @@ class TestArrays {
     function report(name:String) return function (v:Int) log.push('$name:$v');
 
     a.observableLength.bind({ direct: true }, report('l'));
+    
     a.observe(99).bind({ direct: true }, report('99'));
 
     asserts.assert(getLog() == 'l:100,99:99');
@@ -47,6 +48,20 @@ class TestArrays {
       a.push(i);
 
     asserts.assert(getLog() == 'l:101,l:102,l:103,l:104,l:105,l:106,l:107,l:108,l:109,l:110');
+    
+    return asserts.done();
+  }
+
+  public function values() {
+    var counter = 0,
+        a = new ObservableArray();
+
+    for (i in 0...10)
+      a.push(i);
+    for (i in a.observableValues.value)
+      counter++;
+
+    asserts.assert(counter == a.length);
 
     return asserts.done();
   }
