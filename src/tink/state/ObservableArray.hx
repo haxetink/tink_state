@@ -30,6 +30,22 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
     });
   }
 
+  public function values() {
+    return this.observableValues.value;
+  }
+
+  public function keys() {
+    return 0...this.length;
+  }
+
+  public function iterator() {
+    var i = 0;
+    return {
+      hasNext: function () return i < items.length,
+      next: function () return observe(i),
+    }
+  }
+
   public function observe(index:Int) 
     return observable(function () return items[index], function (_, c) return @:privateAccess switch c {
       case Remove(i, { length: l }): i <= index && items.length + l > index;

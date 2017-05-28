@@ -52,17 +52,66 @@ class TestArrays {
     return asserts.done();
   }
 
-  public function values() {
+  public function iteration() {
     var counter = 0,
         a = new ObservableArray();
 
     for (i in 0...10)
       a.push(i);
+
     for (i in a.observableValues.value)
       counter++;
 
     asserts.assert(counter == a.length);
 
+    var keysChanges = 0,
+        valuesChanges = 0,
+        iteratorChanges = 0;
+
+    function sum(i:Iterator<Int>) {
+      var ret = 0;
+      for (i in i)
+        ret += i;
+      return ret;
+    }
+
+    Observable.auto(function () return sum(a.values()))
+      .bind({ direct: true }, function () valuesChanges++);
+
+    Observable.auto(function () return sum(a.keys()))
+      .bind({ direct: true }, function () keysChanges++);
+
+    Observable.auto(function () {
+      var first = 0;
+      for (v in a) {
+        first += v.value;
+        break;
+      }
+      return first;
+    }).bind({ direct: true }, function () iteratorChanges++);
+
+    asserts.assert(iteratorChanges * valuesChanges * keysChanges == 1);
+
+    a.set(2, 4);
+
+    asserts.assert(iteratorChanges == 1);
+    asserts.assert(keysChanges == 1);
+    asserts.assert(valuesChanges == 2);
+
+    a.set(0, 1);
+
+    asserts.assert(iteratorChanges == 2);
+    asserts.assert(keysChanges == 1);
+    asserts.assert(valuesChanges == 3);
+
+    a.pop();
+
+    asserts.assert(iteratorChanges == 2);
+    asserts.assert(keysChanges == 2);
+    asserts.assert(valuesChanges == 4);
+
     return asserts.done();
   }
+
+
 }
