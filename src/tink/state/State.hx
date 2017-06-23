@@ -13,7 +13,7 @@ abstract State<T>(StateObject<T>) to Observable<T> {
   public inline function new(value) 
     this = new StateObject(value);
 	
-  public function observe():Observable<T>
+  public inline function observe():Observable<T>
     return this;
     
   @:impl static public function toggle(s:StateObject<Bool>) {
