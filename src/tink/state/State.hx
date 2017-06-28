@@ -33,6 +33,7 @@ private class StateObject<T> implements ObservableObject<T> {
   
   var next:Measurement<T>;
   var trigger:FutureTrigger<Noise>;
+  var isEqual:T->T->Bool;
   
   public function poll()
     return next;
@@ -41,18 +42,22 @@ private class StateObject<T> implements ObservableObject<T> {
     inline function get_value()
       return value;
       
-  public function new(value) {
+  public function new(value, ?isEqual) {
     this.value = value;
+    this.isEqual = switch isEqual {
+      case null: function (a, b) return a == b;
+      case v: v;
+    }
     arm();
   }
   
   function arm() {
     this.trigger = Future.trigger();
-    this.next = new Measurement(value, this.trigger.asFuture());    
+    this.next = new Measurement(value, this.trigger);    
   }
   
   public function set(value) 
-    if (value != this.value) {
+    if (!isEqual(value, this.value)) {
       this.value = value;
       var last = trigger;
       arm();

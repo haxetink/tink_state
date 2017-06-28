@@ -1,8 +1,7 @@
 package;
 
 import tink.state.Promised;
-import tink.state.Observable;
-import tink.state.State;
+import tink.state.*;
 
 using tink.CoreApi;
 
@@ -10,7 +9,7 @@ using tink.CoreApi;
 class TestBasic {
   
   public function new() {}
-  
+
   public function test() {
     var ta = Signal.trigger(),
         tb = Signal.trigger(),
