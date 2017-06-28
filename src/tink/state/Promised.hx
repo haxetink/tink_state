@@ -15,4 +15,11 @@ class PromisedTools {
       case Failed(e): e;
       case Done(a): f(a);
     }
+    
+  public static function map<A, B>(a:Promised<A>, f:A->B):Promised<B>
+    return switch a {
+      case Loading: Loading;
+      case Failed(e): Failed(e);
+      case Done(a): Done(f(a));
+    }
 }
