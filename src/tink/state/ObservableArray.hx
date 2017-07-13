@@ -53,6 +53,9 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
       case Update(i, items): i <= index && index <= i + items.length;
     });
 
+  public function toArray():Array<T>
+    return observable(function () return this.items.copy());
+
   public function get(index:Int) 
     return observe(index).value;
 
