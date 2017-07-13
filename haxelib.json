@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Add Observable.nextTime",
-	"version": "0.5.1",
+	"releasenote": "Add comparator to State, toArray to ObservableArray and a few other niceties.",
+	"version": "0.5.2",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
