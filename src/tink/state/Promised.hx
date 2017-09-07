@@ -22,4 +22,11 @@ class PromisedTools {
       case Failed(e): Failed(e);
       case Done(a): Done(f(a));
     }
+    
+  public static function flatMap<A, B>(a:Promised<A>, f:A->Promised<B>):Promised<B>
+    return switch a {
+      case Loading: Loading;
+      case Failed(e): Failed(e);
+      case Done(a): f(a);
+    }
 }
