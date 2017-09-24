@@ -167,9 +167,9 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
           if (hasRAF)
             js.Browser.window.requestAnimationFrame(function (_) updateAll());
           else
-            Callback.defer(f);
+            Callback.defer(updateAll);
         #elseif (haxe_ver >= 3.3)
-          Callback.defer(f);
+          Callback.defer(updateAll);
         #else
           throw 'this should be unreachable';
         #end
