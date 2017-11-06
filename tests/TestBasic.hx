@@ -98,4 +98,11 @@ class TestBasic {
 
     return asserts.done();
   }
+
+  public function eqConst() {
+    var value = 'foobar';
+    var o:Observable<String> = value;
+    asserts.assert(value == o);
+    return asserts.done();
+  }
 }

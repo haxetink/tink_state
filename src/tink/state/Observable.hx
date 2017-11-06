@@ -233,7 +233,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   @:noUsing @:from static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);      
   
-  @:commutative @:op(a == b) static inline function equalsConst(o:Observable<T>, value:T):Bool
+  @:commutative @:op(a == b) static inline function equalsConst<T>(o:Observable<T>, value:T):Bool
     return o.value == value;
 }
 
