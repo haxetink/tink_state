@@ -2,12 +2,13 @@ import tink.state.*;
 @:asserts
 class TestScheduler {
   public function new() {}
-  #if js
+  #if (!interp)
   public function testCycle() {
     var s1 = new State(0),
         s2 = new State(0);
-    s1.observe().bind(function (v) s2.set(v + 1));
-    s2.observe().bind(function (v) s1.set(v + 1));
+
+    var l1 = s1.observe().bind(function (v) s2.set(v + 1)),
+        l2 = s2.observe().bind(function (v) s1.set(v + 1));
     asserts.assert(s1.value == 0);
     asserts.assert(s2.value == 0);
     Observable.updatePending(0);
@@ -21,10 +22,16 @@ class TestScheduler {
     asserts.assert(s2.value == 3);
     Observable.updatePending();
     asserts.assert(Math.abs(s1.value - s2.value) == 1);
+    var before = s1.value;
+    l1.dissolve();
+    l2.dissolve();
+    Observable.updatePending();
+    asserts.assert(Math.abs(s1.value - s2.value) == 1);
+    asserts.assert(before == s1.value);
     return asserts.done();
   }
 
-  @:include public function testPhases() {
+  public function testPhases() {
     var s1 = new State(0),
         s2 = new State('foo'),
         s3 = new State('bar');
