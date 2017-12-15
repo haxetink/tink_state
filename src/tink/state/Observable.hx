@@ -159,34 +159,57 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     switch scheduled {
       case null:
         f();
-      case []:
-        scheduled.push(f);
-        #if tink_runloop
-          tink.RunLoop.current.atNextStep(updateAll);
-        #elseif js
-          if (hasRAF)
-            js.Browser.window.requestAnimationFrame(function (_) updateAll());
-          else
-            Callback.defer(updateAll);
-        #elseif (haxe_ver >= 3.3)
-          Callback.defer(updateAll);
-        #else
-          throw 'this should be unreachable';
-        #end
       case v:
         v.push(f);
+        scheduleUpdate();
     }
+  static var isScheduled = false;
+  static function scheduleUpdate() if (!isScheduled) {
+    isScheduled = true;
+    #if tink_runloop
+      tink.RunLoop.current.atNextStep(scheduledRun);
+    #elseif js
+      if (hasRAF)
+        js.Browser.window.requestAnimationFrame(function (_) scheduledRun());
+      else
+        Callback.defer(scheduledRun);
+    #elseif (haxe_ver >= 3.3)
+      Callback.defer(scheduledRun);
+    #else
+      throw 'this should be unreachable';
+    #end  
+  }
+  static function scheduledRun() {
+    isScheduled = false;
+    updatePending();
+  }
+
+  static public function updatePending(maxSeconds:Float = .01) {
+    inline function measure() return
+      #if java
+        Sys.cpuTime();
+      #else
+        haxe.Timer.stamp();
+      #end
+
+    var end = measure() + maxSeconds;
+    do {
+      var old = scheduled;
+      scheduled = [null];
+      for (o in old) o();
+      scheduled.shift();    
+    } 
+    while (scheduled.length > 0 && measure() < end);
+    return 
+      if (scheduled.length > 0) {
+        scheduleUpdate();
+        true;
+      }
+      else false;
+  }
   
-  static public function updateAll() {
-    if (scheduled == null)
-      return;
-    var old = scheduled;
-    scheduled = null;
-    
-    for (o in old) o();
-    
-    scheduled = [];
-  } 
+  static public function updateAll() 
+    updatePending(Math.POSITIVE_INFINITY);
   
   static inline function lift<T>(o:Observable<T>) return o;
 
