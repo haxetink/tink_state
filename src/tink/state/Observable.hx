@@ -3,7 +3,9 @@ package tink.state;
 import tink.state.Promised;
 
 using tink.CoreApi;
-
+#if js
+@:native('O')
+#end
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   
   static var stack = new List<ObservableObject<Dynamic>>();
@@ -255,9 +257,15 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   
   @:noUsing @:from static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);      
-  
-  @:commutative @:op(a == b) static inline function equalsConst<T>(o:Observable<T>, value:T):Bool
-    return o.value == value;
+
+  @:op(a == b) static function equals<T>(a:Observable<T>, b:Observable<T>):Bool
+    return switch [a, b] {
+      case [null, null]: true;
+      case [v, null] | [null, v]: v.value == null;
+      default: a.value == b.value;
+    }
+  @:op(a != b) static inline function nequals<T>(a:Observable<T>, b:Observable<T>):Bool
+    return !equals(a, b);
 }
 
 abstract Computation<T>({ f: Void->T }) {
@@ -272,7 +280,7 @@ abstract Computation<T>({ f: Void->T }) {
     return function () return o.value.value;
   }
 
-  @:from static function plain<T>(f:Void->T):Computation<T>
+  @:from static inline function plain<T>(f:Void->T):Computation<T>
     return new Computation(f);
 }
 

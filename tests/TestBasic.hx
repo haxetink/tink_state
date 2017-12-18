@@ -1,6 +1,7 @@
 package;
 
 import tink.state.Promised;
+import tink.state.Observable;
 import tink.state.*;
 
 using tink.CoreApi;
@@ -102,7 +103,20 @@ class TestBasic {
   public function eqConst() {
     var value = 'foobar';
     var o:Observable<String> = value;
+    
     asserts.assert(value == o);
+    
+    o = null;
+    
+    asserts.assert((o:ObservableObject<String>) == null);
+    asserts.assert(o == null);
+    
+    var s:String = null;
+    o = s;
+
+    asserts.assert((o:ObservableObject<String>) != null);
+    asserts.assert(o == null);
+    
     return asserts.done();
   }
 }
