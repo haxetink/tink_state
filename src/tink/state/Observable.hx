@@ -116,7 +116,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
             
           function doSchedule() {
             if (scheduled) return;
-            
             scheduled = true;
             schedule(update);
           }    
@@ -249,8 +248,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     });
   }
 
-  static public function create<T>(f, ?pos:haxe.PosInfos):Observable<T> 
-    return new SimpleObservable(f, pos);
+  static public function create<T>(f):Observable<T> 
+    return new SimpleObservable(f);
   
   static public function auto<T>(f:Computation<T>):Observable<T>
     return new AutoObservable(f);
@@ -287,7 +286,6 @@ abstract Computation<T>({ f: Void->T }) {
 private class SimpleObservable<T> implements ObservableObject<T> {
   
   var _poll:Void->Measurement<T>;
-  var pos:haxe.PosInfos;
   var cache:Measurement<T>;
   
   function resetCache(_) cache = null;
@@ -309,10 +307,8 @@ private class SimpleObservable<T> implements ObservableObject<T> {
     return cache;
   }
   
-  public function new(f, ?pos:haxe.PosInfos) { 
+  public function new(f) 
     this._poll = f;  
-    this.pos = pos;
-  }
 }
 
 abstract Transform<T, R>(T->R) {
