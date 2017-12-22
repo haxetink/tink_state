@@ -10,8 +10,8 @@ abstract State<T>(StateObject<T>) to Observable<T> {
   public var value(get, never):T;
     @:to function get_value() return observe().value;
   
-  public inline function new(value) 
-    this = new StateObject(value);
+  public inline function new(value, ?isEqual) 
+    this = new StateObject(value, isEqual);
 	
   public inline function observe():Observable<T>
     return this;
