@@ -29,4 +29,16 @@ class PromisedTools {
       case Failed(e): Failed(e);
       case Done(a): f(a);
     }
+
+  static public function or<V>(p:Promised<V>, l:Lazy<V>):V
+    return switch p {
+      case Done(v): v;
+      default: l.get();
+    }
+
+  static public function orNull<V>(p:Promised<V>):Null<V>
+    return switch p {
+      case Done(v): v;
+      default: null;
+    }
 }
