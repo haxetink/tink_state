@@ -68,4 +68,7 @@ class ObservableMap<K, V> implements Map.IMap<K, V> extends ObservableBase<Updat
     
   public inline function toString():String 
     return asString.value;
+
+  public function copy()
+    return new ObservableMap(this.map);
 }
