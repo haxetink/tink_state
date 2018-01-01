@@ -3,9 +3,7 @@ package tink.state;
 import tink.state.Promised;
 
 using tink.CoreApi;
-#if js
-@:native('O')
-#end
+
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   
   static var stack = new List<ObservableObject<Dynamic>>();
@@ -260,6 +258,13 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   @:deprecated("Implicit conversion from constants to observables is deprecated and will soon be removed. See https://github.com/haxetink/tink_state/issues/9")
   @:from static function ofConst<T>(value:T):Observable<T>
     return const(value);
+
+  static public function untracked<T>(f:Void->T, ?pos) {
+    stack.push(null);
+    var ret = f.catchExceptions(null, pos);
+    stack.pop();
+    return ret.sure();
+  }
 
 }
 
