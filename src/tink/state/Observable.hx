@@ -254,17 +254,13 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public function auto<T>(f:Computation<T>):Observable<T>
     return new AutoObservable(f);
   
-  @:noUsing @:from static public function const<T>(value:T):Observable<T> 
+  @:noUsing static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);      
 
-  @:op(a == b) static function equals<T>(a:Observable<T>, b:Observable<T>):Bool
-    return switch [a, b] {
-      case [null, null]: true;
-      case [v, null] | [null, v]: v.value == null;
-      default: a.value == b.value;
-    }
-  @:op(a != b) static inline function nequals<T>(a:Observable<T>, b:Observable<T>):Bool
-    return !equals(a, b);
+  @:deprecated("Implicit conversion from constants to observables is deprecated and will soon be removed. See https://github.com/haxetink/tink_state/issues/9")
+  @:from static function ofConst<T>(value:T):Observable<T>
+    return const(value);
+
 }
 
 abstract Computation<T>({ f: Void->T }) {

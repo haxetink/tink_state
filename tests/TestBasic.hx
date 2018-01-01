@@ -102,7 +102,7 @@ class TestBasic {
 
   public function eqConst() {
     var value = 'foobar';
-    var o:Observable<String> = value;
+    var o:Var<String> = value;
     
     asserts.assert(value == o);
     
