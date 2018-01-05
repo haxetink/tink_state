@@ -24,21 +24,27 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return new Measurement(f(p.value, q.value), p.becameInvalid.first(q.becameInvalid));
     });
 
-  public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, check:T->Bool):Future<T> {
+  public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, check:T->Bool):Future<T> 
+    return getNext(options, function (v) return if (check(v)) Some(v) else None);
+
+  public function getNext<R>(?options:{ ?butNotNow: Bool, ?hires:Bool }, select:T->Option<R>):Future<R> {
     var ret = Future.trigger(),
         waiting = options != null && options.butNotNow;
 
-    var link = bind({ direct: options != null && options.hires }, function (value) 
+    var link = bind({ direct: options != null && options.hires }, function (value) {
+      var out = select(value);
       if (waiting) 
-        waiting = check(value);
-      else if (check(value)) 
-        ret.trigger(value)
-    );
+        waiting = out != None;
+      else switch out {
+        case Some(value): ret.trigger(value);
+        case None:
+      }
+    });
 
     ret.handle(link.dissolve);
 
     return ret;
-  }
+  }  
     
   public function join(that:Observable<T>) {
     var lastA = null;
