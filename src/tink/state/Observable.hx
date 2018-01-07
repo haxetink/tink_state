@@ -265,11 +265,9 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   @:from static function ofConst<T>(value:T):Observable<T>
     return const(value);
 
-  static public function untracked<T>(f:Void->T, ?pos) {
+  static public function untracked<T>(f:Void->T) {
     stack.push(null);
-    var ret = f.catchExceptions(null, pos);
-    stack.pop();
-    return ret.sure();
+    return Error.tryFinally(f, stack.pop);
   }
 
 }
