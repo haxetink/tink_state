@@ -200,9 +200,9 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     var end = measure() + maxSeconds;
     do {
       var old = scheduled;
-      scheduled = [null];
+      scheduled = [];
       for (o in old) o();
-      scheduled.shift();    
+      
     } 
     while (scheduled.length > 0 && measure() < end);
     return 
