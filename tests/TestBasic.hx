@@ -116,7 +116,19 @@ class TestBasic {
 
     asserts.assert((o:ObservableObject<String>) != null);
     asserts.assert(o == null);
+
+    var o1 = Observable.const("foo"),
+        o2 = Observable.const("foo");
     
+    asserts.assert(o1 == o1, 'are equal');
+    asserts.assert(o1 != o2, 'are not equal');
+    asserts.assert(o1 == 'foo', 'equals const');
+    asserts.assert('foo' == o2, 'const equals');
+    asserts.assert(o1 != 'bar', 'not equals const');
+    asserts.assert(!(o1 != 'foo'), 'not not equals const');
+    asserts.assert('bar' != o2, 'not const equals');
+    asserts.assert(!('foo' != o2), 'not not const equals');
+
     return asserts.done();
   }
 }
