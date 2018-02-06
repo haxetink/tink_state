@@ -1,6 +1,15 @@
 {
 	"name": "tink_state",
-	"license": "MIT",
+	"classPath": "src",
+	"dependencies": {
+		"tink_core": ""
+	},
+	"url": "https://github.com/haxetink/tink_state/",
+	"contributors": [
+		"back2dos"
+	],
+	"version": "0.6.0",
+	"releasenote": "Deprecate implicit conversions from constants to observables. Haxe 4 compat. Various other improvements.",
 	"tags": [
 		"tink",
 		"cross",
@@ -9,14 +18,5 @@
 		"observable",
 		"binding"
 	],
-	"classPath": "src",
-	"contributors": [
-		"back2dos"
-	],
-	"releasenote": "Avoid boxing issues.",
-	"version": "0.5.3",
-	"url": "https://github.com/haxetink/tink_state/",
-	"dependencies": {
-		"tink_core": ""
-	}
+	"license": "MIT"
 }
