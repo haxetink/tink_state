@@ -292,8 +292,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
 }
 
-private class Invalid {}
-
 abstract Computation<T>({ f: Void->T }) {
   inline function new(f) 
     this = { f: f };
