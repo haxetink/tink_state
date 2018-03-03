@@ -99,7 +99,7 @@ class TestBasic {
 
     return asserts.done();
   }
-
+  var nil:Observable<Int>;
   public function eqConst() {
     var value = 'foobar';
     var o:Var<String> = value;
@@ -111,7 +111,6 @@ class TestBasic {
     asserts.assert((o:ObservableObject<String>) == null);
     asserts.assert(o == null);
 
-    var nil = (null:Observable<Int>);
     asserts.assert(nil == null);
     
     var s:String = null;
