@@ -270,25 +270,17 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return Error.tryFinally(f, stack.pop);
   }
 
-  @:commutative
   @:op(a == b) 
-  static inline function eq<T>(a:Observable<T>, b:ObservableObject<T>):Bool 
-    return (a:ObservableObject<T>) == b;
+  static function eq<T>(a:Observable<T>, b:Observable<T>):Bool 
+    return switch [a, b] {
+      case [null, null]: true;
+      case [null, _] | [_, null]: false;
+      default: a.value == b.value;
+    }
 
-  @:commutative
-  @:op(a == b) 
-  static inline function eqConst<T>(a:Observable<T>, b:T):Bool 
-    return a.value == b;
-
-  @:commutative
   @:op(a != b) 
-  static inline function neq<T>(a:Observable<T>, b:ObservableObject<T>):Bool 
+  static inline function neq<T>(a:Observable<T>, b:Observable<T>):Bool 
     return !eq(a, b);
-
-  @:commutative
-  @:op(a != b) 
-  static inline function neqConst<T>(a:Observable<T>, b:T):Bool 
-    return !eqConst(a, b);
 
 }
 

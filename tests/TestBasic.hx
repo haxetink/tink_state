@@ -123,7 +123,7 @@ class TestBasic {
         o2 = Observable.const("foo");
     
     asserts.assert(o1 == o1, 'are equal');
-    asserts.assert(o1 != o2, 'are not equal');
+    asserts.assert(o1 == o2, 'are equal');
     asserts.assert(o1 == 'foo', 'equals const');
     asserts.assert('foo' == o2, 'const equals');
     asserts.assert(o1 != 'bar', 'not equals const');
