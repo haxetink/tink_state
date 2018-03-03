@@ -110,6 +110,9 @@ class TestBasic {
     
     asserts.assert((o:ObservableObject<String>) == null);
     asserts.assert(o == null);
+
+    var nil = (null:Observable<Int>);
+    asserts.assert(nil == null);
     
     var s:String = null;
     o = s;
