@@ -8,8 +8,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"version": "0.6.3",
-	"releasenote": "Add comparators to bindings.",
+	"version": "0.6.4",
+	"releasenote": "Don't use default comparator.",
 	"tags": [
 		"tink",
 		"cross",
