@@ -101,7 +101,22 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return new Measurement(p2.value, p.becameInvalid.first(p2.becameInvalid));
     });
     
-  public function bind(?options:{ ?direct: Bool }, cb:Callback<T>):CallbackLink
+  public function bind(?options:{ ?direct: Bool, ?comparator:T->T->Bool }, cb:Callback<T>):CallbackLink {
+    var comparator = switch options {
+      case null | { comparator: null }: Type.enumEq;
+      case { comparator: v }: v;
+    }
+    var isFirst = true,
+        last = null;
+    var cb:Callback<T> = function (data) {
+      if (isFirst) {
+        isFirst = false;
+        cb.invoke(data);
+      }
+      else if (!comparator(last, data)) 
+        cb.invoke(data);
+      last = data;
+    }
     return 
       switch options {
         case null | { direct: null | false }:
@@ -148,7 +163,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
           function () link.dissolve();          
 
       }
-      
+  }
+
   static var scheduled:Array<Void->Void> = 
     #if (js || tink_runloop || (haxe_ver >= 3.3)) 
       [];

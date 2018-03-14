@@ -1,6 +1,5 @@
 package;
 
-import tink.state.Promised;
 import tink.state.Observable;
 import tink.state.*;
 
@@ -10,6 +9,37 @@ using tink.CoreApi;
 class TestBasic {
   
   public function new() {}
+
+  public function donotFireEqual() {
+    var s = new State(0),
+        sLog = [];
+    s.observe().bind({ direct: true, comparator: function (_, _) return true }, sLog.push);
+
+    var o1Log = [],
+        o1 = Observable.auto(function () {
+          return s.value >> 8;
+        });
+    var o2Log = [],
+        o2 = Observable.auto(function () {
+          return s.value;
+        });
+    o1.bind({ direct: true }, o1Log.push);
+    o2.bind({ direct: true }, o2Log.push);
+
+    asserts.assert(sLog.join(',') == '0');
+    asserts.assert(o1Log.join(',') == '0');
+    asserts.assert(o2Log.join(',') == '0');
+    
+    s.set(1 << 4);
+    s.set(0);
+    s.set(1 << 8);
+
+    asserts.assert(sLog.join(',') == '0');
+    asserts.assert(o1Log.join(',') == '0,1');
+    asserts.assert(o2Log.join(',') == '0,16,0,256');
+
+    return asserts.done();    
+  }
 
   public function test() {
     var ta = Signal.trigger(),
