@@ -101,22 +101,24 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return new Measurement(p2.value, p.becameInvalid.first(p2.becameInvalid));
     });
     
-  public function bind(?options:{ ?direct: Bool, ?comparator:T->T->Bool }, cb:Callback<T>):CallbackLink {
-    var comparator = switch options {
-      case null | { comparator: null }: Type.enumEq;
-      case { comparator: v }: v;
-    }
-    var isFirst = true,
-        last = null;
-    var cb:Callback<T> = function (data) {
-      if (isFirst) {
-        isFirst = false;
-        cb.invoke(data);
-      }
-      else if (!comparator(last, data)) 
-        cb.invoke(data);
-      last = data;
-    }
+  public function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink {
+    var cb:Callback<T> = 
+      switch options {
+        case null | { comparator: null }: cb;
+        case { comparator: equal }:
+          var isFirst = true,
+              last = null;
+          function (data) {
+            if (isFirst) {
+              isFirst = false;
+              cb.invoke(data);
+            }
+            else if (!equal(last, data)) 
+              cb.invoke(data);
+            last = data;
+          }
+        }    
+
     return 
       switch options {
         case null | { direct: null | false }:
@@ -298,6 +300,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static inline function neq<T>(a:Observable<T>, b:Observable<T>):Bool 
     return !eq(a, b);
 
+}
+
+typedef BindingOptions<T> = { 
+  ?direct:Bool, 
+  ?comparator:T->T->Bool 
 }
 
 abstract Computation<T>({ f: Void->T }) {

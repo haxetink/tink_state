@@ -23,8 +23,8 @@ class TestBasic {
         o2 = Observable.auto(function () {
           return s.value;
         });
-    o1.bind({ direct: true }, o1Log.push);
-    o2.bind({ direct: true }, o2Log.push);
+    o1.bind({ direct: true, comparator: Type.enumEq }, o1Log.push);
+    o2.bind({ direct: true, comparator: Type.enumEq }, o2Log.push);
 
     asserts.assert(sLog.join(',') == '0');
     asserts.assert(o1Log.join(',') == '0');
