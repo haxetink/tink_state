@@ -105,10 +105,10 @@ class TestBasic {
       Observable.updateAll();
     }
 
-    await(o.nextTime({ hires: true, butNotNow: true }, function (x) return x == 5));
-    await(o.nextTime({ hires: true, }, function (x) return x == 5));
-    await(o.nextTime({ hires: true, butNotNow: true }, function (x) return x == 4));
-    await(o.nextTime({ hires: true, }, function (x) return x == 4));
+    await(o.nextTime(function (x) return x == 5, { hires: true, butNotNow: true }));
+    await(o.nextTime(function (x) return x == 5, { hires: true, }));
+    await(o.nextTime(function (x) return x == 4, { hires: true, butNotNow: true }));
+    await(o.nextTime(function (x) return x == 4, { hires: true, }));
     
     Observable.updateAll();
 
