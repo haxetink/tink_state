@@ -24,10 +24,10 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return new Measurement(f(p.value, q.value), p.becameInvalid.first(q.becameInvalid));
     });
 
-  public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, check:T->Bool):Future<T> 
-    return getNext(options, function (v) return if (check(v)) Some(v) else None);
+  public function nextTime(check:T->Bool, ?options:{ ?butNotNow: Bool, ?hires:Bool }):Future<T> 
+    return getNext(function (v) return if (check(v)) Some(v) else None, options);
 
-  public function getNext<R>(?options:{ ?butNotNow: Bool, ?hires:Bool }, select:T->Option<R>):Future<R> {
+  public function getNext<R>(select:T->Option<R>, ?options:{ ?butNotNow: Bool, ?hires:Bool }):Future<R> {
     var ret = Future.trigger(),
         waiting = options != null && options.butNotNow;
 
