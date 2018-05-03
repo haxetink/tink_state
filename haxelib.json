@@ -8,8 +8,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"version": "0.6.4",
-	"releasenote": "Don't use default comparator.",
+	"version": "0.6.5",
+	"releasenote": "Make observableValues behave in a less unexpected way.",
 	"tags": [
 		"tink",
 		"cross",
