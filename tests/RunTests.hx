@@ -1,10 +1,8 @@
 package ;
 
-import haxe.unit.TestRunner;
-
 class RunTests {
 
-  static function main() 
+  static function main() {  
     tink.testrunner.Runner.run(tink.unit.TestBatch.make([
       new TestBasic(),
       new TestMaps(),
@@ -15,5 +13,5 @@ class RunTests {
       .handle(function(result) {
         travix.Logger.exit(result.summary().failures.length);
       });
-  
+  }
 }

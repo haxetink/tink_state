@@ -113,5 +113,22 @@ class TestArrays {
     return asserts.done();
   }
 
+  public function testIteratorResets() {
+    var o = new ObservableArray<Int>(),
+        name = new State('Alice'),
+        log = [];
 
+    var vals = o.observableValues;
+    Observable.auto(function () {
+        return name.value + ':' + [for (i in vals) i]; 
+    }).bind(function (v) log.push(v));
+    Observable.updateAll();//triggers bindings update
+    o.push(1);
+    o.push(2);
+    Observable.updateAll();
+    name.set('Bob');
+    Observable.updateAll();     
+    asserts.assert(log.join(';') == 'Alice:[];Alice:[1,2];Bob:[1,2]');
+    return asserts.done(); 
+  }
 }

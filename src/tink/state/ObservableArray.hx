@@ -1,11 +1,27 @@
 package tink.state;
 
+import tink.state.Observable;
+
 using tink.CoreApi;
 
 private enum Change<T> {
   Remove(index:Int, values:Array<T>);
   Insert(index:Int, values:Array<T>);
   Update(index:Int, values:Array<T>);
+}
+
+private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
+  
+  var target:ObservableArray<T>;
+
+  public function new(target) 
+    this.target = target;
+
+  public function poll()
+    return new Measurement(
+      @:privateAccess target.items.iterator(), 
+      @:privateAccess target.changes.nextTime().map(function (_) return Noise)
+    );
 }
 
 class ObservableArray<T> extends ObservableBase<Change<T>> {
@@ -23,11 +39,12 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
 
     super();
     
-    this.observableValues = observable(function () return this.items.iterator());
     this.observableLength = observable(function () return this.items.length, function (_, c) return switch c {
       case Update(_, _): false;
       default: true;
     });
+    
+    this.observableValues = new ValueIterator(this);
   }
 
   public function values() {
