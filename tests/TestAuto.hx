@@ -30,4 +30,40 @@ class TestAuto {
     asserts.assert(old == calls);
     return asserts.done();
   }
+
+  @:include public function testDirect() {
+    var calls = 0;
+    var s1 = new State(4),
+        s2 = new State(5);
+    var o = Observable.auto(function () {
+      calls++;
+      return s1.value + s2.value;
+    });
+    
+    var sum = 0;
+    
+    o.bind({ direct: true }, function (v) sum = v);
+    
+    asserts.assert(sum == s1.value + s2.value);
+    asserts.assert(calls == 1);
+    
+    s1.set(s1.value + 1);
+    s2.set(s2.value + 1);
+    
+    asserts.assert(sum == s1.value + s2.value);
+    asserts.assert(calls == 3);
+
+    s1.set(s1.value + 1);
+    s2.set(s2.value + 1);
+    
+    asserts.assert(sum == s1.value + s2.value);
+    asserts.assert(calls == 5);
+
+
+    // asserts.assert(sum == s1.value + s2.value);
+    // asserts.assert(calls == 3);
+    
+    
+    return asserts.done();
+  }
 }
