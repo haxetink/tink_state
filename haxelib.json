@@ -1,15 +1,6 @@
 {
 	"name": "tink_state",
-	"classPath": "src",
-	"dependencies": {
-		"tink_core": ""
-	},
-	"url": "https://github.com/haxetink/tink_state/",
-	"contributors": [
-		"back2dos"
-	],
-	"version": "0.6.5",
-	"releasenote": "Make observableValues behave in a less unexpected way.",
+	"license": "MIT",
 	"tags": [
 		"tink",
 		"cross",
@@ -18,5 +9,14 @@
 		"observable",
 		"binding"
 	],
-	"license": "MIT"
+	"classPath": "src",
+	"contributors": [
+		"back2dos"
+	],
+	"releasenote": "Fix direct bindings for auto observables.",
+	"version": "0.7.0",
+	"url": "https://github.com/haxetink/tink_state/",
+	"dependencies": {
+		"tink_core": ""
+	}
 }
