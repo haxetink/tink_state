@@ -79,7 +79,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     switch Std.instance(before, AutoObservable) {
       case null: 
       case v:
-        p.becameInvalid.handle(v.invalidate);
+        v.subscribe(p.becameInvalid);
+        // p.becameInvalid.handle(v.invalidate);
     }
     stack.pop();
     return p;
@@ -153,7 +154,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
           
         default: 
           var link:CallbackLink = null;
-          
+
           function update(_:Noise) {
             var next = measure();
             cb.invoke(next.value);
@@ -396,13 +397,20 @@ class ConstObservable<T> implements ObservableObject<T> {
 private class AutoObservable<T> extends SimpleObservable<T> {
   
   var trigger:FutureTrigger<Noise>;
+  var subscriptions = new Map<Future<Noise>, CallbackLink>();
   
   public function new(comp:Computation<T>)
     super(function () {
+      //for (l in subscriptions) l.dissolve();//TODO: consider adding this although it might be overkill
+      this.subscriptions = new Map();
       this.trigger = Future.trigger();
       return new Measurement(comp.perform(), this.trigger.asFuture());
     });
 
-  public function invalidate() 
-    trigger.trigger(Noise);  
+  public function subscribe(change:Future<Noise>) {
+    if (!subscriptions.exists(change)) 
+      subscriptions[change] = change.handle(trigger.trigger);
+  }
+  // public function invalidate() 
+  //   trigger.trigger(Noise);  
 }

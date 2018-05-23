@@ -31,7 +31,7 @@ class TestAuto {
     return asserts.done();
   }
 
-  @:include public function testDirect() {
+  public function testDirect() {
     var calls = 0;
     var s1 = new State(4),
         s2 = new State(5);
@@ -57,12 +57,7 @@ class TestAuto {
     s2.set(s2.value + 1);
     
     asserts.assert(sum == s1.value + s2.value);
-    asserts.assert(calls == 5);
-
-
-    // asserts.assert(sum == s1.value + s2.value);
-    // asserts.assert(calls == 3);
-    
+    asserts.assert(calls == 5);    
     
     return asserts.done();
   }
