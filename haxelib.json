@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Fix direct bindings for auto observables.",
-	"version": "0.7.0",
+	"releasenote": "Observable, State: remove implicit conversions from constants. Remove Var",
+	"version": "0.8.0",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
