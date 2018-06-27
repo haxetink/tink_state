@@ -280,10 +280,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   @:noUsing static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);      
 
-  @:deprecated("Implicit conversion from constants to observables is deprecated and will soon be removed. See https://github.com/haxetink/tink_state/issues/9")
-  @:from static function ofConst<T>(value:T):Observable<T>
-    return const(value);
-
   static public function untracked<T>(f:Void->T) {
     stack.push(null);
     return Error.tryFinally(f, stack.pop);

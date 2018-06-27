@@ -129,26 +129,16 @@ class TestBasic {
 
     return asserts.done();
   }
+  
   var nil:Observable<Int>;
   public function eqConst() {
     var value = 'foobar';
-    var o:Var<String> = value;
+    var o:Observable<String> = Observable.const(value);
     
     asserts.assert(value == o);
     
-    o = null;
-    
-    asserts.assert((o:ObservableObject<String>) == null);
-    asserts.assert(o == null);
-
     asserts.assert(nil == null);
     
-    var s:String = null;
-    o = s;
-
-    asserts.assert((o:ObservableObject<String>) != null);
-    asserts.assert(o == null);
-
     var o1 = Observable.const("foo"),
         o2 = Observable.const("foo");
     

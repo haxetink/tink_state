@@ -22,14 +22,10 @@ abstract State<T>(StateObject<T>) to Observable<T> {
   
   @:to public function toCallback():Callback<T>
     return this.set;
-	
-  @:from static function ofConstant<T>(value:T):State<T> 
-    return new State(value);
   
 }
 
 private class StateObject<T> implements ObservableObject<T> {
-  
   
   var next:Measurement<T>;
   var trigger:FutureTrigger<Noise>;
