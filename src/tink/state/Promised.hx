@@ -29,6 +29,12 @@ class PromisedTools {
       case Failed(e): Failed(e);
       case Done(a): f(a);
     }
+    
+  static public function toOption<V>(p:Promised<V>):Option<V> 
+    return switch p {
+      case Done(data): Some(data);
+      case _: None;
+  }
 
   static public function or<V>(p:Promised<V>, l:Lazy<V>):V
     return switch p {
