@@ -14,7 +14,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return measure().value;
         
   public inline function new(get:Void->T, changed:Signal<Noise>)
-    this = create(function () return new Measurement(get(), changed.next()));
+    this = create(function () return new Measurement(get(), changed.nextTime()));
     
   public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
     return new SimpleObservable<R>(function () {
