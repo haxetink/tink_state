@@ -59,4 +59,19 @@ class TestMaps {
 
     return asserts.done();
   }
+  
+  public function testIterators() {
+    var map = new ObservableMap<String, String>(new Map());
+    map.set('key', 'value');
+    
+    var count = 0;
+    for(key in map.keys()) count++;
+    for(key in map.keys()) count++;
+    for(value in map.iterator()) count++;
+    for(value in map.iterator()) count++;
+    
+    asserts.assert(count == 4);
+    
+    return asserts.done();
+  }
 }
