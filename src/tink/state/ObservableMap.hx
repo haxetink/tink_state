@@ -61,10 +61,10 @@ class ObservableMap<K, V> implements Map.IMap<K, V> extends ObservableBase<Updat
   }
   
   public inline function iterator():Iterator<V>
-    return observableValues.value;
+    return map.iterator();
   
   public inline function keys():Iterator<K>
-    return observableKeys.value;
+    return map.keys();
     
   public inline function toString():String 
     return asString.value;
