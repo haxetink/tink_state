@@ -18,7 +18,7 @@ class ObservableBase<Change> {
         (
           if (when == null) changes 
           else changes.filter(when.bind(ret), false)
-        ).next().map(function (_) return Noise)
+        ).nextTime().map(function (_) return Noise)
       );
     });    
 }
