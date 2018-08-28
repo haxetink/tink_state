@@ -1,6 +1,6 @@
 package tink.state;
 
-import tink.state.Observable.ObservableObject;
+import tink.state.Observable;
 
 using tink.CoreApi;
 
@@ -15,6 +15,9 @@ abstract State<T>(StateObject<T>) to Observable<T> {
 	
   public inline function observe():Observable<T>
     return this;
+
+  public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink 
+    return observe().bind(options, cb);
 
   static public function wire<T>(data:Observable<T>, update:T->Void)
     return new CompoundState(data, update);
