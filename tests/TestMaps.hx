@@ -72,6 +72,28 @@ class TestMaps {
     
     asserts.assert(count == 4);
     
+    var counts = [];
+    
+    Observable.auto(function () {
+      var counter = 0;
+      for (i in [map.keys(), map.iterator()])
+        for (x in i) counter++;
+      return counter;
+    }).bind(counts.push);
+
+    Observable.updateAll();
+    asserts.assert(counts.join(',') == '2');
+
+    map.set('key2', 'value');
+
+    Observable.updateAll();
+    asserts.assert(counts.join(',') == '2,4');
+
+    map.set('key3', 'value');
+
+    Observable.updateAll();
+    asserts.assert(counts.join(',') == '2,4,6');
+
     return asserts.done();
   }
 }
