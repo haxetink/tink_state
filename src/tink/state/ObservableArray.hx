@@ -57,6 +57,7 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
 
   public function iterator() {
     var i = 0;
+    length;//not pretty
     return {
       hasNext: function () return i < items.length,
       next: function () return observe(i),

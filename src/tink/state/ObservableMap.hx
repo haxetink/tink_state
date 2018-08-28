@@ -1,5 +1,7 @@
 package tink.state;
 
+import tink.state.ObservableBase;
+
 using tink.CoreApi;
 
 @:structInit private class Update<K, V> {
@@ -22,12 +24,20 @@ class ObservableMap<K, V> implements Map.IMap<K, V> extends ObservableBase<Updat
     super();
     this.map = initial;
     
-    this.observableKeys = observable(map.keys, function (_, c) return switch [c.from, c.to] {
-      case [Some(_), Some(_)] | [None, None]: false;
-      default: true;
-    });
+    this.observableKeys = new ObservableIterator<K>(
+      map.keys, 
+      changes,
+      function (c) return switch [c.from, c.to] {
+        case [Some(_), Some(_)]: false;
+        default: true;
+      } 
+    );
     
-    this.observableValues = observable(map.iterator);
+    this.observableValues = new ObservableIterator(
+      map.iterator,
+      changes
+    );
+    
     this.asString = observable(map.toString);
   }
   

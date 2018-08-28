@@ -11,13 +11,16 @@ abstract State<T>(StateObject<T>) to Observable<T> {
     @:to function get_value() return observe().value;
   
   public inline function new(value, ?isEqual) 
-    this = new StateObject(value, isEqual);
+    this = new SimpleState(value, isEqual);
 	
   public inline function observe():Observable<T>
     return this;
+
+  static public function wire<T>(data:Observable<T>, update:T->Void)
+    return new CompoundState(data, update);
     
   @:impl static public function toggle(s:StateObject<Bool>) {
-    s.set(!s.value);
+    s.set(!s.poll().value);
   }
   
   @:to public function toCallback():Callback<T>
@@ -25,7 +28,28 @@ abstract State<T>(StateObject<T>) to Observable<T> {
   
 }
 
-private class StateObject<T> implements ObservableObject<T> {
+private interface StateObject<T> extends ObservableObject<T> {
+  function set(value:T):Void;
+}
+
+private class CompoundState<T> implements StateObject<T> {
+  
+  var data:ObservableObject<T>;
+  var update:T->Void;
+
+  public function new(data, set) {
+    this.data = data;
+    this.update = set;
+  }
+
+  public function poll()
+    return data.poll();
+
+  public function set(value)
+    update(value);
+}
+
+private class SimpleState<T> implements StateObject<T> {
   
   var next:Measurement<T>;
   var trigger:FutureTrigger<Noise>;

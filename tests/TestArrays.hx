@@ -106,7 +106,7 @@ class TestArrays {
 
     a.pop();
 
-    asserts.assert(iteratorChanges == 2);
+    asserts.assert(iteratorChanges == 3);
     asserts.assert(keysChanges == 2);
     asserts.assert(valuesChanges == 4);
 

@@ -1,5 +1,7 @@
 package tink.state;
 
+import tink.state.Observable;
+
 using tink.CoreApi;
 
 class ObservableBase<Change> {
@@ -21,4 +23,24 @@ class ObservableBase<Change> {
         ).nextTime().map(function (_) return Noise)
       );
     });    
+}
+
+class ObservableIterator<T> implements ObservableObject<Iterator<T>> {
+  
+  static var TRIGGER = Some(Noise);
+  
+  var iterator:Void->Iterator<T>;
+  var changes:Signal<Noise>;
+
+  public function new<C>(iterator, changes:Signal<C>, ?trigger:C->Bool) {
+    this.iterator = iterator;
+    this.changes = changes.select(function (c) return if (trigger == null || trigger(c)) TRIGGER else None);
+  }
+
+  public function poll()
+    return new Measurement(
+      iterator(), 
+      changes.nextTime()
+    );
+
 }
