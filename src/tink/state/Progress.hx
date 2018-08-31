@@ -8,6 +8,12 @@ abstract Progress<T>(State<ProgressType<T>>) to State<ProgressType<T>> {
 		return new ProgressTrigger();
 	}
 	
+	public static function make<T>(f:(Float->Void)->(T->Void)->Void):Progress<T> {
+		var ret = trigger();
+		f(ret.progress, ret.finish);
+		return ret;
+	}
+	
 	inline function new(progress) {
 		this = progress;
 	}
