@@ -62,7 +62,7 @@ abstract ProgressTrigger<T>(State<ProgressType<T>>) from State<ProgressType<T>> 
 		this = new State(InProgress(0));
 	}
 	
-	public inline function progress(v:Float) {
+	public function progress(v:Float) {
 		switch this.value {
 			case Finished(_): // do nothing
 			case InProgress(current):
@@ -72,7 +72,7 @@ abstract ProgressTrigger<T>(State<ProgressType<T>>) from State<ProgressType<T>> 
 		}
 	}
 	
-	public inline function finish(v:T) {
+	public function finish(v:T) {
 		switch this.value {
 			case Finished(_): // do nothing
 			case InProgress(current):
