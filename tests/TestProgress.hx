@@ -12,10 +12,11 @@ class TestProgress {
     var state = Progress.trigger();
     var progress = state.asProgress();
     
-    var p = 0.;
-    progress.bind({direct: true}, function(v) p = v.a);
+    var p;
+    progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
-    asserts.assert(p == 0.5);
+    asserts.assert(p.value == 0.5);
+    asserts.assert(p.total.match(None));
     state.finish('Done');
     progress.result().handle(function(v) {
       asserts.assert(v == 'Done');
@@ -29,10 +30,11 @@ class TestProgress {
     var state = Progress.trigger();
     var progress:Progress<String> = Future.sync(state.asProgress());
     
-    var p = 0.;
-    progress.bind({direct: true}, function(v) p = v.a);
+    var p;
+    progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
-    asserts.assert(p == 0.5);
+    asserts.assert(p.value == 0.5);
+    asserts.assert(p.total.match(None));
     state.finish('Done');
     progress.result().handle(function(v) {
       asserts.assert(v == 'Done');
@@ -46,10 +48,11 @@ class TestProgress {
     var state:ProgressTrigger<String> = Progress.trigger();
     var progress:Progress<Outcome<String, Error>> = Promise.lift(state.asProgress());
     
-    var p = 0.;
-    progress.bind({direct: true}, function(v) p = v.a);
+    var p;
+    progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
-    asserts.assert(p == 0.5);
+    asserts.assert(p.value == 0.5);
+    asserts.assert(p.total.match(None));
     state.finish('Done');
     progress.result().handle(function(v) {
       asserts.assert(v.match(Success('Done')));

@@ -31,6 +31,11 @@ abstract Progress<T>(ProgressObject<T>) from ProgressObject<T> {
 	}
 	
 	@:from
+	static inline function flatten<T>(v:Promise<Progress<Outcome<T, Error>>>):Progress<Outcome<T, Error>> {
+		return new FlattenProgress(v);
+	}
+	
+	@:from
 	static inline function future<T>(v:Future<Progress<T>>):Progress<T> {
 		return new FutureProgress(v);
 	}
@@ -61,7 +66,7 @@ class ProgressTrigger<T> extends ProgressBase<T> {
 					case Some(t): if(v > t) v = t;
 					case None:
 				}
-				if(v > current.a) state.set(InProgress(new Pair(v, total)));
+				if(v > current.value) state.set(InProgress(new Pair(v, total)));
 		}
 	}
 	
@@ -141,6 +146,30 @@ class PromiseProgress<T> extends ProgressBase<Outcome<T, Error>> {
 	}
 }
 
+class FlattenProgress<T> extends ProgressBase<Outcome<T, Error>> {
+	var promise:Promise<Progress<Outcome<T, Error>>>;
+	var state:State<ProgressType<Outcome<T, Error>>>;
+	
+	public function new(promise)
+		this.promise = promise;
+		
+	
+	override function result():Future<Outcome<T, Error>> {
+		return promise.next(function(p) return p.result());
+	}
+	
+	override function observe():Observable<ProgressType<Outcome<T, Error>>> {
+		if(state == null) {
+			state = new State(InProgress(Progress.INIT));
+			promise.handle(function(o) switch o {
+				case Success(p): p.observe().bind({direct: true}, state.set);
+				case Failure(e): state.set(Finished(Failure(e)));
+			});
+		}
+		return state.observe();
+	}
+}
+
 interface ProgressObject<T> {
 	function result():Future<T>;
 	function bind(?opt:BindingOptions<ProgressValue>, f:Callback<ProgressValue>):CallbackLink;
@@ -186,7 +215,17 @@ class ProgressBase<T> implements ProgressObject<T> {
 	
 }
 
-typedef ProgressValue = Pair<Float, Option<Float>>;
+abstract ProgressValue(Pair<Float, Option<Float>>) from Pair<Float, Option<Float>> {
+	public var value(get, never):Float;
+	public var total(get, never):Option<Float>;
+	
+	public inline function new(value, total)
+		this = new Pair(value, total);
+		
+	inline function get_value() return this.a;
+	inline function get_total() return this.b;
+	
+}
 
 enum ProgressType<T> {
 	InProgress(v:ProgressValue);
