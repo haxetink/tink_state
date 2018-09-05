@@ -62,11 +62,14 @@ class ProgressTrigger<T> extends ProgressBase<T> {
 		switch state.value {
 			case Finished(_): // do nothing
 			case InProgress(current):
-				switch total {
-					case Some(t): if(v > t) v = t;
-					case None:
-				}
-				if(v > current.value) state.set(InProgress(new Pair(v, total)));
+				if(
+					current.value != v || 
+					switch [current.total, total] {
+						case [Some(t1), Some(t2)]: t1 != t2;
+						case [None, None]: false;
+						case _: true;
+					}
+				) state.set(InProgress(new Pair(v, total)));
 		}
 	}
 	
