@@ -14,8 +14,8 @@ class TestDate {
     var d = new ObservableDate(),
         log = [];
     
-    d.isOlderThan(.05.seconds()).bind(log.push);
-    d.isOlderThan(10.seconds()).bind(log.push);
+    d.becomesOlderThan(.05.seconds()).bind(log.push);
+    d.becomesOlderThan(10.seconds()).bind(log.push);
     
     Observable.updateAll();
     asserts.assert(log.join(',') == 'false,false');

@@ -42,8 +42,14 @@ class ObservableDate implements Observable.ObservableObject<Bool> {
 	public function observe():Observable<Bool>
 		return this;
 
-	public function isOlderThan(msecs:Float):Observable<Bool>
-		return new ObservableDate(this.date.delta(msecs));
+	public function isOlderThan(msecs:Float):Bool
+		return becomesOlderThan(msecs).value;
+
+	public function becomesOlderThan(msecs:Float):Observable<Bool>
+		return 
+			// if (Date.now().getTime() > date.getTime() + msecs) Observable.const(true);
+			// else 
+			new ObservableDate(this.date.delta(msecs));
 
 	public function poll()
 		return _measurement;
