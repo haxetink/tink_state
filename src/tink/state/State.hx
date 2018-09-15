@@ -79,7 +79,7 @@ private class SimpleState<T> implements StateObject<T> {
   }
 
   inline function differs(a, b)
-    return (isEqual == null && a != b) || !isEqual(a, b);
+    return if (isEqual == null) a != b else !isEqual(a, b);
   
   public function set(value) {
     if (guard != null)
