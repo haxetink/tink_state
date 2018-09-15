@@ -10,8 +10,8 @@ abstract State<T>(StateObject<T>) to Observable<T> {
   public var value(get, never):T;
     @:to function get_value() return observe().value;
   
-  public inline function new(value, ?isEqual) 
-    this = new SimpleState(value, isEqual);
+  public inline function new(value, ?isEqual, ?guard) 
+    this = new SimpleState(value, isEqual, guard);
 	
   public inline function observe():Observable<T>
     return this;
@@ -57,6 +57,7 @@ private class SimpleState<T> implements StateObject<T> {
   var next:Measurement<T>;
   var trigger:FutureTrigger<Noise>;
   var isEqual:T->T->Bool;
+  var guard:T->T->T;
   
   public function poll()
     return next;
@@ -65,12 +66,10 @@ private class SimpleState<T> implements StateObject<T> {
     inline function get_value()
       return value;
       
-  public function new(value, ?isEqual) {
+  public function new(value, ?isEqual, ?guard) {
     this.value = value;
-    this.isEqual = switch isEqual {
-      case null: function (a, b) return a == b;
-      case v: v;
-    }
+    this.isEqual = isEqual;
+    this.guard = guard;
     arm();
   }
   
@@ -78,12 +77,18 @@ private class SimpleState<T> implements StateObject<T> {
     this.trigger = Future.trigger();
     this.next = new Measurement(value, this.trigger);    
   }
+
+  inline function differs(a, b)
+    return (isEqual == null && a != b) || !isEqual(a, b);
   
-  public function set(value) 
-    if (!isEqual(value, this.value)) {
+  public function set(value) {
+    if (guard != null)
+      value = guard(value, this.value);
+    if (differs(value, this.value)) {
       this.value = value;
       var last = trigger;
       arm();
       last.trigger(Noise);
     }
+  }
 }
