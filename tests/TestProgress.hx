@@ -54,6 +54,15 @@ class TestProgress {
     asserts.assert(p.value == 0.5);
     asserts.assert(p.total.match(None));
     state.finish('Done');
+    progress.next(function(o) {
+      asserts.assert(o.sure() == 'Done');
+      return Noise;
+    }).eager();
+    progress.asPromise().next(function(o) {
+      asserts.assert(o == 'Done');
+      return Noise;
+    }).eager();
+    var promise:Promise<String> = progress; // ensure assignable
     progress.result().handle(function(v) {
       asserts.assert(v.match(Success('Done')));
       asserts.done();
