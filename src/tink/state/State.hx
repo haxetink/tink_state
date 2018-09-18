@@ -16,7 +16,7 @@ abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
   public inline function observe():Observable<T>
     return this;
 
-  public function transform<R>(rules:{ function read(v:T):R; function write(v:R):T; }):State<T>
+  public function transform<R>(rules:{ function read(v:T):R; function write(v:R):T; }):State<R>
     return new CompoundState(observe().map(rules.read), function (value) this.set(rules.write(value)));
 
   public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink 
