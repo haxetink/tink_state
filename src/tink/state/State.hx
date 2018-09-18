@@ -5,7 +5,7 @@ import tink.state.Observable;
 using tink.CoreApi;
 
 @:forward(set)
-abstract State<T>(StateObject<T>) to Observable<T> {
+abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
 	
   public var value(get, never):T;
     @:to function get_value() return observe().value;
@@ -19,7 +19,7 @@ abstract State<T>(StateObject<T>) to Observable<T> {
   public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink 
     return observe().bind(options, cb);
 
-  static public function wire<T>(data:Observable<T>, update:T->Void)
+  static public function wire<T>(data:Observable<T>, update:T->Void):State<T>
     return new CompoundState(data, update);
     
   @:impl static public function toggle(s:StateObject<Bool>) {
