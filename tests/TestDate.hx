@@ -1,6 +1,7 @@
 package ;
 
 import tink.state.*;
+import deepequal.DeepEqual.*;
 
 using tink.CoreApi;
 using DateTools;
@@ -18,12 +19,12 @@ class TestDate {
     d.becomesOlderThan(10.seconds()).bind(log.push);
     
     Observable.updateAll();
-    asserts.assert(log.join(',') == 'false,false');
+    asserts.assert(compare(log, [false,false]));
 
     return Future.async(function (done) {
       haxe.Timer.delay(done.bind(Noise), 1100);
     }).next(function (_) {
-      asserts.assert(log.join(',') == 'false,false,true');
+      asserts.assert(compare(log, [false,false,true]));
       return asserts.done();
     });
   }
