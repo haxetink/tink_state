@@ -16,11 +16,11 @@ abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
   public inline function observe():Observable<T>
     return this;
 
+  public function transform<R>(rules:{ function read(v:T):R; function write(v:R):T; }):State<T>
+    return new CompoundState(observe().map(rules.read), function (value) this.set(rules.write(value)));
+
   public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink 
     return observe().bind(options, cb);
-
-  static public function wire<T>(data:Observable<T>, update:T->Void):State<T>
-    return new CompoundState(data, update);
     
   @:impl static public function toggle(s:StateObject<Bool>) {
     s.set(!s.poll().value);
