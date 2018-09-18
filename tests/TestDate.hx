@@ -14,14 +14,14 @@ class TestDate {
     var d = new ObservableDate(),
         log = [];
     
-    d.becomesOlderThan(.05.seconds()).bind(log.push);
+    d.becomesOlderThan(1.seconds()).bind(log.push);
     d.becomesOlderThan(10.seconds()).bind(log.push);
     
     Observable.updateAll();
     asserts.assert(log.join(',') == 'false,false');
 
     return Future.async(function (done) {
-      haxe.Timer.delay(done.bind(Noise), 100);
+      haxe.Timer.delay(done.bind(Noise), 1100);
     }).next(function (_) {
       asserts.assert(log.join(',') == 'false,false,true');
       return asserts.done();
