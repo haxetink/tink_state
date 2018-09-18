@@ -25,8 +25,8 @@ script:
   - lix run travix js
   #- lix run travix flash
   #- lix run travix java
-  #- lix run travix cpp
   #- lix run travix cs
+  - lix run travix cpp
   - lix run travix php
 
 
