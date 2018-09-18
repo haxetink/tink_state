@@ -10,6 +10,7 @@ class RunTests {
       new TestAuto(),
       new TestArrays(),
       new TestScheduler(),
+      new TestProgress(),
     ]))
       .handle(function(result) {
         travix.Logger.exit(result.summary().failures.length);
