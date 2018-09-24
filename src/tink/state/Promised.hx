@@ -47,4 +47,15 @@ class PromisedTools {
       case Done(v): v;
       default: null;
     }
+    
+  static public function all<V>(p:Iterable<Promised<V>>):Promised<Array<V>> {
+    var ret = [];
+    for(p in p)
+      switch p {
+        case Done(v): ret.push(v);
+        case Loading: return Loading;
+        case Failed(e): return Failed(e);
+      }
+    return Done(ret);
+  }
 }
