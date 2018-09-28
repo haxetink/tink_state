@@ -5,22 +5,22 @@ import tink.state.Observable;
 using tink.CoreApi;
 
 @:forward(set)
-abstract State<T>(StateObject<T>) to Observable<T> {
+abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
 	
   public var value(get, never):T;
     @:to function get_value() return observe().value;
   
-  public inline function new(value, ?isEqual) 
-    this = new SimpleState(value, isEqual);
+  public inline function new(value, ?isEqual, ?guard) 
+    this = new SimpleState(value, isEqual, guard);
 	
   public inline function observe():Observable<T>
     return this;
 
+  public function transform<R>(rules:{ function read(v:T):R; function write(v:R):T; }):State<R>
+    return new CompoundState(observe().map(rules.read), function (value) this.set(rules.write(value)));
+
   public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink 
     return observe().bind(options, cb);
-
-  static public function wire<T>(data:Observable<T>, update:T->Void)
-    return new CompoundState(data, update);
     
   @:impl static public function toggle(s:StateObject<Bool>) {
     s.set(!s.poll().value);
@@ -57,6 +57,7 @@ private class SimpleState<T> implements StateObject<T> {
   var next:Measurement<T>;
   var trigger:FutureTrigger<Noise>;
   var isEqual:T->T->Bool;
+  var guard:T->T->T;
   
   public function poll()
     return next;
@@ -65,12 +66,10 @@ private class SimpleState<T> implements StateObject<T> {
     inline function get_value()
       return value;
       
-  public function new(value, ?isEqual) {
+  public function new(value, ?isEqual, ?guard) {
     this.value = value;
-    this.isEqual = switch isEqual {
-      case null: function (a, b) return a == b;
-      case v: v;
-    }
+    this.isEqual = isEqual;
+    this.guard = guard;
     arm();
   }
   
@@ -78,12 +77,18 @@ private class SimpleState<T> implements StateObject<T> {
     this.trigger = Future.trigger();
     this.next = new Measurement(value, this.trigger);    
   }
+
+  inline function differs(a, b)
+    return if (isEqual == null) a != b else !isEqual(a, b);
   
-  public function set(value) 
-    if (!isEqual(value, this.value)) {
+  public function set(value) {
+    if (guard != null)
+      value = guard(value, this.value);
+    if (differs(value, this.value)) {
       this.value = value;
       var last = trigger;
       arm();
       last.trigger(Noise);
     }
+  }
 }

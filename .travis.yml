@@ -2,33 +2,46 @@ sudo: required
 dist: trusty
 
 language: node_js
-node_js: 6
+node_js: 8
 
 os:
   - linux
-  #- osx
-      
-install:
-  - npm install
-
-script:
-  - npm run --silent travix interp
-  - npm run --silent travix neko
-  - npm run --silent travix python
-  - npm run --silent travix node
-  - npm run --silent travix js
-  #- npm run --silent travix flash
-  #- npm run --silent travix java
-  #- npm run --silent travix cpp
-  #- npm run --silent travix cs
-  - npm run --silent travix php
+  # - osx
 
 env:
-  - secure: "U63GwhYD0gn3O8ajIQ3KtRpEKFW4U7QePSJB6wrZtioeylr0etzpp7bSS9ura6+7HE898TFr3/8T0BcHP5dPGYrpPbQlkSaSfTKvw9SV344iN6nQlHKc8r+3JrLlitzafIrv7Zd7DhglwAlExX8d9RSw7WmrzgRE97QjzEFPdV9aubOMLrLp14V9DNpF+FP0eH+V4n8x11ShG/ujlGUgWQcShgpCDUXO3L9Fd5Ni1tbdwEk/eNeldzPcs4DYeWATqXuAJvTfSDp9G+64X4h69N9KbnugcoClonwV7w7eIGIbqqYchNXeSVXToCO54w4koD75yrM9CADJ0VNzBM8irVjpfZmlFrXRtqP7tpe+VuxlVeiOzmrf3bErD0utCtEtDG0Ahh5HKTDCHR/CV3TkYBP9RO0YVlnz+pK0gIx/OAPiDyzjAf45iQu6Nr7VbdfYPbZ04wIzL1TVnzeIbHyJs8rKeSsGnw75HHsIXSrF9N1+iWvgxK8cmhJ95AbGAj+HTE1i6JhdTpG6Gs0mAH83G2AQTKBYwJLXkhnScgs5nBTI2gFj0M+yxSWrH705sSDQ5P0mAcBGGUBuFRXnmsMb1FEbYNz3oKlBUcYcZ/bXZplCpOzVOuXyxIqO2D788ayaRPk4e+lx1YVZVIifqZ9ZEvTYYPBah9gih6NJlZln4nA="
+  - HAXE_VERSION=3.4.7
+  - HAXE_VERSION=latest
   
+install:
+  - npm i -g lix
+  - lix install haxe $HAXE_VERSION
+  - lix download
+  
+script:
+  - lix run travix interp
+  - lix run travix neko
+  - lix run travix python
+  - lix run travix node
+  - lix run travix js
+  #- lix run travix flash
+  #- lix run travix java
+  #- lix run travix cs
+  - lix run travix cpp
+  - lix run travix php
+
+
 jobs:
   include:
+    # - stage: test # should uncomment this when there is no matrix above (e.g. only one os, one env, etc)
     - stage: deploy
+      language: haxe
+      haxe: "3.4.7"
       os: linux
+      install: skip
       script: skip
-      after_success: npm run --silent travix release
+      env:
+        - secure: "U63GwhYD0gn3O8ajIQ3KtRpEKFW4U7QePSJB6wrZtioeylr0etzpp7bSS9ura6+7HE898TFr3/8T0BcHP5dPGYrpPbQlkSaSfTKvw9SV344iN6nQlHKc8r+3JrLlitzafIrv7Zd7DhglwAlExX8d9RSw7WmrzgRE97QjzEFPdV9aubOMLrLp14V9DNpF+FP0eH+V4n8x11ShG/ujlGUgWQcShgpCDUXO3L9Fd5Ni1tbdwEk/eNeldzPcs4DYeWATqXuAJvTfSDp9G+64X4h69N9KbnugcoClonwV7w7eIGIbqqYchNXeSVXToCO54w4koD75yrM9CADJ0VNzBM8irVjpfZmlFrXRtqP7tpe+VuxlVeiOzmrf3bErD0utCtEtDG0Ahh5HKTDCHR/CV3TkYBP9RO0YVlnz+pK0gIx/OAPiDyzjAf45iQu6Nr7VbdfYPbZ04wIzL1TVnzeIbHyJs8rKeSsGnw75HHsIXSrF9N1+iWvgxK8cmhJ95AbGAj+HTE1i6JhdTpG6Gs0mAH83G2AQTKBYwJLXkhnScgs5nBTI2gFj0M+yxSWrH705sSDQ5P0mAcBGGUBuFRXnmsMb1FEbYNz3oKlBUcYcZ/bXZplCpOzVOuXyxIqO2D788ayaRPk4e+lx1YVZVIifqZ9ZEvTYYPBah9gih6NJlZln4nA="
+      after_success:
+        - haxelib install travix
+        - haxelib run travix install
+        - haxelib run travix release

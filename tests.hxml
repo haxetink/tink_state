@@ -1,3 +1,5 @@
 -cp tests
 -lib tink_unittest
 -main RunTests
+
+-lib deep_equal

@@ -11,7 +11,7 @@ class TestArrays {
   public function new() {}
   
   public function basics() {
-    var a = new ObservableArray([for (i in 0...100) i]);
+    var a = new ObservableArray<Null<Int>>([for (i in 0...100) i]);
     var log = [];
 
     function clear()
@@ -20,7 +20,7 @@ class TestArrays {
     function getLog()
       return log.join(',').replace('undefined', '-').replace('null', '-');
 
-    function report(name:String) return function (v:Int) log.push('$name:$v');
+    function report(name:String) return function (v:Null<Int>) log.push('$name:$v');
 
     a.observableLength.bind({ direct: true }, report('l'));
     

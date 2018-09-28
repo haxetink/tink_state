@@ -13,8 +13,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"releasenote": "Observable, State: remove implicit conversions from constants. Remove Var",
-	"version": "0.8.1",
+	"releasenote": "Add ObservableDate and Progress.",
+	"version": "0.9.0",
 	"url": "https://github.com/haxetink/tink_state/",
 	"dependencies": {
 		"tink_core": ""
