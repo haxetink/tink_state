@@ -45,6 +45,9 @@ private class CompoundState<T> implements StateObject<T> {
     this.update = set;
   }
 
+  public function isValid()
+    return data.isValid();
+
   public function poll()
     return data.poll();
 
@@ -58,6 +61,9 @@ private class SimpleState<T> implements StateObject<T> {
   var trigger:FutureTrigger<Noise>;
   var isEqual:T->T->Bool;
   var guard:T->T->T;
+
+  public function isValid()
+    return true;
   
   public function poll()
     return next;

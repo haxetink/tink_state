@@ -37,6 +37,9 @@ class ObservableIterator<T> implements ObservableObject<Iterator<T>> {
     this.changes = changes.select(function (c) return if (trigger == null || trigger(c)) TRIGGER else None);
   }
 
+  public function isValid()
+    return true;
+
   public function poll()
     return new Measurement(
       iterator(), 

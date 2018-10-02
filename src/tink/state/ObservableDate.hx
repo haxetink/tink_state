@@ -12,6 +12,9 @@ class ObservableDate implements Observable.ObservableObject<Bool> {
 		inline function get_passed():Bool
 			return observe().value;
 	
+	public function isValid()
+		return true;
+
 	var _measurement:Measurement<Bool>;
 	
 	public function new(?date:Date) {

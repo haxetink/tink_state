@@ -327,6 +327,9 @@ private class SimpleObservable<T> implements ObservableObject<T> {
   
   function resetCache(_) cache = null;
   
+  public function isValid()
+    return this.cache != null;
+
   public function poll() {
     var count = 0,
         last = null;
@@ -374,6 +377,7 @@ abstract Transform<T, R>(T->R) {
 }
 
 interface ObservableObject<T> {
+  function isValid():Bool;
   function poll():Measurement<T>;
 }
 
@@ -385,6 +389,9 @@ class ConstObservable<T> implements ObservableObject<T> {
   
   public function poll()
     return this.m;
+
+  public function isValid()
+    return true;
   
   public function new(value)
     this.m = new Measurement(value, NEVER);
