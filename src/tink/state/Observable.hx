@@ -316,8 +316,32 @@ abstract Computation<T>({ f: Void->T }) {
     return function () return o.value.value;
   }
 
+  @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
+    var last = None;
+    var o = Observable.auto(new Computation(function () return f(last))).map(Observable.ofPromise);
+    return function () {
+      var ret = o.value.value;
+      switch ret {
+        case Done(v): last = Some(v);//Let's come up with a better solution and pretend this never happened
+        default:
+      }
+      return ret;
+    }
+  }
+
   @:from static inline function plain<T>(f:Void->T):Computation<T>
     return new Computation(f);
+
+  @:from static inline function withLast<T>(f:Option<T>->T):Computation<T>
+    return new Computation({
+      var last = None;
+      function () {
+        var ret = f(last);
+        last = Some(ret);
+        return ret;
+      }
+    });
+
 }
 
 private class SimpleObservable<T> implements ObservableObject<T> {
