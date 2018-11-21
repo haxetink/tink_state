@@ -3,6 +3,7 @@ package ;
 import tink.state.*;
 
 using tink.CoreApi;
+using Lambda;
 using StringTools;
 
 @:asserts
@@ -63,6 +64,9 @@ class TestArrays {
       counter++;
 
     asserts.assert(counter == a.length);
+
+    var evenCount = a.fold(function (v, count) return count + 1 - v.value % 2, 0);
+    asserts.assert(evenCount == 5);
 
     var keysChanges = 0,
         valuesChanges = 0,
