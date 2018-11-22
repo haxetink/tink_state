@@ -63,7 +63,7 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
     length;//not pretty
     return {
       hasNext: function () return i < items.length,
-      next: function () return observe(i),
+      next: function () return observe(i++),
     }
   }
 
