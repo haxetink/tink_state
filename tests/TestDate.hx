@@ -19,12 +19,12 @@ class TestDate {
     d.becomesOlderThan(10.seconds()).bind(log.push);
     
     Observable.updateAll();
-    asserts.assert(compare(log, [false,false]));
+    asserts.assert(compare([false,false], log));
 
     return Future.async(function (done) {
       haxe.Timer.delay(done.bind(Noise), 1100);
     }).next(function (_) {
-      asserts.assert(compare(log, [false,false,true]));
+      asserts.assert(compare([false,false,true], log));
       return asserts.done();
     });
   }
