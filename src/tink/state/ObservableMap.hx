@@ -10,7 +10,7 @@ using tink.CoreApi;
   public var to(default, never):Option<V>;
 }
 
-class ObservableMap<K, V> implements Map.IMap<K, V> extends ObservableBase<Update<K, V>> {
+class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends ObservableBase<Update<K, V>> {
   
   var map:Map<K, V>;
   
@@ -72,6 +72,11 @@ class ObservableMap<K, V> implements Map.IMap<K, V> extends ObservableBase<Updat
   
   public inline function iterator():Iterator<V>
     return observableValues.value;
+    
+  #if haxe4
+  public inline function keyValueIterator():KeyValueIterator<K, V> 
+    throw 'keyValueIterator on ObservableMap is not implemented';
+  #end
   
   public inline function keys():Iterator<K>
     return observableKeys.value;
