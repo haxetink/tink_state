@@ -24,7 +24,7 @@ class ObservableMap<K, V> implements Map.IMap<K, V> extends ObservableBase<Updat
     super();
     this.map = initial;
     
-    this.observableKeys = new ObservableIterator<K>(
+    this.observableKeys = ObservableIterator.make(
       map.keys, 
       changes,
       function (c) return switch [c.from, c.to] {
@@ -33,7 +33,7 @@ class ObservableMap<K, V> implements Map.IMap<K, V> extends ObservableBase<Updat
       } 
     );
     
-    this.observableValues = new ObservableIterator(
+    this.observableValues = ObservableIterator.make(
       map.iterator,
       changes
     );

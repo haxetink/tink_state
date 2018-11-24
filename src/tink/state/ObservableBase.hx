@@ -32,9 +32,16 @@ class ObservableIterator<T> implements ObservableObject<Iterator<T>> {
   var iterator:Void->Iterator<T>;
   var changes:Signal<Noise>;
 
-  public function new<C>(iterator, changes:Signal<C>, ?trigger:C->Bool) {
+  function new(iterator, changes) {
     this.iterator = iterator;
-    this.changes = changes.select(function (c) return if (trigger == null || trigger(c)) TRIGGER else None);
+    this.changes = changes;
+  }
+  
+  public static function make<T, C>(iterator:Void->Iterator<T>, changes:Signal<C>, ?trigger:C->Bool) {
+    return new ObservableIterator(
+      iterator,
+      changes.select(function (c) return if (trigger == null || trigger(c)) TRIGGER else None)
+    );
   }
 
   public function isValid()
