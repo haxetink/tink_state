@@ -25,6 +25,10 @@ abstract Progress<T>(ProgressObject<T>) from ProgressObject<T> {
 		return this.result();
 	}
 	
+	@:impl
+	public static inline function asPromise<T>(p:ProgressObject<Outcome<T, Error>>):Promise<T>
+		return p.result();
+	
 	@:from
 	static inline function promise<T>(v:Promise<Progress<T>>):Progress<Outcome<T, Error>> {
 		return new PromiseProgress(v);
