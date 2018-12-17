@@ -185,7 +185,7 @@ After that, things become a little more complicated, so we'll look into them ste
 
 Using an observable's `bind` method we can create a "binding" to a callback, which gets invoked with the current value and then with the new value, when the observable changes. If you're not familiar with `tink_core`: a `CallbackLink` represents the link between a callback and the place it was registered and can be undone using its `dissolve` method. 
 
-If we create the binding with `{ direct: true }`, then every time the observable changes, the callback is called immediately. This can be pretty inefficient though. Assume the callback is bound to to an observable that combines two states and you update both of them, then the callback fires twice - once after both states were updated, but once inbetween. Performance considerations aside, it may also be that the callback inbetween receives non-sensical data. 
+If we create the binding with `{ direct: true }`, then every time the observable changes, the callback is called immediately. This can be pretty inefficient though. Assume the callback is bound to an observable that combines two states and you update both of them, then the callback fires twice - once after both states were updated, but once in between. Performance considerations aside, it may also be that the callback inbetween receives non-sensical data. 
 
 Therefore, the default behavior is to invalidate the binding and schedule an update at a later time (chosen depending on the current platform, e.g. `requestAnimationFrame` in JavaScript). Using `Observable.updateAll()` you can forcibly update all currently invalid bindings.
 
