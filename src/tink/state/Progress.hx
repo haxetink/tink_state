@@ -4,8 +4,6 @@ import tink.state.Observable;
 
 using tink.CoreApi;
 
-private typedef Impl<T> = Pair<Option<Float>, State<ProgressType<T>>>;
-
 @:forward(result, bind)
 abstract Progress<T>(ProgressObject<T>) from ProgressObject<T> {
 	public static var INIT(default, null):ProgressValue = new Pair(0.0, None);
@@ -228,10 +226,15 @@ abstract ProgressValue(Pair<Float, Option<Float>>) from Pair<Float, Option<Float
 	
 	public inline function new(value, total)
 		this = new Pair(value, total);
+	
+	/**
+	 * Normalize to 0-1 range
+	 */
+	public inline function normalize():Option<Float>
+		return total.map(function(v) return value / v);
 		
 	inline function get_value() return this.a;
 	inline function get_total() return this.b;
-	
 }
 
 enum ProgressType<T> {
