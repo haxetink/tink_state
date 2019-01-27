@@ -73,10 +73,19 @@ class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends Observa
   public inline function iterator():Iterator<V>
     return observableValues.value;
     
-  #if (haxe_ver >= 4)
-  public inline function keyValueIterator():KeyValueIterator<K, V> 
-    throw 'keyValueIterator on ObservableMap is not implemented';
-  #end
+  public inline function keyValueIterator():Iterator<{key:K, value:V}> {
+    var keys = keys();
+    return {
+      hasNext: keys.hasNext,
+      next: function () {
+        var key = keys.next();
+        return {
+          key: key,
+          value: get(key)
+        }
+      }
+    }
+  }
   
   public inline function keys():Iterator<K>
     return observableKeys.value;
