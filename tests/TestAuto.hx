@@ -61,4 +61,33 @@ class TestAuto {
     
     return asserts.done();
   }
+
+  // @:include
+  public function donotFireEqualAuto() {
+    var s = new State(1 << 5);
+
+    function inc()
+      s.set(s.value + 1);
+
+    var o = s.observe();
+    var a = [];
+
+    for (i in 0...5) {
+      a[i] = -1;
+      var cur = o;
+      o = Observable.auto(function () {
+        a[i]++;
+        return cur.value >> 1;
+      });
+    }
+
+    o.bind({ direct: true}, function () {});
+
+    for (i in 0...s.value >> 1) 
+      inc();
+    
+    asserts.assert('16,8,4,2,1' == a.join(','));
+  
+    return asserts.done();
+  }  
 }
