@@ -1,0 +1,10 @@
+{
+	"name": "@haxelib/tink_state",
+	"scripts": {
+		"postinstall": "lix download",
+		"test": "lix run travix node"
+	},
+	"dependencies": {
+		"lix": "=15.3.5"
+	}
+}
