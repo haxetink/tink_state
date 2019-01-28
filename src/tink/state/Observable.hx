@@ -10,7 +10,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   
   public var value(get, never):T;
   
-    @:to function get_value() 
+    @:to function get_value():T
       return measure().value;
         
   public inline function new(get:Void->T, changed:Signal<Noise>)
@@ -435,14 +435,14 @@ private class DependencyOf<T> implements Dependency {
   var data:Observable<T>;
   var last:T;
   
-  public function new(data, initial:Measurement<T>, trigger:FutureTrigger<Noise>) {
+  public function new(data:Observable<T>, initial:Measurement<T>, trigger:FutureTrigger<Noise>) {
     this.data = data;
 
     last = initial.value;
     initial.becameInvalid.handle(trigger.trigger);
   }
 
-  public function changed() 
+  public function changed():Bool 
     return last != data.value;
   
   public function resubscribe(trigger:FutureTrigger<Noise>) 
@@ -455,7 +455,6 @@ private class DependencyOf<T> implements Dependency {
 private class AutoObservable<T> extends SimpleObservable<T> {
   
   var trigger:FutureTrigger<Noise>;
-  // var subscriptions = new Map<Future<Noise>, CallbackLink>();
   var dependencies:Array<Dependency>;
   var isSubscribed:Map<{}, Bool>;
   var last:T;
@@ -488,7 +487,7 @@ private class AutoObservable<T> extends SimpleObservable<T> {
     });
   }
 
-  public function subscribe<D>(dependency:Observable<D>, initial:Measurement<D>) 
+  public function subscribe<D>(dependency:ObservableObject<D>, initial:Measurement<D>) 
     if (!isSubscribed[dependency]) {
       isSubscribed[dependency] = true;
       dependencies.push(new DependencyOf(dependency, initial, this.trigger));
