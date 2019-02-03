@@ -428,16 +428,12 @@ private class AutoObservable<T> extends SimpleObservable<T> {
   
   public function new(comp:Computation<T>)
     super(function () {
-      //for (l in subscriptions) l.dissolve();//TODO: consider adding this although it might be overkill
       this.subscriptions = new Map();
       this.trigger = Future.trigger();
       return new Measurement(comp.perform(), this.trigger.asFuture());
     });
 
-  public function subscribe(change:Future<Noise>) {
+  public function subscribe(change:Future<Noise>) 
     if (!subscriptions.exists(change)) 
       subscriptions[change] = change.handle(trigger.trigger);
-  }
-  // public function invalidate() 
-  //   trigger.trigger(Noise);  
 }
