@@ -230,11 +230,24 @@ abstract ProgressValue(Pair<Float, Option<Float>>) from Pair<Float, Option<Float
 	/**
 	 * Normalize to 0-1 range
 	 */
-	public inline function normalize():Option<Float>
+	public inline function normalize():Option<UnitInterval>
 		return total.map(function(v) return value / v);
 		
 	inline function get_value() return this.a;
 	inline function get_total() return this.b;
+}
+
+abstract UnitInterval(Float) from Float to Float {
+	public function toPercentageString(dp:Int) {
+		var m = Math.pow(10, dp);
+		var v = Math.round(this * m * 100) / m;
+		var s = Std.string(v);
+		return switch s.indexOf('.') {
+			case -1: s + '.' + StringTools.lpad('', '0', dp) + '%';
+			case i if(s.length - i > dp): s.substr(0, dp + i + 1) + '%';
+			case i: StringTools.rpad(s, '0', i + dp + 1) + '%';
+		}
+	}
 }
 
 enum ProgressType<T> {
