@@ -433,22 +433,26 @@ private interface Dependency {
 private class DependencyOf<T> implements Dependency {
   
   var data:Observable<T>;
+  var link:CallbackLink;
   var last:T;
   
   public function new(data:Observable<T>, initial:Measurement<T>, trigger:FutureTrigger<Noise>) {
     this.data = data;
 
     last = initial.value;
-    initial.becameInvalid.handle(trigger.trigger);
+    link = initial.becameInvalid.handle(trigger.trigger);
   }
 
-  public function changed():Bool 
+  public function changed():Bool {
+    link.dissolve();//this kind of side effect in a check is horrific, but this is private class and performance kinda matters here
     return last != data.value;
-  
-  public function resubscribe(trigger:FutureTrigger<Noise>) 
-    data.measure().becameInvalid.handle(function (_) {
+  }
+
+  public function resubscribe(trigger:FutureTrigger<Noise>) {
+    link = data.measure().becameInvalid.handle(function (_) {
       trigger.trigger(Noise);
     });
+  }
 
 }
 
@@ -469,10 +473,8 @@ private class AutoObservable<T> extends SimpleObservable<T> {
         var changed = false;
         
         for (d in dependencies)
-          if (d.changed()) {
+          if (d.changed()) 
             changed = true;
-            break;
-          }
 
         if (!changed) {
           for (d in dependencies)
