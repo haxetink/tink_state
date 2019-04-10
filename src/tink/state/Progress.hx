@@ -18,7 +18,6 @@ abstract Progress<T>(ProgressObject<T>) from ProgressObject<T> {
 		return ret;
 	}
 	
-	@:to
 	public inline function asFuture():Future<T> {
 		return this.result();
 	}
