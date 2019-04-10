@@ -62,7 +62,6 @@ class TestProgress {
       asserts.assert(o == 'Done');
       return Noise;
     }).eager();
-    var promise:Promise<String> = progress; // ensure assignable
     progress.result().handle(function(v) {
       asserts.assert(v.match(Success('Done')));
       asserts.done();
