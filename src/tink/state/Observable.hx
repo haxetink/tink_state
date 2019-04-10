@@ -424,10 +424,12 @@ class ConstObservable<T> implements ObservableObject<T> {
 private class AutoObservable<T> extends SimpleObservable<T> {
   
   var trigger:FutureTrigger<Noise>;
-  var subscriptions = new Map<Future<Noise>, CallbackLink>();
+  var subscriptions:Map<Future<Noise>, CallbackLink>;
   
   public function new(comp:Computation<T>)
     super(function () {
+      if (this.subscriptions != null)
+        for (l in subscriptions) l.dissolve();
       this.subscriptions = new Map();
       this.trigger = Future.trigger();
       return new Measurement(comp.perform(), this.trigger.asFuture());
