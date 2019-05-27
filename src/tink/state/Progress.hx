@@ -1,6 +1,7 @@
 package tink.state;
 
 import tink.state.Observable;
+import tink.core.Callback;
 
 using tink.CoreApi;
 
@@ -216,7 +217,42 @@ class ProgressBase<T> implements ProgressObject<T> {
 	public function observe():Observable<ProgressType<T>> {
 		throw 'not implemented';
 	}
+}
+
+class Cancellable<T> implements ProgressObject<T> implements LinkObject {
+	var progress:Progress<T>;
+	var link:CallbackLink;
 	
+	public function new(progress, link) {
+		this.progress = progress;
+		this.link = link;
+	}
+	
+	public inline function result():Future<T> {
+		return progress.result();
+	}
+	
+	public inline function bind(?opt:BindingOptions<ProgressValue>, f:Callback<ProgressValue>):CallbackLink {
+		return progress.bind(opt, f);
+	}
+	
+	public inline function observe():Observable<ProgressType<T>> {
+		return progress.observe();
+	}
+	
+	public inline function cancel():Void {
+		link.cancel();
+	}
+	
+	public inline function asProgress():Progress<T> {
+		return progress;
+	}
+	
+	public static function make<T>(f:(Float->Option<Float>->Void)->(T->Void)->CallbackLink):Cancellable<T> {
+		var ret = Progress.trigger();
+		var binding = f(ret.progress, ret.finish);
+		return new Cancellable(ret, binding);
+	}
 }
 
 abstract ProgressValue(Pair<Float, Option<Float>>) from Pair<Float, Option<Float>> {
