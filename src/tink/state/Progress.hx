@@ -255,6 +255,7 @@ class Cancellable<T> implements ProgressObject<T> implements LinkObject {
 	}
 }
 
+@:pure
 abstract ProgressValue(Pair<Float, Option<Float>>) from Pair<Float, Option<Float>> {
 	public var value(get, never):Float;
 	public var total(get, never):Option<Float>;
