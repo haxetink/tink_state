@@ -222,7 +222,7 @@ Instead, we can do this:
 o.bind(function (promised:Promised<X>) switch promised {
   case Loading://now we are loading
   case Done(d)://now it is loaded and succeeded
-  case Failure(e)://now it is loaded and failed
+  case Failed(e)://now it is loaded and failed
 });
 ```
 
