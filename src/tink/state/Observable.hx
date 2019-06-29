@@ -10,7 +10,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   
   public var value(get, never):T;
   
-    @:to function get_value() 
+    @:to function get_value():T
       return measure().value;
         
   public inline function new(get:Void->T, changed:Signal<Noise>)
@@ -79,8 +79,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     switch Std.instance(before, AutoObservable) {
       case null: 
       case v:
-        v.subscribe(p.becameInvalid);
-        // p.becameInvalid.handle(v.invalidate);
+        v.subscribe(this, p);
     }
     stack.pop();
     return p;
@@ -187,7 +186,9 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         v.push(f);
         scheduleUpdate();
     }
+
   static var isScheduled = false;
+
   static function scheduleUpdate() if (!isScheduled) {
     isScheduled = true;
     #if tink_runloop
@@ -217,6 +218,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       #end
 
     var end = measure() + maxSeconds;
+
     do {
       var old = scheduled;
       scheduled = [];
@@ -224,6 +226,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       
     } 
     while (scheduled.length > 0 && measure() < end);
+
     return 
       if (scheduled.length > 0) {
         scheduleUpdate();
@@ -249,6 +252,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       var m2 = m.value.measure();
       return new Measurement(m2.value, m.becameInvalid || m2.becameInvalid);
     });
+
   static var counter = 0;
   static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>> {
     if (p == null) 
@@ -371,7 +375,7 @@ private class SimpleObservable<T> implements ObservableObject<T> {
     return cache;
   }
   
-  public function new(f) 
+  public function new(f)  
     this._poll = f;  
 }
 
@@ -421,21 +425,73 @@ class ConstObservable<T> implements ObservableObject<T> {
     this.m = new Measurement(value, NEVER);
 }
 
+private interface Dependency {
+  function changed():Bool;
+  function resubscribe(trigger:FutureTrigger<Noise>):Void;
+}
+
+private class DependencyOf<T> implements Dependency {
+  
+  var data:Observable<T>;
+  var link:CallbackLink;
+  var last:T;
+  
+  public function new(data:Observable<T>, initial:Measurement<T>, trigger:FutureTrigger<Noise>) {
+    this.data = data;
+
+    last = initial.value;
+    link = initial.becameInvalid.handle(trigger.trigger);
+  }
+
+  public function changed():Bool {
+    link.dissolve();//this kind of side effect in a check is horrific, but this is private class and performance kinda matters here
+    return last != data.value;
+  }
+
+  public function resubscribe(trigger:FutureTrigger<Noise>) {
+    link = data.measure().becameInvalid.handle(function (_) {
+      trigger.trigger(Noise);
+    });
+  }
+
+}
+
 private class AutoObservable<T> extends SimpleObservable<T> {
   
   var trigger:FutureTrigger<Noise>;
-  var subscriptions:Map<Future<Noise>, CallbackLink>;
-  
-  public function new(comp:Computation<T>)
-    super(function () {
-      if (this.subscriptions != null)
-        for (l in subscriptions) l.dissolve();
-      this.subscriptions = new Map();
-      this.trigger = Future.trigger();
-      return new Measurement(comp.perform(), this.trigger.asFuture());
-    });
+  var dependencies:Array<Dependency>;
+  var isSubscribed:Map<{}, Bool>;
+  var last:T;
 
-  public function subscribe(change:Future<Noise>) 
-    if (!subscriptions.exists(change)) 
-      subscriptions[change] = change.handle(trigger.trigger);
+  public function new(comp:Computation<T>) {
+    
+    super(function () {
+
+      this.trigger = Future.trigger();
+
+      if (dependencies != null) {
+        var changed = false;
+        
+        for (d in dependencies)
+          if (d.changed()) 
+            changed = true;
+
+        if (!changed) {
+          for (d in dependencies)
+            d.resubscribe(this.trigger);
+          return new Measurement(last, this.trigger.asFuture());
+        }
+      }
+      dependencies = [];
+      isSubscribed = new Map();
+      
+      return new Measurement(last = comp.perform(), this.trigger.asFuture());
+    });
+  }
+
+  public function subscribe<D>(dependency:ObservableObject<D>, initial:Measurement<D>) 
+    if (!isSubscribed[dependency]) {
+      isSubscribed[dependency] = true;
+      dependencies.push(new DependencyOf(dependency, initial, this.trigger));
+    }
 }
