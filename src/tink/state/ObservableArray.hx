@@ -25,6 +25,9 @@ private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
       @:privateAccess target.items.iterator(), 
       @:privateAccess target.changes.nextTime().map(function (_) return Noise)
     );
+
+  public function getComparator()
+    return null;
 }
 
 class ObservableArray<T> extends ObservableBase<Change<T>> {

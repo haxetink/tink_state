@@ -51,4 +51,7 @@ class ObservableDate implements ObservableObject<Bool> {
 
 	public function isValid()
 		return _observable.isValid();
+
+	public function getComparator()
+		return null;
 }

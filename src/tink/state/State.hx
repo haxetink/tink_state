@@ -39,10 +39,12 @@ private class CompoundState<T> implements StateObject<T> {
   
   var data:ObservableObject<T>;
   var update:T->Void;
+  var comparator:Null<T->T->Bool>;
 
-  public function new(data, set) {
+  public function new(data, set, ?comparator) {
     this.data = data;
     this.update = set;
+    this.comparator = comparator;
   }
 
   public function isValid()
@@ -53,14 +55,17 @@ private class CompoundState<T> implements StateObject<T> {
 
   public function set(value)
     update(value);
+
+  public function getComparator()
+    return this.comparator;
 }
 
 private class SimpleState<T> implements StateObject<T> {
   
   var next:Measurement<T>;
   var trigger:FutureTrigger<Noise>;
-  var isEqual:T->T->Bool;
-  var guard:T->T->T;
+  var isEqual:Null<T->T->Bool>;
+  var guard:T->T;
 
   public function isValid()
     return true;
@@ -73,9 +78,9 @@ private class SimpleState<T> implements StateObject<T> {
       return value;
       
   public function new(value, ?isEqual, ?guard) {
-    this.value = value;
-    this.isEqual = isEqual;
     this.guard = guard;
+    this.isEqual = isEqual;
+    this.value = if (guard != null) guard(value) else value;
     arm();
   }
   
@@ -87,9 +92,12 @@ private class SimpleState<T> implements StateObject<T> {
   inline function differs(a, b)
     return if (isEqual == null) a != b else !isEqual(a, b);
   
+  public function getComparator()
+    return isEqual;
+
   public function set(value) {
     if (guard != null)
-      value = guard(value, this.value);
+      value = guard(value);
     if (differs(value, this.value)) {
       this.value = value;
       var last = trigger;

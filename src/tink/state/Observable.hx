@@ -75,8 +75,14 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         
     stack.push(this);
     var p = this.poll();
-    
-    switch Std.instance(before, AutoObservable) {
+      
+    switch 
+        #if haxe4 
+          Std.downcast(before, AutoObservable) 
+        #else
+          Std.instance(before, AutoObservable) 
+        #end
+    {
       case null: 
       case v:
         v.subscribe(this, p);
@@ -204,6 +210,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       throw 'this should be unreachable';
     #end  
   }
+
   static function scheduledRun() {
     isScheduled = false;
     updatePending();
@@ -275,11 +282,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     });
   }
 
-  static public function create<T>(f):Observable<T> 
-    return new SimpleObservable(f);
+  static public function create<T>(f, ?comparator):Observable<T> 
+    return new SimpleObservable(f, comparator);
   
-  static public function auto<T>(f:Computation<T>):Observable<T>
-    return new AutoObservable(f);
+  static public function auto<T>(f:Computation<T>, ?comparator):Observable<T>
+    return new AutoObservable(f, comparator);
   
   @:noUsing static public function const<T>(value:T):Observable<T> 
     return new ConstObservable(value);      
@@ -351,6 +358,7 @@ abstract Computation<T>({ f: Void->T }) {
 private class SimpleObservable<T> implements ObservableObject<T> {
   
   var _poll:Void->Measurement<T>;
+  var comparator:Null<T->T->Bool>;
   var cache:Measurement<T>;
   
   function resetCache(_) cache = null;
@@ -375,8 +383,13 @@ private class SimpleObservable<T> implements ObservableObject<T> {
     return cache;
   }
   
-  public function new(f)  
-    this._poll = f;  
+  public function new(f, ?comparator) {
+    this._poll = f;
+    this.comparator = comparator;
+  }
+
+  public function getComparator()
+    return comparator;
 }
 
 abstract Transform<T, R>(T->R) {
@@ -406,6 +419,7 @@ abstract Transform<T, R>(T->R) {
 
 interface ObservableObject<T> {
   function isValid():Bool;
+  function getComparator():Null<T->T->Bool>;
   function poll():Measurement<T>;
 }
 
@@ -423,6 +437,9 @@ class ConstObservable<T> implements ObservableObject<T> {
   
   public function new(value)
     this.m = new Measurement(value, NEVER);
+
+  public function getComparator():Null<T->T->Bool>
+    return null;
 }
 
 private interface Dependency {
@@ -434,18 +451,22 @@ private class DependencyOf<T> implements Dependency {
   
   var data:Observable<T>;
   var link:CallbackLink;
+  var comparator:Null<T->T->Bool>;
   var last:T;
   
   public function new(data:Observable<T>, initial:Measurement<T>, trigger:FutureTrigger<Noise>) {
     this.data = data;
-
-    last = initial.value;
-    link = initial.becameInvalid.handle(trigger.trigger);
+    this.comparator = (data:ObservableObject<T>).getComparator();
+    this.last = initial.value;
+    this.link = initial.becameInvalid.handle(trigger.trigger);
   }
 
   public function changed():Bool {
     link.dissolve();//this kind of side effect in a check is horrific, but this is private class and performance kinda matters here
-    return last != data.value;
+    return switch comparator {
+      case null: last != data.value;
+      case f: !f(last, data.value);
+    }
   }
 
   public function resubscribe(trigger:FutureTrigger<Noise>) {
@@ -463,7 +484,7 @@ private class AutoObservable<T> extends SimpleObservable<T> {
   var isSubscribed:Map<{}, Bool>;
   var last:T;
 
-  public function new(comp:Computation<T>) {
+  public function new(comp:Computation<T>, ?comparator) {
     
     super(function () {
 
@@ -486,7 +507,7 @@ private class AutoObservable<T> extends SimpleObservable<T> {
       isSubscribed = new Map();
       
       return new Measurement(last = comp.perform(), this.trigger.asFuture());
-    });
+    }, comparator);
   }
 
   public function subscribe<D>(dependency:ObservableObject<D>, initial:Measurement<D>) 

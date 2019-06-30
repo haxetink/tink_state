@@ -53,4 +53,7 @@ class ObservableIterator<T> implements ObservableObject<Iterator<T>> {
       changes.nextTime()
     );
 
+  public function getComparator()
+    return null;
+
 }
