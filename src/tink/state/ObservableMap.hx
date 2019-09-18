@@ -93,6 +93,11 @@ class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends Observa
   public inline function toString():String 
     return asString.value;
 
+	public inline function clear():Void {
+		 for (key in map.keys())
+      map.remove(key);
+	}
+
   public function copy()
     return new ObservableMap(this.map);
 }
