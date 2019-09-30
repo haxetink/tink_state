@@ -19,7 +19,7 @@ class ObservableBase<Change> {
         ret,
         (
           if (when == null) changes 
-          else changes.filter(when.bind(ret), false)
+          else changes.filter(when.bind(ret) #if !tink_core_2 , false #end)
         ).nextTime().map(function (_) return Noise)
       );
     });    
