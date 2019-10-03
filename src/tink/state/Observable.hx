@@ -444,6 +444,7 @@ class ConstObservable<T> implements ObservableObject<T> {
 
 private interface Dependency {
   function changed():Bool;
+  function unlink():Void;
   function resubscribe(trigger:FutureTrigger<Noise>):Void;
 }
 
@@ -461,18 +462,20 @@ private class DependencyOf<T> implements Dependency {
     this.link = initial.becameInvalid.handle(trigger.trigger);
   }
 
-  public function changed():Bool {
-    link.dissolve();//this kind of side effect in a check is horrific, but this is private class and performance kinda matters here
+  public function changed():Bool 
     return switch comparator {
       case null: last != data.value;
       case f: !f(last, data.value);
     }
-  }
+  public function unlink()
+    link.dissolve();
 
   public function resubscribe(trigger:FutureTrigger<Noise>) {
-    link = data.measure().becameInvalid.handle(function (_) {
+    var next = data.measure().becameInvalid.handle(function (_) {
       trigger.trigger(Noise);
     });
+    link.cancel();
+    link = next;
   }
 
 }
@@ -494,10 +497,15 @@ private class AutoObservable<T> extends SimpleObservable<T> {
         var changed = false;
         
         for (d in dependencies)
-          if (d.changed()) 
+          if (d.changed()) {
             changed = true;
+            break;
+          }
 
-        if (!changed) {
+        if (changed) 
+          for (d in dependencies)
+            d.unlink();
+        else {
           for (d in dependencies)
             d.resubscribe(this.trigger);
           return new Measurement(last, this.trigger.asFuture());
