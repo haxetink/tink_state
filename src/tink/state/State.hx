@@ -6,29 +6,29 @@ using tink.CoreApi;
 
 @:forward(set)
 abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
-	
+
   public var value(get, never):T;
     @:to function get_value() return observe().value;
-  
-  public inline function new(value, ?isEqual, ?guard) 
+
+  public inline function new(value, ?isEqual, ?guard)
     this = new SimpleState(value, isEqual, guard);
-	
+
   public inline function observe():Observable<T>
     return this;
 
   public function transform<R>(rules:{ function read(v:T):R; function write(v:R):T; }):State<R>
     return new CompoundState(observe().map(rules.read), function (value) this.set(rules.write(value)));
 
-  public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink 
+  public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink
     return observe().bind(options, cb);
-    
+
   @:impl static public function toggle(s:StateObject<Bool>) {
     s.set(!s.poll().value);
   }
-  
+
   @:to public function toCallback():Callback<T>
     return this.set;
-  
+
 }
 
 private interface StateObject<T> extends ObservableObject<T> {
@@ -36,7 +36,7 @@ private interface StateObject<T> extends ObservableObject<T> {
 }
 
 private class CompoundState<T> implements StateObject<T> {
-  
+
   var data:ObservableObject<T>;
   var update:T->Void;
   var comparator:Null<T->T->Bool>;
@@ -61,7 +61,7 @@ private class CompoundState<T> implements StateObject<T> {
 }
 
 private class SimpleState<T> implements StateObject<T> {
-  
+
   var next:Measurement<T>;
   var trigger:FutureTrigger<Noise>;
   var isEqual:Null<T->T->Bool>;
@@ -69,40 +69,47 @@ private class SimpleState<T> implements StateObject<T> {
 
   public function isValid()
     return true;
-  
-  public function poll()
+
+  public function poll() {
+    if (next == null) {
+      if (guard != null)
+        value = guard(value);
+      arm();
+    }
     return next;
-  
-  public var value(get, null):T;
-    inline function get_value()
-      return value;
-      
+  }
+
+  var value:T;
+
   public function new(value, ?isEqual, ?guard) {
     this.guard = guard;
     this.isEqual = isEqual;
-    this.value = if (guard != null) guard(value) else value;
-    arm();
+    this.value = value;
   }
-  
+
   function arm() {
     this.trigger = Future.trigger();
-    this.next = new Measurement(value, this.trigger);    
+    this.next = new Measurement(value, this.trigger);
   }
 
   inline function differs(a, b)
     return if (isEqual == null) a != b else !isEqual(a, b);
-  
+
   public function getComparator()
     return isEqual;
 
   public function set(value) {
-    if (guard != null)
+    if (guard != null) {
+      if (next == null)
+        this.value = guard(this.value);
       value = guard(value);
+    }
     if (differs(value, this.value)) {
       this.value = value;
       var last = trigger;
       arm();
-      last.trigger(Noise);
+      if (last != null)
+        last.trigger(Noise);
     }
   }
 }
