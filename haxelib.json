@@ -1,6 +1,15 @@
 {
 	"name": "tink_state",
-	"license": "MIT",
+	"classPath": "src",
+	"dependencies": {
+		"tink_core": ""
+	},
+	"url": "https://github.com/haxetink/tink_state/",
+	"contributors": [
+		"back2dos"
+	],
+	"version": "0.11.0",
+	"releasenote": "Improved dependency tracking. Fix memory leak. Simplify guards. Update for Haxe4 stable.",
 	"tags": [
 		"tink",
 		"cross",
@@ -9,14 +18,5 @@
 		"observable",
 		"binding"
 	],
-	"classPath": "src",
-	"contributors": [
-		"back2dos"
-	],
-	"releasenote": "Various bugfixes. Adjust to latest Haxe 4 changes.",
-	"version": "0.10.1",
-	"url": "https://github.com/haxetink/tink_state/",
-	"dependencies": {
-		"tink_core": ""
-	}
+	"license": "MIT"
 }
