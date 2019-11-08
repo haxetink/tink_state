@@ -201,7 +201,7 @@ enum Promised<T> {
 }
 ```
 
-We want this because it `Observable<Promised<R>>` is a more handy representation of `Observable<Promised<T>>`. The latter nests two asynchronous data structures and that results in all kinds of issues. For starters, here is what we'd have to do to get data from the it:
+We want this because `Observable<Promised<R>>` is a more handy representation of `Observable<Promise<T>>`. The latter nests two asynchronous data structures and that results in all kinds of issues. For starters, here is what we'd have to do to get data from the it:
 
 ```haxe
 o.bind(function (promise:Promise<X>) {
