@@ -212,7 +212,7 @@ o.bind(function (promise:Promise<X>) {
       case Success(d)://and succeeded
       case Failure(e)://and failed
     }
-  }
+  });
 });
 ```
 
