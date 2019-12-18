@@ -127,7 +127,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
           function update()
             if (active) {
-              var next = measure();
+              var next = untracked(measure);
               cb.invoke(next.value);
               scheduled = false;
               link = next.becameInvalid.handle(updated);
@@ -153,7 +153,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
           var link:CallbackLink = null;
 
           function update(_:Noise) {
-            var next = measure();
+            var next = untracked(measure);
             cb.invoke(next.value);
             link = next.becameInvalid.handle(update);
           }
