@@ -97,6 +97,9 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
           splice(v, 1);
           true;
       }
+      
+  public inline function indexOf(item:T):Int
+    return items.indexOf(item);
 
   public function splice(index:Int, length:Int) {
     var ret = items.splice(index, length);
