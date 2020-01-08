@@ -5,34 +5,34 @@ import tink.state.ObservableBase;
 using tink.CoreApi;
 
 @:structInit private class Update<K, V> {
-  public var key(default, never):K;
-  public var from(default, never):Option<V>;
-  public var to(default, never):Option<V>;
+  public #if haxe4 var #else final #end key #if !haxe4 (default, never) #end:K;
+  public #if haxe4 var #else final #end from #if !haxe4 (default, never) #end:Option<V>;
+  public #if haxe4 var #else final #end to #if !haxe4 (default, never) #end:Option<V>;
 }
 
 class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends ObservableBase<Update<K, V>> {
-  
+
   var map:Map<K, V>;
-  
+
   public var observableKeys(default, null):Observable<Iterator<K>>;
   public var observableValues(default, null):Observable<Iterator<V>>;
 
   var asString:Observable<String>;
-  
+
   public function new(initial) {
-    
+
     super();
     this.map = initial;
-    
+
     this.observableKeys = ObservableIterator.make(
-      map.keys, 
+      map.keys,
       changes,
       function (c) return switch [c.from, c.to] {
         case [Some(_), Some(_)]: false;
         default: true;
-      } 
+      }
     );
-    
+
     this.observableValues = ObservableIterator.make(
       map.iterator,
       changes
@@ -40,23 +40,23 @@ class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends Observa
 
     this.asString = observable(map.toString);
   }
-  
+
   public function observe(key:K):Observable<Null<V>>
     return observable(map.get.bind(key), function (_, c) return c.key == key);
-    
-  public inline function get(key:K):Null<V> 
+
+  public inline function get(key:K):Null<V>
     return observe(key).value;
-  
-  public function set(key:K, value:V) 
+
+  public function set(key:K, value:V)
     switch map[key] {
       case unchanged if (value == unchanged):
-      case old: 
+      case old:
         var from = if (map.exists(key)) Some(old) else None;
         map[key] = value;
         _changes.trigger({ key: key, from: from, to: Some(value) });
     }
-  
-  public function remove(key:K):Bool 
+
+  public function remove(key:K):Bool
     return
       if (map.exists(key)) {
         var from = Some(map[key]);
@@ -65,14 +65,14 @@ class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends Observa
         true;
       }
       else false;
-  
+
   public function exists(key:K):Bool {
     return observable(map.exists.bind(key), function (exists, c) return exists == (c.to == None));
   }
-  
+
   public inline function iterator():Iterator<V>
     return observableValues.value;
-    
+
   public inline function keyValueIterator():Iterator<{key:K, value:V}> {
     var keys = keys();
     return {
@@ -86,11 +86,11 @@ class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends Observa
       }
     }
   }
-  
+
   public inline function keys():Iterator<K>
     return observableKeys.value;
-    
-  public inline function toString():String 
+
+  public inline function toString():String
     return asString.value;
 
 	public inline function clear():Void {
