@@ -54,7 +54,7 @@ private class CompoundState<T> implements StateObject<T> {
     return data.isValid();
 
   public function poll()
-    return data.poll();
+    return (data:Observable<T>).measure();
 
   public function set(value)
     update(value);
