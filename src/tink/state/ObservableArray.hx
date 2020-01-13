@@ -98,6 +98,10 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
           true;
       }
       
+  public inline function clear() {
+    return splice(0, items.length);
+  }
+      
   public inline function indexOf(item:T):Int
     return items.indexOf(item);
 

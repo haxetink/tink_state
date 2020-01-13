@@ -135,4 +135,18 @@ class TestArrays {
     asserts.assert(log.join(';') == 'Alice:[];Alice:[1,2];Bob:[1,2]');
     return asserts.done(); 
   }
+  
+  public function clear() {
+    var o = new ObservableArray([1,2,3]);
+    
+    var log = '';
+    
+    o.observableLength.bind({ direct: true }, v -> log += 'len:$v');
+    for(i in 0...o.length) o.observe(i).bind({ direct: true }, v -> log += ',$i:$v');
+    o.clear();
+    
+    asserts.assert(log.replace('undefined', '-').replace('null', '-') == 'len:3,0:1,1:2,2:3len:0,0:-,1:-,2:-');
+    
+    return asserts.done();
+  }
 }
