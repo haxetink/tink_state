@@ -29,6 +29,9 @@ abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
   @:to public function toCallback():Callback<T>
     return this.set;
 
+  static public function compound<T>(source:Observable<T>, update:T->Void, ?comparator:T->T->Bool)
+    return new CompoundState(source, update, comparator);
+
 }
 
 private interface StateObject<T> extends ObservableObject<T> {
@@ -51,7 +54,7 @@ private class CompoundState<T> implements StateObject<T> {
     return data.isValid();
 
   public function poll()
-    return data.poll();
+    return (data:Observable<T>).measure();
 
   public function set(value)
     update(value);
