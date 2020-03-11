@@ -137,7 +137,7 @@ class TestArrays {
   }
   
   public function clear() {
-    var o = new ObservableArray([1,2,3]);
+    var o = new ObservableArray<Null<Int>>([1,2,3]);
     
     var log = '';
     
