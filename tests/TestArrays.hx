@@ -141,8 +141,8 @@ class TestArrays {
     
     var log = '';
     
-    o.observableLength.bind({ direct: true }, v -> log += 'len:$v');
-    for(i in 0...o.length) o.observe(i).bind({ direct: true }, v -> log += ',$i:$v');
+    o.observableLength.bind({ direct: true }, function(v) return log += 'len:$v');
+    for(i in 0...o.length) o.observe(i).bind({ direct: true }, function(v) return log += ',$i:$v');
     o.clear();
     
     asserts.assert(log.replace('undefined', '-').replace('null', '-') == 'len:3,0:1,1:2,2:3len:0,0:-,1:-,2:-');
