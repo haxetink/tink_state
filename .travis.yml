@@ -19,7 +19,7 @@ install:
   - lix download
 
 script:
-  - lix run travix interp
+  # - lix run travix interp
   - lix run travix neko
   - lix run travix python
   - lix run travix node
