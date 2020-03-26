@@ -173,7 +173,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     #end
 
   #if js
-    static var hasRAF:Bool = untyped __js__("typeof window != 'undefined' && 'requestAnimationFrame' in window");
+    static var hasRAF:Bool = #if haxe4 js.Syntax.code #else untyped __js__ #end ("typeof window != 'undefined' && 'requestAnimationFrame' in window");
   #end
 
   static function schedule(f:Void->Void)
