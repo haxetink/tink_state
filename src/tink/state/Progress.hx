@@ -187,7 +187,7 @@ class ProgressBase<T> implements ProgressObject<T> {
 	}
 	
 	public function bind(?opt:BindingOptions<ProgressValue>, f:Callback<ProgressValue>):CallbackLink {
-		var binding:CallbackLink;
+		var binding:CallbackLink = null;
 		
 		var opt:BindingOptions<ProgressType<T>> = switch opt {
 			case null: null;
