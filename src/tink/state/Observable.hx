@@ -307,12 +307,22 @@ typedef BindingOptions<T> = {
   ?comparator:T->T->Bool
 }
 
-abstract Computation<T>({ f: Void->T }) {
+private abstract WrapComp<T>(Dynamic) {
+  public inline function new(v:Void->T)
+    this = v;
+
+  public inline function call():T
+    return
+      (this:Void->T)();
+
+}
+
+abstract Computation<T>(WrapComp<T>) {
   inline function new(f)
-    this = { f: f };
+    this = new WrapComp(f);
 
   public inline function perform()
-    return this.f();
+    return this.call();
 
   @:from static function async<T>(f:Void->Promise<T>):Computation<Promised<T>> {//Something tells me this is rather inefficient ...
     var o = Observable.auto(new Computation(f)).map(Observable.ofPromise);
