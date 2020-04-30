@@ -84,7 +84,15 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
     return observe(index).value;
 
   public function set(index:Int, value:T)
-    if (items[index] != value) {
+    if (index >= items.length)
+      if (index == items.length)
+        insert(index, value)
+      else {
+        var a = [];
+        a[index - items.length] = value;
+        insertMany(index, a);
+      }
+    else if (items[index] != value) {
       items[index] = value;
       _changes.trigger(Update(index, [value]));
     }
@@ -97,7 +105,7 @@ class ObservableArray<T> extends ObservableBase<Change<T>> {
           splice(v, 1);
           true;
       }
-      
+
   public inline function clear() {
     return splice(0, items.length);
   }

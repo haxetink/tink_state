@@ -8,9 +8,9 @@ using StringTools;
 
 @:asserts
 class TestArrays {
-  
+
   public function new() {}
-  
+
   public function basics() {
     var a = new ObservableArray<Null<Int>>([for (i in 0...100) i]);
     var log = [];
@@ -24,7 +24,7 @@ class TestArrays {
     function report(name:String) return function (v:Null<Int>) log.push('$name:$v');
 
     a.observableLength.bind({ direct: true }, report('l'));
-    
+
     a.observe(99).bind({ direct: true }, report('99'));
 
     asserts.assert(getLog() == 'l:100,99:99');
@@ -37,19 +37,29 @@ class TestArrays {
     clear();
 
     for (i in 0...9)
-      a.unshift(a.get(0)-1);    
-    
+      a.unshift(a.get(0)-1);
+
     asserts.assert(getLog() == 'l:91,l:92,l:93,l:94,l:95,l:96,l:97,l:98,l:99');
 
     clear();
-    a.unshift(a.get(0)-1);    
+    a.unshift(a.get(0)-1);
     asserts.assert(getLog() == '99:89,l:100');//It's a good question why exactly this happens out of order
     clear();
     for (i in 0...10)
       a.push(i);
 
     asserts.assert(getLog() == 'l:101,l:102,l:103,l:104,l:105,l:106,l:107,l:108,l:109,l:110');
-    
+
+    return asserts.done();
+  }
+
+  public function issue27() {
+    var arr = new ObservableArray<Bool>();
+    asserts.assert(arr.length == 0);
+    arr.set(0, true);
+    asserts.assert(arr.length == 1);
+    arr.set(10, true);
+    asserts.assert(arr.length == 11);
     return asserts.done();
   }
 
@@ -124,29 +134,29 @@ class TestArrays {
 
     var vals = o.observableValues;
     Observable.auto(function () {
-        return name.value + ':' + [for (i in vals) i]; 
+        return name.value + ':' + [for (i in vals) i];
     }).bind(function (v) log.push(v));
     Observable.updateAll();//triggers bindings update
     o.push(1);
     o.push(2);
     Observable.updateAll();
     name.set('Bob');
-    Observable.updateAll();     
+    Observable.updateAll();
     asserts.assert(log.join(';') == 'Alice:[];Alice:[1,2];Bob:[1,2]');
-    return asserts.done(); 
+    return asserts.done();
   }
-  
+
   public function clear() {
     var o = new ObservableArray<Null<Int>>([1,2,3]);
-    
+
     var log = '';
-    
+
     o.observableLength.bind({ direct: true }, function(v) return log += 'len:$v');
     for(i in 0...o.length) o.observe(i).bind({ direct: true }, function(v) return log += ',$i:$v');
     o.clear();
-    
+
     asserts.assert(log.replace('undefined', '-').replace('null', '-') == 'len:3,0:1,1:2,2:3len:0,0:-,1:-,2:-');
-    
+
     return asserts.done();
   }
 }
