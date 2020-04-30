@@ -1,17 +1,18 @@
 import tink.state.*;
 
-import tink.state.Progress;
 
 using tink.CoreApi;
+
+import tink.state.Progress;
 
 @:asserts
 class TestProgress {
   public function new() {}
-  
+
   public function testProgress() {
     var state = Progress.trigger();
     var progress = state.asProgress();
-    
+
     var p;
     progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
@@ -22,14 +23,14 @@ class TestProgress {
       asserts.assert(v == 'Done');
       asserts.done();
     });
-    
+
     return asserts;
   }
-  
+
   public function testFutureProgress() {
     var state = Progress.trigger();
     var progress:Progress<String> = Future.sync(state.asProgress());
-    
+
     var p;
     progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
@@ -40,14 +41,14 @@ class TestProgress {
       asserts.assert(v == 'Done');
       asserts.done();
     });
-    
+
     return asserts;
   }
-  
+
   public function testPromiseProgress() {
     var state:ProgressTrigger<String> = Progress.trigger();
     var progress:Progress<Outcome<String, Error>> = Promise.lift(state.asProgress());
-    
+
     var p;
     progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
@@ -66,7 +67,7 @@ class TestProgress {
       asserts.assert(v.match(Success('Done')));
       asserts.done();
     });
-    
+
     return asserts;
   }
 }
