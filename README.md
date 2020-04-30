@@ -13,7 +13,7 @@ The Wikipedia offers a very simple definition of what an observable is:
 
 > In physics, an observable is a dynamic variable that can be measured.
 
-That's actually rather straight forward to define: 
+That's actually rather straight forward to define:
 
 ```haxe
 typedef Observable<T> = {
@@ -44,7 +44,7 @@ function map<In, Out>(o:Observable<In>, transform:In->Out):Observable<Out>
   return {
     measure: function () {
       var m = o.measure();
-          
+
       return {
         value: transform(m.value),
         becameInvalid: m.becameInvalid,
@@ -63,10 +63,10 @@ function combine<A, B, C>(a:Observable<A>, b:Observable<B>, combinator:A->B->C):
     measure: function () {
       var ma = a.measure(),
           mb = b.measure();
-         
+
       return {
         value: combinator(ma.value, mb.value),
-        becameInvalid: ma.becameInvalid || mb.becameInvalid 
+        becameInvalid: ma.becameInvalid || mb.becameInvalid
         // the || operator on two futures creates a new future that triggers as soon as one of its operands trigger
       }
     }
@@ -85,11 +85,11 @@ import haxe.ds.Option;
 
 function isFull(health)
   return health.cur >= health.max;
-  
+
 var player:Player = ...;
 var nextHealthPotion = combine(
-  player.inventory, 
-  player.health, 
+  player.inventory,
+  player.health,
   function (inventory, health) {
     if (isFull(health)) return None;
     for (item in inventory)
@@ -122,8 +122,8 @@ abstract State<T> to Observable<T> {
   var value(get, never):T;
   function new(value:T):Void;
   function set(value:T):Void;
-  function observe():Observable<T>; 
-  
+  function observe():Observable<T>;
+
   @:to function toCallback():Callback<T>;
   @:from static private function ofConstant<T>(value:T):State<T>;
 }
@@ -154,22 +154,22 @@ They are practically the same as in the introduction, except that they are abstr
 
 ```haxe
 abstract Observable<T> {
-  
+
   @:to var value(get, never):T;
-  function measure():Measurement<T>;  
-  
+  function measure():Measurement<T>;
+
   function bind(?options:{ ?direct: Bool }, cb:Callback<T>):CallbackLink;
-  static function updateAll():Void;  
-  
+  static function updateAll():Void;
+
   @:impl static function deliver<T>(o:Observable<Promised<T>>, initial:T):Observable<T>;
-  
+
   static function create<T>(f:Void->Measurement<T>):Observable<T>;
   static function auto<T>(f:Computation<T>):Observable<T>;
-  @:from static function const<T>(value:T):Observable<T>;     
-  
+  @:from static function const<T>(value:T):Observable<T>;
+
   function map<R>(f:Transform<T, R>):Observable<R>;
   function mapAsync<R>(f:Transform<T, Promise<R>>):Observable<Promised<R>>;
-  
+
   function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>;
   function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>;
 
@@ -183,9 +183,9 @@ After that, things become a little more complicated, so we'll look into them ste
 
 #### Binding
 
-Using an observable's `bind` method we can create a "binding" to a callback, which gets invoked with the current value and then with the new value, when the observable changes. If you're not familiar with `tink_core`: a `CallbackLink` represents the link between a callback and the place it was registered and can be undone using its `dissolve` method. 
+Using an observable's `bind` method we can create a "binding" to a callback, which gets invoked with the current value and then with the new value, when the observable changes. If you're not familiar with `tink_core`: a `CallbackLink` represents the link between a callback and the place it was registered and can be undone using its `dissolve` method.
 
-If we create the binding with `{ direct: true }`, then every time the observable changes, the callback is called immediately. This can be pretty inefficient though. Assume the callback is bound to an observable that combines two states and you update both of them, then the callback fires twice - once after both states were updated, but once in between. Performance considerations aside, it may also be that the callback inbetween receives non-sensical data. 
+If we create the binding with `{ direct: true }`, then every time the observable changes, the callback is called immediately. This can be pretty inefficient though. Assume the callback is bound to an observable that combines two states and you update both of them, then the callback fires twice - once after both states were updated, but once in between. Performance considerations aside, it may also be that the callback inbetween receives non-sensical data.
 
 Therefore, the default behavior is to invalidate the binding and schedule an update at a later time (chosen depending on the current platform, e.g. `requestAnimationFrame` in JavaScript). Using `Observable.updateAll()` you can forcibly update all currently invalid bindings.
 
@@ -266,7 +266,7 @@ Transforms are used in both `map` and `mapAsync`, the former being very much lik
 Suppose we have a translation service:
 
 ```haxe
-function translate(word:String, fromLanguage:String, toLanguage:String):Promise<String>; 
+function translate(word:String, fromLanguage:String, toLanguage:String):Promise<String>;
 ```
 
 And we have an `Observable<String>` that represents user input.
@@ -285,7 +285,7 @@ As you can see, we always deal only with `String` despite the fact that `$type(i
 
 #### Awaiting the next time a condition is met
 
-With `nextTime` you create a `Future` that triggers when the provided condition is met for the very next time. Note that if the current value meets the condition, then the future is triggered with that value, but you can set `options.butNotNow` to `true` to delay triggering until the condition turns false and then true again. 
+With `nextTime` you create a `Future` that triggers when the provided condition is met for the very next time. Note that if the current value meets the condition, then the future is triggered with that value, but you can set `options.butNotNow` to `true` to delay triggering until the condition turns false and then true again.
 
 Example:
 
@@ -331,7 +331,7 @@ var nextHealthPotion = Observable.auto(function () {
       case v: return Some(v);
     }
   return None;
-}); 
+});
 ```
 
 That might not seem like a big advantage, but suppose the result should depend on some other observables:
@@ -346,7 +346,7 @@ var nextHealthPotion = Observable.auto(function () {
       case v: return Some(v);
     }
   return None;
-}); 
+});
 ```
 
 We could get the same result by calling `combine` which is quite a bit more work than adding a line of code to your calculation.
@@ -357,3 +357,13 @@ Everything comes with limitations and costs attached. Things to be aware of when
 
 - The resulting observable only tracks changes in other observables it accesses. So for example `Observable.auto(function () { return Date.now() })` will never update.
 - While they make your code much more concise, it becomes far less implicit how exactly observables are wired together. If you want to be explicit, you can always fall back to `map`/`mapAsync` and `combine`/`combineAsync`.
+
+## Updating states from bind
+
+There's a relatively common anti-pattern of doing the following:
+
+```haxe
+observable.bind(state.set);
+```
+
+While `tink_state` will process it correctly, it is discouraged to do so. It is bad design and may also impact performance. To help you avoid such mistakes, `tink_state` will generate runtime warnings if a state update is performed from a binding. You can suppress these by building with `-D tink_state_ignore_binding_cascade_because_I_am_a_naughty_naughty_boy`.

@@ -101,7 +101,21 @@ private class SimpleState<T> implements StateObject<T> {
   public function getComparator()
     return isEqual;
 
+  static inline function warn(s)
+    #if hxnodejs
+      js.Node.console.warn(s);
+    #elseif js
+      js.Browser.console.warn(s);
+    #else
+      trace('Warning: $s');
+    #end
+
   public function set(value) {
+    #if !tink_state_ignore_binding_cascade_because_I_am_a_naughty_naughty_boy
+    if (Observable.isUpdating)
+      warn('Updating state in a binding');
+    #end
+
     if (guard != null) {
       if (next == null)
         this.value = guard(this.value);

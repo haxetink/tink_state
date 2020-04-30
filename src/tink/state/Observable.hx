@@ -208,6 +208,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     updatePending();
   }
 
+  static public var isUpdating(default, null):Bool = false;
+
   static public function updatePending(maxSeconds:Float = .01) {
     inline function measure() return
       #if java
@@ -218,13 +220,16 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
     var end = measure() + maxSeconds;
 
+    isUpdating = true;
+
     do {
       var old = scheduled;
       scheduled = [];
       for (o in old) o();
-
     }
     while (scheduled.length > 0 && measure() < end);
+
+    isUpdating = false;
 
     return
       if (scheduled.length > 0) {
