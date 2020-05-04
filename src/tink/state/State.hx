@@ -102,10 +102,12 @@ private class SimpleState<T> implements StateObject<T> {
     return isEqual;
 
   static inline function warn(s)
-    #if hxnodejs
-      js.Node.console.warn(s);
-    #elseif js
-      js.Browser.console.warn(s);
+    #if js
+      #if hxnodejs
+        js.Node.console.warn(s);
+      #else
+        js.Browser.console.warn(s);
+      #end
     #else
       trace('Warning: $s');
     #end
