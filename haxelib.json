@@ -8,8 +8,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"version": "0.11.0",
-	"releasenote": "Improved dependency tracking. Fix memory leak. Simplify guards. Update for Haxe4 stable.",
+	"version": "0.11.1",
+	"releasenote": "Fix nodejs issue.",
 	"tags": [
 		"tink",
 		"cross",
