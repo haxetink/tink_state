@@ -257,7 +257,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return new Measurement(m2.value, m.becameInvalid || m2.becameInvalid);
     });
 
-  static var counter = 0;
   static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>> {
     if (p == null)
       throw 'Expected Promise but got null';
