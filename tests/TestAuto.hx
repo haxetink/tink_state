@@ -1,19 +1,21 @@
 package;
 
-import tink.state.Measurement;
-#if nu
+import tink.state.Promised;
+import tink.state.Observable;
 import tink.state.*;
+
+#if nu
 #else
 using tink.CoreApi;
+
+interface Derived {
+  function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
+}
 
 interface ObservableObject<T> {
   function getValue():T;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
-}
-
-interface Derived {
-  function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
 }
 
 typedef Invalidatable = {
@@ -104,7 +106,6 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
     return _cache;
   }
 
-
   public function getValue()
     return poll().value;
 }
@@ -145,8 +146,43 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> {
     return this.onInvalidate({ invalidate: function () update() });
   }
 
-  static public function auto<V>(compute:Void->V):Observable<V> {
+  static public function auto<V>(compute:Computation<V>):Observable<V> {
     return new AutoObservable<V>(compute);
+  }
+}
+
+@:callable
+abstract Computation<T>((T->Void)->?Noise->T) {
+  inline function new(f) this = f;
+
+  @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
+    var link:CallbackLink = null,
+        last = None;
+    return new Computation((update, ?_) -> {
+      link.dissolve();
+      link = f(last).handle(o -> update(switch o {
+        case Success(v): last = Some(v); Done(v);
+        case Failure(e): Failed(e);
+      }));
+      return Loading;
+    });
+  }
+
+
+  @:from static function async<T>(f:Void->Promise<T>):Computation<Promised<T>>
+    return asyncWithLast(_ -> f());
+
+  @:from static inline function withLast<T>(f:Option<T>->T):Computation<T> {
+    var last = None;
+    return new Computation((_, ?_) -> {
+      var ret = f(last);
+      last = Some(ret);
+      return ret;
+    });
+  }
+
+  @:from static function sync<T>(f:Void->T) {
+    return new Computation((_, ?_) -> f());
   }
 }
 
@@ -181,7 +217,7 @@ private class AutoObservable<T> extends Invalidator implements Derived implement
 
   static var cur:Derived;
 
-  var compute:Void->T;
+  var compute:Computation<T>;
   var valid:Bool = false;
   var last:T = null;
   var subscriptions:Array<Subscription> = null;
@@ -241,10 +277,15 @@ private class AutoObservable<T> extends Invalidator implements Derived implement
       else {
         valid = true;
         subscriptions = [];
-        last = computeFor(this, compute);
+        last = computeFor(this, () -> compute(update));
       }
 
     return last;
+  }
+
+  function update(value) {
+    last = value;
+    fire();
   }
 
   public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
@@ -325,6 +366,65 @@ class TestAuto {
 
     return asserts.done();
   }
+
+  @:include public function testAsync() {
+    var triggers = new Array<FutureTrigger<Outcome<Int, Error>>>();
+
+    function trigger(value, ?pos) {
+      asserts.assert(triggers.length > 0, null, pos);
+      if (triggers.length > 0)
+        triggers.shift().trigger(value);
+    }
+
+    function yield(value, ?pos)
+      trigger(Success(value), pos);
+
+    function fail(?pos)
+      trigger(Failure(new Error('failure')), pos);
+
+    var counter = new State(0);
+    function inc()
+      counter.set(counter.value + 1);
+
+    var last = None;
+
+    var o = Observable.auto(l -> {
+      var t = new FutureTrigger();
+      last = l;
+      triggers.push(t);
+      Promise.lift(counter.value)
+        .next(c -> Promise.lift(t)
+          .next(t -> { c: c, t: t })
+        );
+    });
+
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(None));
+    yield(12);
+    asserts.assert(o.value.match(Done({ c: 0, t: 12 })));
+    asserts.assert(last.match(None));
+    inc();
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(Some({ c: 0, t: 12 })));
+    inc();
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(Some({ c: 0, t: 12 })));
+    yield(22);
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(Some({ c: 0, t: 12 })));
+    yield(42);
+    asserts.assert(o.value.match(Done({ c: 2, t: 42 })));
+    asserts.assert(last.match(Some({ c: 0, t: 12 })));
+    inc();
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(Some({ c: 2, t: 42 })));
+    fail();
+    asserts.assert(o.value.match(Failed(_)));
+    asserts.assert(last.match(Some({ c: 2, t: 42 })));
+
+    return asserts.done();
+  }
+
 
   public function donotFireEqualAuto() {
     var s = new State(1 << 5);
