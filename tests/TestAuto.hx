@@ -59,6 +59,15 @@ abstract Comparator<T>(Null<(T,T)->Bool>) from (T,T)->Bool {
       case null: a == b;
       case f: f(a, b);
     }
+
+  inline function unpack()
+    return this;
+
+  public inline function and(that:Comparator<T>):Comparator<T>
+    return switch [this, that.unpack()] {
+      case [null, v] | [v, null]: v;
+      case [c1, c2]: (a, b) -> c1(a, b) && c2(a, b);
+    }
 }
 
 class SimpleState<T> extends Invalidator implements ObservableObject<T> {
@@ -151,11 +160,14 @@ class Binding<T> implements Invalidatable implements Schedulable {
   var firstTime = true;
   var last:Null<T> = null;
 
-  public function new(data, cb, scheduler, comparator) {
+  public function new(data, cb, ?scheduler, ?comparator) {
     this.data = data;
     this.cb = cb;
-    this.scheduler = scheduler;
-    this.comparator = comparator;
+    this.scheduler = switch scheduler {
+      case null: DirectScheduler.inst;
+      case v: v;
+    }
+    this.comparator = data.getComparator().and(comparator);
     scheduler.schedule(this);
   }
 
@@ -218,7 +230,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> {
   static public var scheduler:Scheduler = DirectScheduler.inst;
 
   public function bind(?options:BindingOptions<T>, cb:Callback<T>)
-    return new Binding(this, cb, if (options != null && options.direct) DirectScheduler.inst else scheduler, if (options == null) null else options.comparator);
+    return new Binding(this, cb, if (options != null && options.direct) null else scheduler, if (options == null) null else options.comparator);
 
   static public function auto<V>(compute:Computation<V>, ?comparator):Observable<V>
     return new AutoObservable<V>(compute, comparator);
