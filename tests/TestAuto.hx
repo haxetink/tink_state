@@ -18,8 +18,20 @@ interface ObservableObject<T> {
   function onInvalidate(i:Invalidatable):CallbackLink;
 }
 
-typedef Invalidatable = {
+interface Invalidatable {
   function invalidate():Void;
+}
+
+interface Schedulable {
+  function run():Void;
+}
+
+class PlainSchedulable implements Schedulable {
+  final f:Void->Void;
+  public function new(f)
+    this.f = f;
+  public function run()
+    f();
 }
 
 class Invalidator {
@@ -126,6 +138,74 @@ abstract State<T>(StateObject<T>) from StateObject<T> {
     return this;
 }
 
+interface Scheduler {
+  function schedule(s:Schedulable):Void;
+}
+
+class Binding<T> implements Invalidatable implements Schedulable {
+  final data:ObservableObject<T>;
+  final cb:Callback<T>;
+  final scheduler:Scheduler;
+  final comparator:Comparator<T>;
+  var valid = false;
+  var firstTime = true;
+  var last:Null<T> = null;
+
+  public function new(data, cb, scheduler, comparator) {
+    this.data = data;
+    this.cb = cb;
+    this.scheduler = scheduler;
+    this.comparator = comparator;
+    scheduler.schedule(this);
+  }
+
+  public function invalidate()
+    if (valid) {
+      valid = false;
+      scheduler.schedule(this);
+    }
+
+  public function run() {
+    valid = true;
+    var prev = this.last;
+    var next = this.last = data.getValue();
+
+    if (firstTime) {
+      firstTime = false;
+      data.onInvalidate(this);
+    }
+    else if (comparator.eq(prev, next))
+      return;
+    cb.invoke(next);
+  }
+}
+
+private class DirectScheduler implements Scheduler {
+  static public final inst = new DirectScheduler();
+  function new() {}
+
+  public function schedule(s:Schedulable)
+    s.run();
+}
+
+private class BatchScheduler implements Scheduler {
+  var queue = [];
+  var scheduled = false;
+  final run:BatchScheduler->Void;
+
+  public function new(run) {
+    this.run = run;
+  }
+
+  public function schedule(s:Schedulable) {
+    queue.push(s);
+    if (!scheduled) {
+      scheduled = true;
+      run(this);
+    }
+  }
+}
+
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> {
 
   public var value(get, never):T;
@@ -135,16 +215,10 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> {
   static public inline function untracked<T>(fn:Void->T)
     return AutoObservable.untracked(fn);
 
-  public function bind(?options:BindingOptions<T>, cb:Callback<T>) {
+  static public var scheduler:Scheduler = DirectScheduler.inst;
 
-    inline function update() {
-      cb.invoke(untracked(get_value));
-    }
-
-    update();
-
-    return this.onInvalidate({ invalidate: function () update() });
-  }
+  public function bind(?options:BindingOptions<T>, cb:Callback<T>)
+    return new Binding(this, cb, if (options != null && options.direct) DirectScheduler.inst else scheduler, if (options == null) null else options.comparator);
 
   static public function auto<V>(compute:Computation<V>):Observable<V> {
     return new AutoObservable<V>(compute);
@@ -213,7 +287,8 @@ private class SubscriptionTo<T> implements Subscription {
     link.dissolve();
 }
 
-private class AutoObservable<T> extends Invalidator implements Derived implements ObservableObject<T> {
+private class AutoObservable<T> extends Invalidator
+  implements Invalidatable implements Derived implements ObservableObject<T> {
 
   static var cur:Derived;
 
@@ -303,7 +378,7 @@ private class AutoObservable<T> extends Invalidator implements Derived implement
 
 typedef BindingOptions<T> = {
   ?direct:Bool,
-  ?comparator:T->T->Bool
+  ?comparator:Comparator<T>,
 }
 #end
 
@@ -340,6 +415,7 @@ class TestAuto {
     var calls = 0;
     var s1 = new State(4),
         s2 = new State(5);
+
     var o = Observable.auto(function () {
       calls++;
       return s1.value + s2.value;
@@ -367,7 +443,7 @@ class TestAuto {
     return asserts.done();
   }
 
-  @:include public function testAsync() {
+  public function testAsync() {
     var triggers = new Array<FutureTrigger<Outcome<Int, Error>>>();
 
     function trigger(value, ?pos) {
