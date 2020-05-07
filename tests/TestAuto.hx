@@ -26,6 +26,22 @@ interface Schedulable {
   function run():Void;
 }
 
+private class ConstObservable<T> implements ObservableObject<T> {
+  final value:T;
+
+  public function new(value)
+    this.value = value;
+
+  public function getValue()
+    return value;
+
+  public function getComparator()
+    return null;
+
+  public function onInvalidate(i:Invalidatable):CallbackLink
+    return null;
+}
+
 class PlainSchedulable implements Schedulable {
   final f:Void->Void;
   public function new(f)
