@@ -220,9 +220,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> {
   public function bind(?options:BindingOptions<T>, cb:Callback<T>)
     return new Binding(this, cb, if (options != null && options.direct) DirectScheduler.inst else scheduler, if (options == null) null else options.comparator);
 
-  static public function auto<V>(compute:Computation<V>):Observable<V> {
-    return new AutoObservable<V>(compute);
-  }
+  static public function auto<V>(compute:Computation<V>, ?comparator):Observable<V>
+    return new AutoObservable<V>(compute, comparator);
 }
 
 @:callable
