@@ -184,7 +184,7 @@ class Binding<T> implements Invalidatable implements Schedulable {
       case v: v;
     }
     this.comparator = data.getComparator().and(comparator);
-    scheduler.schedule(this);
+    this.scheduler.schedule(this);
   }
 
   public function invalidate()
