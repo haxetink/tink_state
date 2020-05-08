@@ -17,14 +17,11 @@ private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
   public function new(target)
     this.target = target;
 
-  public function isValid()
-    return true;
+  public function getValue()
+    return @:privateAccess target.items.iterator();
 
-  public function poll()
-    return new Measurement<Iterator<T>>(
-      @:privateAccess target.items.iterator(),
-      @:privateAccess target.changes.nextTime().map(function (_) return Noise)
-    );
+  public function onInvalidate(i:Invalidatable)
+    return @:privateAccess target.changes.handle(i.invalidate);
 
   public function getComparator()
     return null;

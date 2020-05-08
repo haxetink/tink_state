@@ -5,12 +5,12 @@ class RunTests {
   static function main() {
     tink.testrunner.Runner.run(tink.unit.TestBatch.make([
       new TestBasic(),
-      // new TestMaps(),
-      // new TestDate(),
+      new TestMaps(),
+      new TestDate(),
       new TestAuto(),
-      // new TestArrays(),
+      new TestArrays(),
       new TestScheduler(),
-      // new TestProgress(),
+      new TestProgress(),
     ]))
       .handle(function(result) {
         travix.Logger.exit(result.summary().failures.length);

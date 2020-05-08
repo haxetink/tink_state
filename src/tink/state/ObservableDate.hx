@@ -12,11 +12,17 @@ class ObservableDate implements ObservableObject<Bool> {
 	public var date(default, null):Date;
 	public var passed(get, never):Bool;
 		inline function get_passed():Bool
-			return observe().value;
-	
+			return _observable.getValue();
+
+	public function getValue()
+		return _observable.getValue();
+
+	public function onInvalidate(i)
+		return _observable.onInvalidate(i);
+
 	public function new(?date:Date) {
-		
-		if (date == null) 
+
+		if (date == null)
 			date = Date.now();
 
 		this.date = date;
@@ -26,7 +32,7 @@ class ObservableDate implements ObservableObject<Bool> {
 
 		var passed = now >= stamp;
 
-		_observable = 
+		_observable =
 			if (passed) PASSED;
 			else {
 				var state = new State(false);
@@ -42,15 +48,9 @@ class ObservableDate implements ObservableObject<Bool> {
 		return becomesOlderThan(msecs).value;
 
 	public function becomesOlderThan(msecs:Float):Observable<Bool>
-		return 
+		return
 			if (Date.now().getTime() > date.getTime() + msecs) PASSED;
 			else new ObservableDate(this.date.delta(msecs)).observe();
-
-	public function poll()
-		return _observable.poll();
-
-	public function isValid()
-		return _observable.isValid();
 
 	public function getComparator()
 		return null;
