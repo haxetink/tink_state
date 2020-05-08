@@ -371,7 +371,6 @@ private class BatchScheduler implements Scheduler {
 
   public function progress(maxSeconds:Float)
     return @:privateAccess Observable.performUpdate(() -> {
-
       var end = measure() + maxSeconds;
 
       do {
@@ -385,7 +384,7 @@ private class BatchScheduler implements Scheduler {
         run(this, true);
         true;
       }
-      else false;
+      else scheduled = false;
     });
 
   public function schedule(s:Schedulable) {
