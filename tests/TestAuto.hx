@@ -6,45 +6,6 @@ import tink.state.*;
 
 using tink.CoreApi;
 
-class SimpleState<T> extends Invalidator implements ObservableObject<T> {
-  var value:T;
-  var comparator:Comparator<T>;
-
-  public function set(next:T) {
-    value = next;
-    fire();
-  }
-
-  public function new(value, ?comparator) {
-    super();
-    this.value = value;
-    this.comparator = comparator;
-  }
-
-  public function getComparator()
-    return comparator;
-
-  public function getValue():T
-    return value;
-
-}
-
-typedef StateObject<T> = SimpleState<T>;
-
-@:forward(set)
-abstract State<T>(StateObject<T>) from StateObject<T> {
-
-  public var value(get, never):T;
-    inline function get_value()
-      return observe().value;
-
-  public inline function new(value:T)
-    this = new SimpleState(value);
-
-  public inline function observe():Observable<T>
-    return this;
-}
-
 @:asserts
 class TestAuto {
   public function new() {}
