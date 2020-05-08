@@ -4,7 +4,7 @@ class RunTests {
 
   static function main() {
     tink.testrunner.Runner.run(tink.unit.TestBatch.make([
-      // new TestBasic(),
+      new TestBasic(),
       // new TestMaps(),
       // new TestDate(),
       new TestAuto(),

@@ -205,23 +205,16 @@ private class PlainSchedulable implements Schedulable {
     f();
 }
 
+
 class Invalidator {
-  static var counter = 0;
-  var handlers = [];
+  var list = new CallbackList();
   function new() {}
 
-  public function onInvalidate(i:Invalidatable):CallbackLink {
-    handlers.push(i);
-    return function () if (i != null) {
-      handlers.remove(i);
-      i = null;
-    }
-  }
+  public function onInvalidate(i:Invalidatable):CallbackLink
+    return list.add(i.invalidate);//TODO: optimize away this indirection
 
-  function fire() {
-    for (i in handlers)
-      i.invalidate();
-  }
+  function fire()
+    list.invoke(Noise);
 }
 
 abstract Comparator<T>(Null<(T,T)->Bool>) from (T,T)->Bool {
