@@ -15,7 +15,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public var scheduler:Scheduler = DirectScheduler.inst;
 
   public function bind(?options:BindingOptions<T>, cb:Callback<T>)
-    return new Binding(this, cb, if (options != null && options.direct) null else scheduler, if (options == null) null else options.comparator);
+    return new Binding(this, cb, if (options != null && options.direct) null else scheduler, if (options == null) null else options.comparator).cancel;
 
   public inline function new(get:Void->T, changed:Signal<Noise>)
     this = create(function () return new Measurement(get(), changed.nextTime()));
@@ -77,6 +77,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return dfault.get().value;
     });
 
+  static public var isUpdating(default, null):Bool = false;
+
   /*
 
   static var scheduled:Array<Void->Void> =
@@ -121,8 +123,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     isScheduled = false;
     updatePending();
   }
-
-  static public var isUpdating(default, null):Bool = false;
 
   static public function updatePending(maxSeconds:Float = .01) {
     inline function measure() return
@@ -320,9 +320,9 @@ private class Binding<T> implements Invalidatable implements Schedulable {
   final cb:Callback<T>;
   final scheduler:Scheduler;
   final comparator:Comparator<T>;
-  var valid = false;
-  var firstTime = true;
+  var status = Fresh;
   var last:Null<T> = null;
+  var link:CallbackLink;
 
   public function new(data, cb, ?scheduler, ?comparator) {
     this.data = data;
@@ -335,25 +335,41 @@ private class Binding<T> implements Invalidatable implements Schedulable {
     this.scheduler.schedule(this);
   }
 
+  public function cancel() {
+    link.cancel();
+    status = Canceled;
+  }
+
   public function invalidate()
-    if (valid) {
-      valid = false;
+    if (status == Valid) {
+      status = Invalid;
       scheduler.schedule(this);
     }
 
-  public function run() {
-    valid = true;
-    var prev = this.last;
-    var next = this.last = data.getValue();
+  public function run()
+    switch status {
+      case Canceled | Valid:
+      case Fresh:
 
-    if (firstTime) {
-      firstTime = false;
-      data.onInvalidate(this);
+        data.onInvalidate(this);
+        status = Valid;
+        cb.invoke(this.last = data.getValue());
+
+      case Invalid:
+        status = Valid;
+        var prev = this.last,
+            next = this.last = data.getValue();
+
+        if (!comparator.eq(prev, next))
+          cb.invoke(next);
     }
-    else if (comparator.eq(prev, next))
-      return;
-    cb.invoke(next);
-  }
+}
+
+private enum abstract BindingStatus(Int) {
+  var Fresh;
+  var Valid;
+  var Invalid;
+  var Canceled;
 }
 
 private class DirectScheduler implements Scheduler {
