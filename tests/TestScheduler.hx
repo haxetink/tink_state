@@ -2,7 +2,7 @@ import tink.state.*;
 @:asserts
 class TestScheduler {
   public function new() {}
-  #if (!interp)
+
   public function testCycle() {
     var s1 = new State(0),
         s2 = new State(0);
@@ -37,7 +37,7 @@ class TestScheduler {
         s3 = new State('bar');
 
     var log = [];
-    
+
     s1.observe().bind(function (v) {
       s2.set('foo($v)');
       s3.set('bar($v)');
@@ -66,5 +66,4 @@ class TestScheduler {
 
     return asserts.done();
   }
-  #end  
 }
