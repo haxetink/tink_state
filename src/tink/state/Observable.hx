@@ -111,6 +111,10 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         }
       });
     #end
+
+  static public function schedule(f:Void->Void)
+    scheduler.schedule(JustOnce.call(f));
+
   static public var isUpdating(default, null):Bool = false;
 
   @:extern static inline function performUpdate<T>(fn:Void->T) {
@@ -197,12 +201,25 @@ private class ConstObservable<T> implements ObservableObject<T> {
     return null;
 }
 
-private class PlainSchedulable implements Schedulable {
-  final f:Void->Void;
-  public function new(f)
-    this.f = f;
-  public function run()
+private class JustOnce implements Schedulable {
+  var f:Void->Void;
+  function new() {}
+
+  public function run() {
+    var f = f;
+    this.f = null;
+    pool.push(this);
     f();
+  }
+  static var pool = [];
+  static public function call(f) {
+    var ret = switch pool.pop() {
+      case null: new JustOnce();
+      case v: v;
+    }
+    ret.f = f;
+    return ret;
+  }
 }
 
 
