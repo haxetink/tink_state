@@ -9,7 +9,7 @@ class RunTests {
       // new TestDate(),
       new TestAuto(),
       // new TestArrays(),
-      // new TestScheduler(),
+      new TestScheduler(),
       // new TestProgress(),
     ]))
       .handle(function(result) {

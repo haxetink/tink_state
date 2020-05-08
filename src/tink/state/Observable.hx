@@ -12,9 +12,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public inline function untracked<T>(fn:Void->T)
     return AutoObservable.untracked(fn);
 
-  static public var scheduler:Scheduler = DirectScheduler.inst;
-
-  public function bind(?options:BindingOptions<T>, cb:Callback<T>)
+  public function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink
     return new Binding(this, cb, if (options != null && options.direct) null else scheduler, if (options == null) null else options.comparator).cancel;
 
   public inline function new(get:Void->T, changed:Signal<Noise>)
@@ -40,7 +38,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       }
     });
 
-    // ret.handle(link.dissolve);
+    ret.handle(link.dissolve);
 
     return ret;
   }
@@ -77,85 +75,55 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return dfault.get().value;
     });
 
+  static var scheduler:Scheduler =
+    #if macro
+      DirectScheduler.inst;
+    #else
+      new BatchScheduler({
+        function later(fn)
+          haxe.Timer.delay(fn, 10);
+        #if js
+          var later =
+            try
+              if (js.Browser.window.requestAnimationFrame != null)
+                function (fn:Void->Void)
+                  js.Browser.window.requestAnimationFrame(cast fn);
+              else
+                throw 'nope'
+            catch (e:Dynamic)
+              later;
+        #end
+
+        function asap(fn)
+          later(fn);
+        #if js
+          var asap =
+            try {
+              var p = js.lib.Promise.resolve(42);
+              function (fn:Void->Void) p.then(cast fn);
+            }
+            catch (e:Dynamic)
+              asap;
+        #end
+
+        function (b:BatchScheduler, isRerun:Bool) {
+          (if (isRerun) later else asap)(b.progress.bind(.01));
+        }
+      });
+    #end
   static public var isUpdating(default, null):Bool = false;
 
-  /*
-
-  static var scheduled:Array<Void->Void> =
-    #if (js || tink_runloop || (haxe_ver >= 3.3))
-      [];
-    #else
-      null;
-    #end
-
-  #if js
-    static var hasRAF:Bool = #if haxe4 js.Syntax.code #else untyped __js__ #end ("typeof window != 'undefined' && 'requestAnimationFrame' in window");
-  #end
-
-  static function schedule(f:Void->Void)
-    switch scheduled {
-      case null:
-        f();
-      case v:
-        v.push(f);
-        scheduleUpdate();
-    }
-
-  static var isScheduled = false;
-
-  static function scheduleUpdate() if (!isScheduled) {
-    isScheduled = true;
-    #if tink_runloop
-      tink.RunLoop.current.atNextStep(scheduledRun);
-    #elseif js
-      if (hasRAF)
-        js.Browser.window.requestAnimationFrame(function (_) scheduledRun());
-      else
-        Callback.defer(scheduledRun);
-    #elseif (haxe_ver >= 3.3)
-      Callback.defer(scheduledRun);
-    #else
-      throw 'this should be unreachable';
-    #end
-  }
-
-  static function scheduledRun() {
-    isScheduled = false;
-    updatePending();
-  }
-
-  static public function updatePending(maxSeconds:Float = .01) {
-    inline function measure() return
-      #if java
-        Sys.cpuTime();
-      #else
-        haxe.Timer.stamp();
-      #end
-
-    var end = measure() + maxSeconds;
-
+  @:extern static inline function performUpdate<T>(fn:Void->T) {
+    var wasUpdating = isUpdating;
     isUpdating = true;
-
-    do {
-      var old = scheduled;
-      scheduled = [];
-      for (o in old) o();
-    }
-    while (scheduled.length > 0 && measure() < end);
-
-    isUpdating = false;
-
-    return
-      if (scheduled.length > 0) {
-        scheduleUpdate();
-        true;
-      }
-      else false;
+    return Error.tryFinally(fn, () -> isUpdating = wasUpdating);
   }
+
+  static public function updatePending(maxSeconds:Float = .01)
+    return !isUpdating && scheduler.progress(maxSeconds);
 
   static public function updateAll()
     updatePending(Math.POSITIVE_INFINITY);
-  */
 
   static inline function lift<T>(o:Observable<T>) return o;
 
@@ -271,6 +239,12 @@ abstract Comparator<T>(Null<(T,T)->Bool>) from (T,T)->Bool {
       case [null, v] | [v, null]: v;
       case [c1, c2]: (a, b) -> c1(a, b) && c2(a, b);
     }
+
+  public inline function or(that:Comparator<T>):Comparator<T>
+    return switch [this, that.unpack()] {
+      case [null, v] | [v, null]: v;
+      case [c1, c2]: (a, b) -> c1(a, b) || c2(a, b);
+    }
 }
 
 private class SimpleObservable<T> extends Invalidator implements ObservableObject<T> {
@@ -312,6 +286,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
 }
 
 interface Scheduler {
+  function progress(maxSeconds:Float):Bool;
   function schedule(s:Schedulable):Void;
 }
 
@@ -331,7 +306,7 @@ private class Binding<T> implements Invalidatable implements Schedulable {
       case null: DirectScheduler.inst;
       case v: v;
     }
-    this.comparator = data.getComparator().and(comparator);
+    this.comparator = data.getComparator().or(comparator);
     this.scheduler.schedule(this);
   }
 
@@ -374,26 +349,57 @@ private enum abstract BindingStatus(Int) {
 
 private class DirectScheduler implements Scheduler {
   static public final inst = new DirectScheduler();
+
   function new() {}
 
+  public function progress(_)
+    return false;
+
   public function schedule(s:Schedulable)
-    s.run();
+    @:privateAccess Observable.performUpdate(s.run);
 }
 
 private class BatchScheduler implements Scheduler {
-  var queue = [];
+  var queue:Array<Schedulable> = [];
   var scheduled = false;
-  final run:BatchScheduler->Void;
+  final run:(s:BatchScheduler, isRerun:Bool)->Void;
 
   public function new(run) {
     this.run = run;
   }
 
+  inline function measure()
+    return
+      #if java
+        Sys.cpuTime();
+      #else
+        haxe.Timer.stamp();
+      #end
+
+  public function progress(maxSeconds:Float)
+    return @:privateAccess Observable.performUpdate(() -> {
+
+      var end = measure() + maxSeconds;
+
+      do {
+        var old = queue;
+        queue = [];
+        for (o in old) o.run();
+      }
+      while (queue.length > 0 && measure() < end);
+
+      if (queue.length > 0) {
+        run(this, true);
+        true;
+      }
+      else false;
+    });
+
   public function schedule(s:Schedulable) {
     queue.push(s);
     if (!scheduled) {
       scheduled = true;
-      run(this);
+      run(this, false);
     }
   }
 }
