@@ -102,7 +102,7 @@ class TestArrays {
         break;
       }
       return first;
-    }).bind({ direct: true }, function () iteratorChanges++);
+    }).bind({ direct: true, comparator: (_, _) -> false }, function () iteratorChanges++);
 
     asserts.assert(iteratorChanges * valuesChanges * keysChanges == 1);
 
