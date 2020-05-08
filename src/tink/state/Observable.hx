@@ -56,7 +56,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   }
 
   public function map<R>(f:Transform<T, R>):Observable<R>
-    return Observable.auto(() -> f.apply(value));
+    return new TransformObservable(this, f);
 
   public function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>
      return Observable.auto(() -> f(value, that.value));
@@ -590,4 +590,35 @@ abstract Transform<T, R>(T->R) {
 
   @:from static function plain<T, R>(f:T->R):Transform<T, R>
     return new Transform(f);
+}
+
+private class TransformObservable<In, Out> implements ObservableObject<Out> implements Invalidatable {
+
+  var valid = false;
+  var last:Out = null;
+  var transform:Transform<In, Out>;
+  var source:ObservableObject<In>;
+
+  public function new(source, transform) {
+    this.source = source;
+    this.transform = transform;
+    source.onInvalidate(this);
+  }
+
+  public function invalidate()
+    valid = false;
+
+  public function onInvalidate(i)
+    return source.onInvalidate(i);
+
+  public function getValue() {
+    if (valid == false) {
+      valid = true;
+      last = transform.apply(source.getValue());
+    }
+    return last;
+  }
+
+  public function getComparator()
+    return null;
 }
