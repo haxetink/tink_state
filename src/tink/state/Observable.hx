@@ -523,8 +523,6 @@ private class AutoObservable<T> extends Invalidator
       else if (subscriptions != null) {
         valid = true;
 
-        var old = Std.string(subscriptions);
-
         for (s in subscriptions)
           if (s.hasChanged()) {
             valid = false;
