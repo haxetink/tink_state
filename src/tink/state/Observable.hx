@@ -419,14 +419,15 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
 
   @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
     var link:CallbackLink = null,
-        last = None;
+        last = None,
+        ret = Loading;
     return new Computation((update, ?_) -> {
       link.dissolve();
-      link = f(last).handle(o -> update(switch o {
+      link = f(last).handle(o -> update(ret = switch o {
         case Success(v): last = Some(v); Done(v);
         case Failure(e): Failed(e);
       }));
-      return Loading;
+      return ret;
     });
   }
 
@@ -538,13 +539,17 @@ private class AutoObservable<T> extends Invalidator
       else {
         valid = true;
         subscriptions = [];
+        sync = true;
         last = computeFor(this, () -> compute(update));
+        sync = false;
       }
 
     return last;
   }
 
-  function update(value) {
+  var sync = true;
+
+  function update(value) if (!sync) {
     last = value;
     fire();
   }
