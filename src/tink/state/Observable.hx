@@ -244,11 +244,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   static inline function lift<T>(o:Observable<T>) return o;
 
-  @:impl static public function deliver<T>(o:ObservableObject<Promised<T>>, initial:T, ?failed:Error->T):Observable<T>
+  @:impl static public function deliver<T>(o:ObservableObject<Promised<T>>, initial:T, ?failed:Error->T->T):Observable<T>
     return lift(o).map(function (p) return switch p {
       case Done(v): initial = v;
       case Loading: initial;
-      case Failed(e): if (failed != null) failed(e) else initial;
+      case Failed(e): if (failed != null) initial = failed(e, initial) else initial;
     });
 
   @:impl static public function flatten<T>(o:ObservableObject<Observable<T>>)
