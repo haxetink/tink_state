@@ -422,7 +422,7 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
         last = None,
         ret = Loading;
     return new Computation((update, ?_) -> {
-      link.dissolve();
+      link.cancel();
       link = f(last).handle(o -> update(ret = switch o {
         case Success(v): last = Some(v); Done(v);
         case Failure(e): Failed(e);
@@ -473,7 +473,7 @@ private class SubscriptionTo<T> implements Subscription {
   }
 
   public function unregister():Void
-    link.dissolve();
+    link.cancel();
 }
 
 private class AutoObservable<T> extends Invalidator
