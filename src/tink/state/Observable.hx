@@ -38,7 +38,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       }
     });
 
-    ret.handle(link.dissolve);
+    ret.handle(link.cancel);
 
     return ret;
   }
