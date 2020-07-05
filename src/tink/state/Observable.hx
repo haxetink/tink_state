@@ -482,6 +482,12 @@ private class AutoObservable<T> extends Invalidator
   static var cur:Derived;
 
   var compute:Computation<T>;
+  #if hotswap
+    static var rev = new State(0);
+    static function onHotswapLoad() {
+      rev.set(rev.value + 1);
+    }
+  #end
   var valid:Bool = false;
   var last:T = null;
   var subscriptions:Array<Subscription> = null;
@@ -500,6 +506,9 @@ private class AutoObservable<T> extends Invalidator
   static public inline function computeFor<T>(o:Derived, fn:Void->T) {
     var before = cur;
     cur = o;
+    #if hotswap
+      rev.value;
+    #end
     var ret = fn();
     cur = before;
     return ret;
