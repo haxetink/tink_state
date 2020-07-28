@@ -4,6 +4,7 @@ import tink.state.Promised;
 
 using tink.CoreApi;
 
+#if haxe4 @:using(tink.state.Observable.ObservableTools) #end
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
 
   static var stack = new List<ObservableObject<Dynamic>>();
@@ -244,6 +245,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   static inline function lift<T>(o:Observable<T>) return o;
 
+  #if !haxe4
   @:impl static public function deliver<T>(o:ObservableObject<Promised<T>>, initial:T):Observable<T>
     return lift(o).map(function (p) return switch p {
       case Done(v): initial = v;
@@ -256,6 +258,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       var m2 = m.value.measure();
       return new Measurement(m2.value, m.becameInvalid || m2.becameInvalid);
     });
+  #end
 
   static var counter = 0;
   static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>> {
@@ -531,3 +534,22 @@ private class AutoObservable<T> extends SimpleObservable<T> {
       dependencies.push(new DependencyOf(dependency, initial, this.trigger));
     }
 }
+
+#if haxe4
+@:access(tink.state.Observable)
+class ObservableTools {
+  
+  static public function deliver<T>(o:Observable<Promised<T>>, initial:T):Observable<T>
+    return Observable.lift(o).map(function (p) return switch p {
+      case Done(v): initial = v;
+      default: initial;
+    });
+
+  static public function flatten<T>(o:Observable<Observable<T>>)
+    return Observable.create(function () {
+      var m = Observable.lift(o).measure();
+      var m2 = m.value.measure();
+      return new Measurement(m2.value, m.becameInvalid || m2.becameInvalid);
+    });
+}
+#end
