@@ -35,7 +35,7 @@ abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
 }
 
 private interface StateObject<T> extends ObservableObject<T> {
-  function set(value:T):Void;
+  function set(value:T):T;
 }
 
 private class CompoundState<T> implements StateObject<T> {
@@ -56,8 +56,10 @@ private class CompoundState<T> implements StateObject<T> {
   public function poll()
     return (data:Observable<T>).measure();
 
-  public function set(value)
+  public function set(value) {
     update(value);
+    return value;
+  }
 
   public function getComparator()
     return this.comparator;
@@ -130,5 +132,6 @@ private class SimpleState<T> implements StateObject<T> {
       if (last != null)
         last.trigger(Noise);
     }
+    return value;
   }
 }
