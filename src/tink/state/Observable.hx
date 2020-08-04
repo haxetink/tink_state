@@ -4,6 +4,7 @@ import tink.state.Promised;
 
 using tink.CoreApi;
 
+#if haxe4 @:using(tink.state.Observable.ObservableTools) #end
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   public var value(get, never):T;
     @:to function get_value()
@@ -131,6 +132,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   static inline function lift<T>(o:Observable<T>) return o;
 
+  #if !haxe4
   @:impl static public function deliver<T>(o:ObservableObject<Promised<T>>, initial:T):Observable<T>
     return lift(o).map(function (p) return switch p {
       case Done(v): initial = v;
@@ -139,6 +141,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   @:impl static public function flatten<T>(o:ObservableObject<Observable<T>>)
     return Observable.auto(() -> lift(o).value.value);
+  #end
 
   static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>>
     return Observable.auto(() -> p);
@@ -649,3 +652,18 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> impl
   public function getComparator()
     return null;
 }
+#if haxe4
+@:access(tink.state.Observable)
+class ObservableTools {
+
+  static public function deliver<T>(o:Observable<Promised<T>>, initial:T):Observable<T>
+    return Observable.lift(o).map(function (p) return switch p {
+      case Done(v): initial = v;
+      default: initial;
+    });
+
+  static public function flatten<T>(o:Observable<Observable<T>>)
+    return Observable.auto(() -> Observable.lift(o).value.value);
+
+}
+#end

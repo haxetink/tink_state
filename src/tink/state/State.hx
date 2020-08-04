@@ -35,7 +35,7 @@ abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
 }
 
 private interface StateObject<T> extends ObservableObject<T> {
-  function set(value:T):Void;
+  function set(value:T):T;
 }
 
 private class CompoundState<T> implements StateObject<T> {
@@ -59,8 +59,10 @@ private class CompoundState<T> implements StateObject<T> {
   public function onInvalidate(i)
     return data.onInvalidate(i);
 
-  public function set(value)
+  public function set(value) {
     update(value);//TODO: consider running comparator here
+    return value;
+  }
 
   public function getComparator()
     return this.comparator;
@@ -121,5 +123,6 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
       this.value = value;
       fire();
     }
+    return value;
   }
 }
