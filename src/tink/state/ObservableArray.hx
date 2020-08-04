@@ -17,6 +17,9 @@ private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
   public function new(target)
     this.target = target;
 
+  public function isValid()
+    return true;
+
   public function getValue()
     return @:privateAccess target.items.iterator();
 

@@ -173,6 +173,7 @@ interface Derived {
 
 interface ObservableObject<T> {
   function getValue():T;
+  function isValid():Bool;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
 }
@@ -193,6 +194,9 @@ private class ConstObservable<T> implements ObservableObject<T> {
 
   public function getValue()
     return value;
+
+  public function isValid()
+    return true;
 
   public function getComparator()
     return null;
@@ -224,7 +228,7 @@ private class JustOnce implements Schedulable {
 
 
 class Invalidator {
-  var list = new CallbackList();
+  final list = new CallbackList();
   function new() {}
 
   public function onInvalidate(i:Invalidatable):CallbackLink
@@ -268,6 +272,9 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
     this._poll = poll;
     this.comparator = comparator;
   }
+
+  public function isValid()
+    return _cache != null;
 
   public function getComparator()
     return comparator;
@@ -494,6 +501,9 @@ private class AutoObservable<T> extends Invalidator
 
   var comparator:Comparator<T>;
 
+  public function isValid()
+    return valid;
+
   public function getComparator()
     return comparator;
 
@@ -618,6 +628,9 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> impl
     this.transform = transform;
     source.onInvalidate(this);
   }
+
+  public function isValid()
+    return valid;
 
   public function invalidate()
     valid = false;

@@ -37,6 +37,9 @@ class ObservableIterator<T> implements ObservableObject<Iterator<T>> {
     this.changes = changes;
   }
 
+  public function isValid()
+    return true;
+
   public static function make<T, C>(iterator:Void->Iterator<T>, changes:Signal<C>, ?trigger:C->Bool) {
     return new ObservableIterator(
       iterator,
