@@ -32,6 +32,8 @@ script:
 
 
 jobs:
+  allow_failures:
+    - env: HAXE_VERSION=nightly
   include:
     # - stage: test # should uncomment this when there is no matrix above (e.g. only one os, one env, etc)
     - stage: deploy
