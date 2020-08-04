@@ -1,21 +1,25 @@
 package;
 
+import tink.state.Promised;
+import tink.state.Observable;
 import tink.state.*;
+
+using tink.CoreApi;
 
 @:asserts
 class TestAuto {
   public function new() {}
-  
+
   public function test() {
     var s1 = new State(4),
         s2 = new State(5);
-    
+
     var calls = 0;
-    var o = Observable.auto(function () return { 
+    var o = Observable.auto(function () return {
       calls++;
-      s1.value + s2.value; 
+      s1.value + s2.value;
     });
-    
+
     asserts.assert(9 == o.value);
     s1.set(10);
     asserts.assert(15 == o.value);
@@ -35,34 +39,93 @@ class TestAuto {
     var calls = 0;
     var s1 = new State(4),
         s2 = new State(5);
+
     var o = Observable.auto(function () {
       calls++;
       return s1.value + s2.value;
     });
-    
+
     var sum = 0;
-    
+
     o.bind({ direct: true }, function (v) sum = v);
-    
+
     asserts.assert(sum == s1.value + s2.value);
     asserts.assert(calls == 1);
-    
+
     s1.set(s1.value + 1);
     s2.set(s2.value + 1);
-    
+
     asserts.assert(sum == s1.value + s2.value);
     asserts.assert(calls == 3);
 
     s1.set(s1.value + 1);
     s2.set(s2.value + 1);
-    
+
     asserts.assert(sum == s1.value + s2.value);
-    asserts.assert(calls == 5);    
-    
+    asserts.assert(calls == 5);
+
     return asserts.done();
   }
 
-  // @:include
+  public function testAsync() {
+    var triggers = new Array<FutureTrigger<Outcome<Int, Error>>>();
+
+    function trigger(value, ?pos) {
+      asserts.assert(triggers.length > 0, null, pos);
+      if (triggers.length > 0)
+        triggers.shift().trigger(value);
+    }
+
+    function yield(value, ?pos)
+      trigger(Success(value), pos);
+
+    function fail(?pos)
+      trigger(Failure(new Error('failure')), pos);
+
+    var counter = new State(0);
+    function inc()
+      counter.set(counter.value + 1);
+
+    var last = None;
+
+    var o = Observable.auto(l -> {
+      var t = new FutureTrigger();
+      last = l;
+      triggers.push(t);
+      Promise.lift(counter.value)
+        .next(c -> Promise.lift(t)
+          .next(t -> { c: c, t: t })
+        );
+    });
+
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(None));
+    yield(12);
+    asserts.assert(o.value.match(Done({ c: 0, t: 12 })));
+    asserts.assert(last.match(None));
+    inc();
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(Some({ c: 0, t: 12 })));
+    inc();
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(Some({ c: 0, t: 12 })));
+    yield(22);
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(Some({ c: 0, t: 12 })));
+    yield(42);
+    asserts.assert(o.value.match(Done({ c: 2, t: 42 })));
+    asserts.assert(last.match(Some({ c: 0, t: 12 })));
+    inc();
+    asserts.assert(o.value.match(Loading));
+    asserts.assert(last.match(Some({ c: 2, t: 42 })));
+    fail();
+    asserts.assert(o.value.match(Failed(_)));
+    asserts.assert(last.match(Some({ c: 2, t: 42 })));
+
+    return asserts.done();
+  }
+
+
   public function donotFireEqualAuto() {
     var s = new State(1 << 5);
 
@@ -81,13 +144,24 @@ class TestAuto {
       });
     }
 
-    o.bind({ direct: true}, function () {});
+    o.bind({ direct: true }, function () {});
 
-    for (i in 0...s.value >> 1) 
+    asserts.assert(o.value == 1);
+
+    for (i in 0...1 << 4)
       inc();
-    
+
+    asserts.assert(o.value == 1);
+
     asserts.assert('16,8,4,2,1' == a.join(','));
-  
+
+    for (i in 0...1 << 4)
+      inc();
+
+    asserts.assert(o.value == 2);
+
+    asserts.assert('32,16,8,4,2' == a.join(','));
+
     return asserts.done();
-  }  
+  }
 }

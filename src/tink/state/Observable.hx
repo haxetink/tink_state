@@ -6,24 +6,21 @@ using tink.CoreApi;
 
 #if haxe4 @:using(tink.state.Observable.ObservableTools) #end
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
-
-  static var stack = new List<ObservableObject<Dynamic>>();
-
   public var value(get, never):T;
+    @:to function get_value()
+      return AutoObservable.track(this);
 
-    @:to function get_value():T
-      return measure().value;
+  static public inline function untracked<T>(fn:Void->T)
+    return AutoObservable.untracked(fn);
+
+  public function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink
+    return new Binding(this, cb, if (options != null && options.direct) null else scheduler, if (options == null) null else options.comparator).cancel;
 
   public inline function new(get:Void->T, changed:Signal<Noise>)
     this = create(function () return new Measurement(get(), changed.nextTime()));
 
   public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
-    return new SimpleObservable<R>(function () {
-      var p = measure(),
-          q = that.measure();
-
-      return new Measurement(f(p.value, q.value), p.becameInvalid.first(q.becameInvalid));
-    });
+    return Observable.auto(() -> f(value, that.value));
 
   public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, check:T->Bool):Future<T>
     return getNext(options, function (v) return if (check(v)) Some(v) else None);
@@ -42,7 +39,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       }
     });
 
-    ret.handle(link.dissolve);
+    ret.handle(link.cancel);
 
     return ret;
   }
@@ -60,185 +57,75 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   }
 
   public function map<R>(f:Transform<T, R>):Observable<R>
-    return create(function () {
-      var m = measure();
-      return new Measurement(f.apply(m.value), m.becameInvalid);
-    });
+    return new TransformObservable(this, f);
 
   public function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>
-     return combine(that, f).mapAsync(function (x) return x);
+     return Observable.auto(() -> f(value, that.value));
 
   public function mapAsync<R>(f:Transform<T, Promise<R>>):Observable<Promised<R>>
-    return map(f).map(ofPromise).flatten();
-
-  public function measure():Measurement<T> {
-    var before = stack.first();
-
-    stack.push(this);
-    var p = this.poll();
-
-    if (Type.getClass(before) == AutoObservable)
-      (cast before: AutoObservable<Dynamic>).subscribe(this, p);
-
-    stack.pop();
-    return p;
-  }
+    return Observable.auto(() -> f.apply(this.getValue()));
 
   public function switchSync<R>(cases:Array<{ when: T->Bool, then: Lazy<Observable<R>> } > , dfault:Lazy<Observable<R>>):Observable<R>
-    return new SimpleObservable(function () {
-
-      var p = measure();
-
+    return Observable.auto(() -> {
+      var v = value;
       for (c in cases)
-        if (c.when(p.value)) {
+        if (c.when(v)) {
           dfault = c.then;
           break;
         }
-
-      var p2 = dfault.get().measure();
-
-      return new Measurement(p2.value, p.becameInvalid.first(p2.becameInvalid));
+      return dfault.get().value;
     });
 
-  public function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink {
-    var cb:Callback<T> =
-      switch options {
-        case null | { comparator: null }: cb;
-        case { comparator: equal }:
-          var isFirst = true,
-              last = null;
-          function (data) {
-            if (isFirst) {
-              isFirst = false;
-              cb.invoke(data);
+  static var scheduler:Scheduler =
+    #if macro
+      DirectScheduler.inst;
+    #else
+      new BatchScheduler({
+        function later(fn)
+          haxe.Timer.delay(fn, 10);
+        #if js
+          var later =
+            try
+              if (js.Browser.window.requestAnimationFrame != null)
+                function (fn:Void->Void)
+                  js.Browser.window.requestAnimationFrame(cast fn);
+              else
+                throw 'nope'
+            catch (e:Dynamic)
+              later;
+        #end
+
+        function asap(fn)
+          later(fn);
+        #if js
+          var asap =
+            try {
+              var p = js.lib.Promise.resolve(42);
+              function (fn:Void->Void) p.then(cast fn);
             }
-            else if (!equal(last, data))
-              cb.invoke(data);
-            last = data;
-          }
+            catch (e:Dynamic)
+              asap;
+        #end
+
+        function (b:BatchScheduler, isRerun:Bool) {
+          (if (isRerun) later else asap)(b.progress.bind(.01));
         }
-
-    return
-      switch options {
-        case null | { direct: null | false }:
-          var scheduled = false,
-              active = true,
-              updated:Callback<Noise> = null,
-              link:CallbackLink = null;
-
-          function update()
-            if (active) {
-              var next = untracked(measure);
-              cb.invoke(next.value);
-              scheduled = false;
-              link = next.becameInvalid.handle(updated);
-            }
-
-          function doSchedule() {
-            if (scheduled) return;
-            scheduled = true;
-            schedule(update);
-          }
-
-          updated = doSchedule;
-
-          doSchedule();
-
-          return function ()
-            if (active) {
-              active = false;
-              link.dissolve();
-            }
-
-        default:
-          var link:CallbackLink = null;
-
-          function update(_:Noise) {
-            var next = untracked(measure);
-            cb.invoke(next.value);
-            link = next.becameInvalid.handle(update);
-          }
-
-          update(Noise);
-
-          function () link.dissolve();
-
-      }
-  }
-
-  static var scheduled:Array<Void->Void> =
-    #if (js || tink_runloop || (haxe_ver >= 3.3))
-      [];
-    #else
-      null;
+      });
     #end
 
-  #if js
-    static var hasRAF:Bool = #if haxe4 js.Syntax.code #else untyped __js__ #end ("typeof window != 'undefined' && 'requestAnimationFrame' in window");
-  #end
-
-  static function schedule(f:Void->Void)
-    switch scheduled {
-      case null:
-        f();
-      case v:
-        v.push(f);
-        scheduleUpdate();
-    }
-
-  static var isScheduled = false;
-
-  static function scheduleUpdate() if (!isScheduled) {
-    isScheduled = true;
-    #if tink_runloop
-      tink.RunLoop.current.atNextStep(scheduledRun);
-    #elseif js
-      if (hasRAF)
-        js.Browser.window.requestAnimationFrame(function (_) scheduledRun());
-      else
-        Callback.defer(scheduledRun);
-    #elseif (haxe_ver >= 3.3)
-      Callback.defer(scheduledRun);
-    #else
-      throw 'this should be unreachable';
-    #end
-  }
-
-  static function scheduledRun() {
-    isScheduled = false;
-    updatePending();
-  }
+  static public function schedule(f:Void->Void)
+    scheduler.schedule(JustOnce.call(f));
 
   static public var isUpdating(default, null):Bool = false;
 
-  static public function updatePending(maxSeconds:Float = .01) {
-    inline function measure() return
-      #if java
-        Sys.cpuTime();
-      #else
-        haxe.Timer.stamp();
-      #end
-
-    var end = measure() + maxSeconds;
-
+  @:extern static inline function performUpdate<T>(fn:Void->T) {
+    var wasUpdating = isUpdating;
     isUpdating = true;
-
-    do {
-      var old = scheduled;
-      scheduled = [];
-      for (o in old) o();
-    }
-    while (scheduled.length > 0 && measure() < end);
-
-    isUpdating = false;
-
-    return
-      if (scheduled.length > 0) {
-        scheduleUpdate();
-        true;
-      }
-      else false;
+    return Error.tryFinally(fn, () -> isUpdating = wasUpdating);
   }
+
+  static public function updatePending(maxSeconds:Float = .01)
+    return !isUpdating && scheduler.progress(maxSeconds);
 
   static public function updateAll()
     updatePending(Math.POSITIVE_INFINITY);
@@ -253,34 +140,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     });
 
   @:impl static public function flatten<T>(o:ObservableObject<Observable<T>>)
-    return create(function () {
-      var m = lift(o).measure();
-      var m2 = m.value.measure();
-      return new Measurement(m2.value, m.becameInvalid || m2.becameInvalid);
-    });
+    return Observable.auto(() -> lift(o).value.value);
   #end
 
-  static var counter = 0;
-  static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>> {
-    if (p == null)
-      throw 'Expected Promise but got null';
-
-    var value = Loading,
-        becameInvalid = Lazy.ofFunc(p.map.bind(function (_) return Noise));
-
-    return create(function () {
-      if (p != null) {
-        p.handle(function (o) {
-          value = switch o {
-            case Success(v): Done(v);
-            case Failure(e): Failed(e);
-          }
-          becameInvalid = ConstObservable.NEVER;
-        });
-      }
-      return new Measurement(value, becameInvalid);
-    });
-  }
+  static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>>
+    return Observable.auto(() -> p);
 
   static public function create<T>(f, ?comparator):Observable<T>
     return new SimpleObservable(f, comparator);
@@ -290,11 +154,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   @:noUsing static public function const<T>(value:T):Observable<T>
     return new ConstObservable(value);
-
-  static public function untracked<T>(f:Void->T) {//TODO: consider inlining
-    stack.push(null);
-    return Error.tryFinally(f, stack.pop);
-  }
 
   @:op(a == b)
   static function eq<T>(a:Observable<T>, b:Observable<T>):Bool
@@ -310,96 +169,430 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
 }
 
-typedef BindingOptions<T> = {
-  ?direct:Bool,
-  ?comparator:T->T->Bool
+
+interface Derived {
+  function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
 }
 
-private abstract WrapComp<T>(Dynamic) {
-  public inline function new(v:Void->T)
-    this = v;
-
-  public inline function call():T
-    return
-      (this:Void->T)();
-
+interface ObservableObject<T> {
+  function getValue():T;
+  function isValid():Bool;
+  function getComparator():Comparator<T>;
+  function onInvalidate(i:Invalidatable):CallbackLink;
 }
 
-abstract Computation<T>(WrapComp<T>) {
-  inline function new(f)
-    this = new WrapComp(f);
-
-  public inline function perform()
-    return this.call();
-
-  @:from static function async<T>(f:Void->Promise<T>):Computation<Promised<T>> {//Something tells me this is rather inefficient ...
-    var o = Observable.auto(new Computation(f)).map(Observable.ofPromise);
-    return function () return o.value.value;
-  }
-
-  @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
-    var last = None;
-    var o = Observable.auto(new Computation(function () return f(last))).map(Observable.ofPromise);
-    return function () {
-      var ret = o.value.value;
-      switch ret {
-        case Done(v): last = Some(v);//Let's come up with a better solution and pretend this never happened
-        default:
-      }
-      return ret;
-    }
-  }
-
-  @:from static inline function plain<T>(f:Void->T):Computation<T>
-    return new Computation(f);
-
-  @:from static inline function withLast<T>(f:Option<T>->T):Computation<T>
-    return new Computation({
-      var last = None;
-      function () {
-        var ret = f(last);
-        last = Some(ret);
-        return ret;
-      }
-    });
-
+interface Invalidatable {
+  function invalidate():Void;
 }
 
-private class SimpleObservable<T> implements ObservableObject<T> {
+interface Schedulable {
+  function run():Void;
+}
 
-  var _poll:Void->Measurement<T>;
-  var comparator:Null<T->T->Bool>;
-  var cache:Measurement<T>;
+private class ConstObservable<T> implements ObservableObject<T> {
+  final value:T;
 
-  function resetCache(_) cache = null;
+  public function new(value)
+    this.value = value;
+
+  public function getValue()
+    return value;
 
   public function isValid()
-    return this.cache != null;
+    return true;
 
-  public function poll() {
-    var count = 0,
-        last = null;
-    while (cache == null) {
-      var cache = cache = _poll();
-      if (last == cache)
-        throw 'Polling loops on the same value';
+  public function getComparator()
+    return null;
 
-      last = cache;
-      cache.becameInvalid.handle(resetCache);
+  public function onInvalidate(i:Invalidatable):CallbackLink
+    return null;
+}
 
-      if (count++ >= 100)
-        throw 'Polling not concluded after 100 iterations';
-    }
-    return cache;
+private class JustOnce implements Schedulable {
+  var f:Void->Void;
+  function new() {}
+
+  public function run() {
+    var f = f;
+    this.f = null;
+    pool.push(this);
+    f();
   }
+  static var pool = [];
+  static public function call(f) {
+    var ret = switch pool.pop() {
+      case null: new JustOnce();
+      case v: v;
+    }
+    ret.f = f;
+    return ret;
+  }
+}
 
-  public function new(f, ?comparator) {
-    this._poll = f;
+
+class Invalidator {
+  final list = new CallbackList();
+  function new() {}
+
+  public function onInvalidate(i:Invalidatable):CallbackLink
+    return list.add(i.invalidate);//TODO: optimize away this indirection
+
+  function fire()
+    list.invoke(Noise);
+}
+
+abstract Comparator<T>(Null<(T,T)->Bool>) from (T,T)->Bool {
+  public inline function eq(a:T, b:T)
+    return switch this {
+      case null: a == b;
+      case f: f(a, b);
+    }
+
+  inline function unpack()
+    return this;
+
+  public inline function and(that:Comparator<T>):Comparator<T>
+    return switch [this, that.unpack()] {
+      case [null, v] | [v, null]: v;
+      case [c1, c2]: (a, b) -> c1(a, b) && c2(a, b);
+    }
+
+  public inline function or(that:Comparator<T>):Comparator<T>
+    return switch [this, that.unpack()] {
+      case [null, v] | [v, null]: v;
+      case [c1, c2]: (a, b) -> c1(a, b) || c2(a, b);
+    }
+}
+
+private class SimpleObservable<T> extends Invalidator implements ObservableObject<T> {
+
+  var _poll:Void->Measurement<T>;
+  var _cache:Measurement<T> = null;
+  var comparator:Comparator<T>;
+
+  public function new(poll, ?comparator) {
+    super();
+    this._poll = poll;
     this.comparator = comparator;
   }
 
+  public function isValid()
+    return _cache != null;
+
   public function getComparator()
     return comparator;
+
+  function reset(_) {
+    _cache = null;
+    fire();
+  }
+
+  function poll() {
+    var count = 0;
+
+    while (_cache == null)
+      if (++count == 100)
+        throw "polling did not conclude after 100 iterations";
+      else {
+        _cache = _poll();
+        _cache.becameInvalid.handle(reset);
+      }
+
+    return _cache;
+  }
+
+  public function getValue()
+    return poll().value;
+}
+
+interface Scheduler {
+  function progress(maxSeconds:Float):Bool;
+  function schedule(s:Schedulable):Void;
+}
+
+private class Binding<T> implements Invalidatable implements Schedulable {
+  final data:ObservableObject<T>;
+  final cb:Callback<T>;
+  final scheduler:Scheduler;
+  final comparator:Comparator<T>;
+  var status = Fresh;
+  var last:Null<T> = null;
+  var link:CallbackLink;
+
+  public function new(data, cb, ?scheduler, ?comparator) {
+    this.data = data;
+    this.cb = cb;
+    this.scheduler = switch scheduler {
+      case null: DirectScheduler.inst;
+      case v: v;
+    }
+    this.comparator = data.getComparator().or(comparator);
+    this.scheduler.schedule(this);
+  }
+
+  public function cancel() {
+    link.cancel();
+    status = Canceled;
+  }
+
+  public function invalidate()
+    if (status == Valid) {
+      status = Invalid;
+      scheduler.schedule(this);
+    }
+
+  public function run()
+    switch status {
+      case Canceled | Valid:
+      case Fresh:
+
+        data.onInvalidate(this);
+        status = Valid;
+        cb.invoke(this.last = data.getValue());
+
+      case Invalid:
+        status = Valid;
+        var prev = this.last,
+            next = this.last = data.getValue();
+
+        if (!comparator.eq(prev, next))
+          cb.invoke(next);
+    }
+}
+
+private enum abstract BindingStatus(Int) {
+  var Fresh;
+  var Valid;
+  var Invalid;
+  var Canceled;
+}
+
+private class DirectScheduler implements Scheduler {
+  static public final inst = new DirectScheduler();
+
+  function new() {}
+
+  public function progress(_)
+    return false;
+
+  public function schedule(s:Schedulable)
+    @:privateAccess Observable.performUpdate(s.run);
+}
+
+private class BatchScheduler implements Scheduler {
+  var queue:Array<Schedulable> = [];
+  var scheduled = false;
+  final run:(s:BatchScheduler, isRerun:Bool)->Void;
+
+  public function new(run) {
+    this.run = run;
+  }
+
+  inline function measure()
+    return
+      #if java
+        Sys.cpuTime();
+      #else
+        haxe.Timer.stamp();
+      #end
+
+  public function progress(maxSeconds:Float)
+    return @:privateAccess Observable.performUpdate(() -> {
+      var end = measure() + maxSeconds;
+
+      do {
+        var old = queue;
+        queue = [];
+        for (o in old) o.run();
+      }
+      while (queue.length > 0 && measure() < end);
+
+      if (queue.length > 0) {
+        run(this, true);
+        true;
+      }
+      else scheduled = false;
+    });
+
+  public function schedule(s:Schedulable) {
+    queue.push(s);
+    if (!scheduled) {
+      scheduled = true;
+      run(this, false);
+    }
+  }
+}
+
+@:callable
+private abstract Computation<T>((T->Void)->?Noise->T) {
+  inline function new(f) this = f;
+
+  @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
+    var link:CallbackLink = null,
+        last = None,
+        ret = Loading;
+    return new Computation((update, ?_) -> {
+      ret = Loading;
+      link.cancel();
+      link = f(last).handle(o -> update(ret = switch o {
+        case Success(v): last = Some(v); Done(v);
+        case Failure(e): Failed(e);
+      }));
+      return ret;
+    });
+  }
+
+
+  @:from static function async<T>(f:Void->Promise<T>):Computation<Promised<T>>
+    return asyncWithLast(_ -> f());
+
+  @:from static inline function withLast<T>(f:Option<T>->T):Computation<T> {
+    var last = None;
+    return new Computation((_, ?_) -> {
+      var ret = f(last);
+      last = Some(ret);
+      return ret;
+    });
+  }
+
+  @:from static function sync<T>(f:Void->T) {
+    return new Computation((_, ?_) -> f());
+  }
+}
+
+private interface Subscription {
+  function hasChanged():Bool;
+  function unregister():Void;
+}
+
+private class SubscriptionTo<T> implements Subscription {
+
+  var source:ObservableObject<T>;
+  var last:T;
+  var link:CallbackLink;
+
+  public function new(source, cur, target) {
+    this.source = source;
+    this.last = cur;
+    this.link = source.onInvalidate(target);
+  }
+
+  public function hasChanged():Bool {
+    var before = last;
+    last = Observable.untracked(source.getValue);// not sure this has to be untracked
+    return !source.getComparator().eq(last, before);
+  }
+
+  public function unregister():Void
+    link.cancel();
+}
+
+private class AutoObservable<T> extends Invalidator
+  implements Invalidatable implements Derived implements ObservableObject<T> {
+
+  static var cur:Derived;
+
+  var compute:Computation<T>;
+  #if hotswap
+    static var rev = new State(0);
+    static function onHotswapLoad() {
+      rev.set(rev.value + 1);
+    }
+  #end
+  var valid:Bool = false;
+  var last:T = null;
+  var subscriptions:Array<Subscription> = null;
+
+  var comparator:Comparator<T>;
+
+  public function isValid()
+    return valid;
+
+  public function getComparator()
+    return comparator;
+
+  public function new(compute, ?comparator) {
+    super();
+    this.compute = compute;
+    this.comparator = comparator;
+  }
+
+  static public inline function computeFor<T>(o:Derived, fn:Void->T) {
+    var before = cur;
+    cur = o;
+    #if hotswap
+      rev.value;
+    #end
+    var ret = fn();
+    cur = before;
+    return ret;
+  }
+
+  static public inline function untracked<T>(fn:Void->T)
+    return computeFor(null, fn);
+
+  static public inline function track<V>(o:ObservableObject<V>):V {
+    var ret = o.getValue();
+    if (cur != null)
+      cur.subscribeTo(o, ret);
+    return ret;
+  }
+
+  public function getValue():T {
+    var count = 0;
+
+    while (!valid)
+      if (++count == 100)
+        throw 'no result after 100 attempts';
+      else if (subscriptions != null) {
+        valid = true;
+
+        for (s in subscriptions)
+          if (s.hasChanged()) {
+            valid = false;
+            break;
+          }
+
+        if (!valid) {
+          for (s in subscriptions)
+            s.unregister();
+          subscriptions = null;
+        }
+      }
+      else {
+        valid = true;
+        subscriptions = [];
+        sync = true;
+        last = computeFor(this, () -> compute(update));
+        sync = false;
+      }
+
+    return last;
+  }
+
+  var sync = true;
+
+  function update(value) if (!sync) {
+    last = value;
+    fire();
+  }
+
+  public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
+    if (valid) {
+      subscriptions.push(new SubscriptionTo(source, cur, this));
+    }
+
+  public function invalidate()
+    if (valid) {
+      valid = false;
+      fire();
+    }
+
+}
+
+typedef BindingOptions<T> = {
+  ?direct:Bool,
+  ?comparator:T->T->Bool
 }
 
 abstract Transform<T, R>(T->R) {
@@ -427,118 +620,43 @@ abstract Transform<T, R>(T->R) {
     return new Transform(f);
 }
 
-interface ObservableObject<T> {
-  function isValid():Bool;
-  function getComparator():Null<T->T->Bool>;
-  function poll():Measurement<T>;
-}
+private class TransformObservable<In, Out> implements ObservableObject<Out> implements Invalidatable {
 
-class ConstObservable<T> implements ObservableObject<T> {
+  var valid = false;
+  var last:Out = null;
+  var transform:Transform<In, Out>;
+  var source:ObservableObject<In>;
 
-  static public var NEVER = new Future<Noise>(function (_) return null);
-
-  public var m(default, null):Measurement<T>;
-
-  public function poll()
-    return this.m;
+  public function new(source, transform) {
+    this.source = source;
+    this.transform = transform;
+    source.onInvalidate(this);
+  }
 
   public function isValid()
-    return true;
+    return valid;
 
-  public function new(value)
-    this.m = new Measurement(value, NEVER);
+  public function invalidate()
+    valid = false;
 
-  public function getComparator():Null<T->T->Bool>
+  public function onInvalidate(i)
+    return source.onInvalidate(i);
+
+  public function getValue() {
+    if (valid == false) {
+      valid = true;
+      last = transform.apply(source.getValue());
+    }
+    return last;
+  }
+
+  public function getComparator()
     return null;
 }
-
-private interface Dependency {
-  function changed():Bool;
-  function unlink():Void;
-  function resubscribe(trigger:FutureTrigger<Noise>):Void;
-}
-
-private class DependencyOf<T> implements Dependency {
-
-  var data:Observable<T>;
-  var link:CallbackLink;
-  var comparator:Null<T->T->Bool>;
-  var last:T;
-
-  public function new(data:Observable<T>, initial:Measurement<T>, trigger:FutureTrigger<Noise>) {
-    this.data = data;
-    this.comparator = (data:ObservableObject<T>).getComparator();
-    this.last = initial.value;
-    this.link = initial.becameInvalid.handle(trigger.trigger);
-  }
-
-  public function changed():Bool
-    return switch comparator {
-      case null: last != data.value;
-      case f: !f(last, data.value);
-    }
-  public function unlink()
-    link.dissolve();
-
-  public function resubscribe(trigger:FutureTrigger<Noise>) {
-    var next = data.measure().becameInvalid.handle(function (_) {
-      trigger.trigger(Noise);
-    });
-    link.cancel();
-    link = next;
-  }
-
-}
-
-private class AutoObservable<T> extends SimpleObservable<T> {
-
-  var trigger:FutureTrigger<Noise>;
-  var dependencies:Array<Dependency>;
-  var isSubscribed:Map<{}, Bool>;
-  var last:T;
-
-  public function new(comp:Computation<T>, ?comparator) {
-
-    super(function () {
-
-      this.trigger = Future.trigger();
-
-      if (dependencies != null) {
-        var changed = false;
-
-        for (d in dependencies)
-          if (d.changed()) {
-            changed = true;
-            break;
-          }
-
-        if (changed)
-          for (d in dependencies)
-            d.unlink();
-        else {
-          for (d in dependencies)
-            d.resubscribe(this.trigger);
-          return new Measurement(last, this.trigger.asFuture());
-        }
-      }
-      dependencies = [];
-      isSubscribed = new Map();
-
-      return new Measurement(last = comp.perform(), this.trigger.asFuture());
-    }, comparator);
-  }
-
-  public function subscribe<D>(dependency:ObservableObject<D>, initial:Measurement<D>)
-    if (!isSubscribed[dependency]) {
-      isSubscribed[dependency] = true;
-      dependencies.push(new DependencyOf(dependency, initial, this.trigger));
-    }
-}
-
 #if haxe4
 @:access(tink.state.Observable)
 class ObservableTools {
-  
+
   static public function deliver<T>(o:Observable<Promised<T>>, initial:T):Observable<T>
     return Observable.lift(o).map(function (p) return switch p {
       case Done(v): initial = v;
@@ -546,10 +664,7 @@ class ObservableTools {
     });
 
   static public function flatten<T>(o:Observable<Observable<T>>)
-    return Observable.create(function () {
-      var m = Observable.lift(o).measure();
-      var m2 = m.value.measure();
-      return new Measurement(m2.value, m.becameInvalid || m2.becameInvalid);
-    });
+    return Observable.auto(() -> Observable.lift(o).value.value);
+
 }
 #end

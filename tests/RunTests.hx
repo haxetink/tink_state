@@ -2,7 +2,7 @@ package ;
 
 class RunTests {
 
-  static function main() {  
+  static function main() {
     tink.testrunner.Runner.run(tink.unit.TestBatch.make([
       new TestBasic(),
       new TestMaps(),

@@ -9,7 +9,7 @@ os:
   # - osx
 
 env:
-  - HAXE_VERSION=3.4.7
+  # - HAXE_VERSION=3.4.7
   - HAXE_VERSION=latest
   - HAXE_VERSION=nightly
 
@@ -32,6 +32,8 @@ script:
 
 
 jobs:
+  allow_failures:
+    - env: HAXE_VERSION=nightly
   include:
     # - stage: test # should uncomment this when there is no matrix above (e.g. only one os, one env, etc)
     - stage: deploy

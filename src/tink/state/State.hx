@@ -10,8 +10,8 @@ abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
   public var value(get, never):T;
     @:to function get_value() return observe().value;
 
-  public inline function new(value, ?isEqual, ?guard)
-    this = new SimpleState(value, isEqual, guard);
+  public inline function new(value, ?comparator, ?guard)
+    this = new SimpleState(value, comparator, guard);
 
   public inline function observe():Observable<T>
     return this;
@@ -23,7 +23,7 @@ abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
     return observe().bind(options, cb);
 
   @:impl static public function toggle(s:StateObject<Bool>) {
-    s.set(!s.poll().value);
+    s.set(!s.getValue());
   }
 
   @:to public function toCallback():Callback<T>
@@ -42,7 +42,7 @@ private class CompoundState<T> implements StateObject<T> {
 
   var data:ObservableObject<T>;
   var update:T->Void;
-  var comparator:Null<T->T->Bool>;
+  var comparator:Comparator<T>;
 
   public function new(data, set, ?comparator) {
     this.data = data;
@@ -53,11 +53,14 @@ private class CompoundState<T> implements StateObject<T> {
   public function isValid()
     return data.isValid();
 
-  public function poll()
-    return (data:Observable<T>).measure();
+  public function getValue()
+    return data.getValue();
+
+  public function onInvalidate(i)
+    return data.onInvalidate(i);
 
   public function set(value) {
-    update(value);
+    update(value);//TODO: consider running comparator here
     return value;
   }
 
@@ -65,43 +68,34 @@ private class CompoundState<T> implements StateObject<T> {
     return this.comparator;
 }
 
-private class SimpleState<T> implements StateObject<T> {
+private class SimpleState<T> extends Invalidator implements StateObject<T> {
 
-  var next:Measurement<T>;
-  var trigger:FutureTrigger<Noise>;
-  var isEqual:Null<T->T->Bool>;
-  var guard:T->T;
+  final comparator:Comparator<T>;
+  final guard:T->T;
+  var value:T;
+  var guardApplied:Bool;
 
   public function isValid()
     return true;
 
-  public function poll() {
-    if (next == null) {
-      if (guard != null)
-        value = guard(value);
-      arm();
-    }
-    return next;
-  }
-
-  var value:T;
-
-  public function new(value, ?isEqual, ?guard) {
-    this.guard = guard;
-    this.isEqual = isEqual;
+  public function new(value, ?comparator, ?guard) {
+    super();
     this.value = value;
+    this.guard = guard;
+    this.comparator = comparator;
+    this.guardApplied = guard == null;
   }
 
-  function arm() {
-    this.trigger = Future.trigger();
-    this.next = new Measurement(value, this.trigger);
+  public function getValue() {
+    if (!this.guardApplied) {
+      this.guardApplied = true;
+      value = guard(value);
+    }
+    return value;
   }
-
-  inline function differs(a, b)
-    return if (isEqual == null) a != b else !isEqual(a, b);
 
   public function getComparator()
-    return isEqual;
+    return comparator;
 
   static inline function warn(s)
     #if js
@@ -121,16 +115,13 @@ private class SimpleState<T> implements StateObject<T> {
     #end
 
     if (guard != null) {
-      if (next == null)
-        this.value = guard(this.value);
+      getValue();
       value = guard(value);
     }
-    if (differs(value, this.value)) {
+
+    if (!comparator.eq(value, this.value)) {
       this.value = value;
-      var last = trigger;
-      arm();
-      if (last != null)
-        last.trigger(Noise);
+      fire();
     }
     return value;
   }

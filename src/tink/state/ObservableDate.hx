@@ -6,52 +6,55 @@ using DateTools;
 
 class ObservableDate implements ObservableObject<Bool> {
 
-	static var PASSED = Observable.const(true);
+  static var PASSED = Observable.const(true);
 
-	var _observable:ObservableObject<Bool>;
-	public var date(default, null):Date;
-	public var passed(get, never):Bool;
-		inline function get_passed():Bool
-			return observe().value;
-	
-	public function new(?date:Date) {
-		
-		if (date == null) 
-			date = Date.now();
+  var _observable:ObservableObject<Bool>;
+  public var date(default, null):Date;
+  public var passed(get, never):Bool;
+    inline function get_passed():Bool
+      return _observable.getValue();
 
-		this.date = date;
+  public function isValid()
+    return _observable.isValid();
 
-		var now = Date.now().getTime(),
-			stamp = date.getTime();
+  public function getValue()
+    return _observable.getValue();
 
-		var passed = now >= stamp;
+  public function onInvalidate(i)
+    return _observable.onInvalidate(i);
 
-		_observable = 
-			if (passed) PASSED;
-			else {
-				var state = new State(false);
-				haxe.Timer.delay(function () state.set(true), Std.int(stamp - now));
-				state;
-			}
-	}
+  public function new(?date:Date) {
 
-	public function observe():Observable<Bool>
-		return _observable;
+    if (date == null)
+      date = Date.now();
 
-	public function isOlderThan(msecs:Float):Bool
-		return becomesOlderThan(msecs).value;
+    this.date = date;
 
-	public function becomesOlderThan(msecs:Float):Observable<Bool>
-		return 
-			if (Date.now().getTime() > date.getTime() + msecs) PASSED;
-			else new ObservableDate(this.date.delta(msecs)).observe();
+    var now = Date.now().getTime(),
+      stamp = date.getTime();
 
-	public function poll()
-		return _observable.poll();
+    var passed = now >= stamp;
 
-	public function isValid()
-		return _observable.isValid();
+    _observable =
+      if (passed) PASSED;
+      else {
+        var state = new State(false);
+        haxe.Timer.delay(function () state.set(true), Std.int(stamp - now));
+        state;
+      }
+  }
 
-	public function getComparator()
-		return null;
+  public function observe():Observable<Bool>
+    return _observable;
+
+  public function isOlderThan(msecs:Float):Bool
+    return becomesOlderThan(msecs).value;
+
+  public function becomesOlderThan(msecs:Float):Observable<Bool>
+    return
+      if (Date.now().getTime() > date.getTime() + msecs) PASSED;
+      else new ObservableDate(this.date.delta(msecs)).observe();
+
+  public function getComparator()
+    return null;
 }
