@@ -432,6 +432,7 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
         last = None,
         ret = Loading;
     return new Computation((update, ?_) -> {
+      ret = Loading;
       link.cancel();
       link = f(last).handle(o -> update(ret = switch o {
         case Success(v): last = Some(v); Done(v);
