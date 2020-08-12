@@ -12,26 +12,26 @@ enum Promised<T> {
 class PromisedTools {
   static public function next<A, B>(a:Promised<A>, f:Next<A, B>):Promise<B>
     return switch a {
-      case Loading: Promise.NEVER;
+      case Loading: Promise.NEVER #if (tink_core < "2" && haxe_ver >= "4.2") .next(_ -> (null:B)) #end;
       case Failed(e): e;
       case Done(a): f(a);
     }
-    
+
   static public function map<A, B>(a:Promised<A>, f:A->B):Promised<B>
     return switch a {
       case Loading: Loading;
       case Failed(e): Failed(e);
       case Done(a): Done(f(a));
     }
-    
+
   static public function flatMap<A, B>(a:Promised<A>, f:A->Promised<B>):Promised<B>
     return switch a {
       case Loading: Loading;
       case Failed(e): Failed(e);
       case Done(a): f(a);
     }
-    
-  static public function toOption<V>(p:Promised<V>):Option<V> 
+
+  static public function toOption<V>(p:Promised<V>):Option<V>
     return switch p {
       case Done(data): Some(data);
       case _: None;
@@ -48,7 +48,7 @@ class PromisedTools {
       case Done(v): v;
       default: null;
     }
-    
+
   static public function all<V>(p:Iterable<Promised<V>>):Promised<Array<V>> {
     var ret = [];
     for(p in p)
