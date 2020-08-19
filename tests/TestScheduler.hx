@@ -9,9 +9,7 @@ class TestScheduler {
 
     var l1 = s1.observe().bind(function (v) s2.set(v + 1)),
         l2 = s2.observe().bind(function (v) s1.set(v + 1));
-    asserts.assert(s1.value == 0);
-    asserts.assert(s2.value == 0);
-    Observable.updatePending(0);
+
     asserts.assert(s1.value == 2);
     asserts.assert(s2.value == 1);
     Observable.updatePending(0);
@@ -47,12 +45,8 @@ class TestScheduler {
       return s2.value + s3.value;
     }).bind(log.push);
 
-    function checkLog(expected)
-      asserts.assert(log.join(',') == expected);
-
-    checkLog('');
-
-    Observable.updateAll();
+    function checkLog(expected, ?pos:haxe.PosInfos)
+      asserts.assert(log.join(',') == expected, null, pos);
 
     checkLog('foo(0)bar(0)');
 

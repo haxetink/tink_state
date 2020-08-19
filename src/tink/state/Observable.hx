@@ -315,9 +315,9 @@ private class Binding<T> implements Invalidatable implements Schedulable {
   final cb:Callback<T>;
   final scheduler:Scheduler;
   final comparator:Comparator<T>;
-  var status = Fresh;
+  var status = Valid;
   var last:Null<T> = null;
-  var link:CallbackLink;
+  final link:CallbackLink;
 
   public function new(data, cb, ?scheduler, ?comparator) {
     this.data = data;
@@ -327,7 +327,8 @@ private class Binding<T> implements Invalidatable implements Schedulable {
       case v: v;
     }
     this.comparator = data.getComparator().or(comparator);
-    this.scheduler.schedule(this);
+    link = data.onInvalidate(this);
+    cb.invoke(this.last = data.getValue());
   }
 
   public function cancel() {
@@ -344,12 +345,6 @@ private class Binding<T> implements Invalidatable implements Schedulable {
   public function run()
     switch status {
       case Canceled | Valid:
-      case Fresh:
-
-        data.onInvalidate(this);
-        status = Valid;
-        cb.invoke(this.last = data.getValue());
-
       case Invalid:
         status = Valid;
         var prev = this.last,
@@ -361,7 +356,6 @@ private class Binding<T> implements Invalidatable implements Schedulable {
 }
 
 private enum abstract BindingStatus(Int) {
-  var Fresh;
   var Valid;
   var Invalid;
   var Canceled;
