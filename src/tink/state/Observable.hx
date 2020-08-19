@@ -130,7 +130,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public function updateAll()
     updatePending(Math.POSITIVE_INFINITY);
 
-  static inline function lift<T>(o:Observable<T>) return o;
+  static public inline function lift<T>(o:Observable<T>) return o;
 
   #if !haxe4
   @:impl static public function deliver<T>(o:ObservableObject<Promised<T>>, initial:T):Observable<T>
