@@ -1,6 +1,7 @@
 package tink.state;
 
 import tink.state.Promised;
+import tink.state.Invalidatable;
 
 using tink.CoreApi;
 
@@ -159,7 +160,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 }
 
 
-interface Derived {
+private interface Derived {
   function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
 }
 
@@ -169,10 +170,6 @@ interface ObservableObject<T> {
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
   function getObservers():Iterator<Invalidatable>;
-}
-
-interface Invalidatable {
-  function invalidate():Void;
 }
 
 interface Schedulable {
@@ -224,26 +221,6 @@ private class JustOnce implements Schedulable {
   }
 }
 
-
-class Invalidator {
-  final observers = new Map<Invalidatable, Bool>();
-  function new() {}
-
-  public function onInvalidate(i:Invalidatable):CallbackLink
-    return
-      if (observers[i]) null;
-      else {
-        observers[i] = true;
-        observers.remove.bind(i);
-      }
-
-  public function getObservers()
-    return observers.keys();
-
-  function fire()
-    for (i in observers.keys()) i.invalidate();
-}
-
 abstract Comparator<T>(Null<(T,T)->Bool>) from (T,T)->Bool {
   public inline function eq(a:T, b:T)
     return switch this {
@@ -274,7 +251,6 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
   var comparator:Comparator<T>;
 
   public function new(poll, ?comparator) {
-    super();
     this._poll = poll;
     this.comparator = comparator;
   }
@@ -509,7 +485,6 @@ private class AutoObservable<T> extends Invalidator
     return comparator;
 
   public function new(compute, ?comparator) {
-    super();
     this.compute = compute;
     this.comparator = comparator;
   }

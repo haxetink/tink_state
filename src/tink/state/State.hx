@@ -1,6 +1,7 @@
 package tink.state;
 
 import tink.state.Observable;
+import tink.state.Invalidatable;
 
 using tink.CoreApi;
 
@@ -82,7 +83,6 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
     return true;
 
   public function new(value, ?comparator, ?guard) {
-    super();
     this.value = value;
     this.guard = guard;
     this.comparator = comparator;
