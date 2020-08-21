@@ -37,6 +37,12 @@ abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
   @:op([]) public inline function set(index, value)
     return this.set(index, value);
 
+  public function copy():ObservableArray<T>
+    return new ArrayImpl(this.copy());
+
+  public function toArray():Array<T>
+    return this.copy();
+
   @:from static public function fromArray<T>(a:Array<T>):ObservableArray<T>
     return new ArrayImpl(a.copy());
 
@@ -117,6 +123,9 @@ private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<
 
   public function getComparator()
     return neverEqual;
+
+  public function copy()
+    return calc(() -> entries.copy());
 
   @:extern inline function update<T>(fn:Void->T) {
     var ret = fn();
