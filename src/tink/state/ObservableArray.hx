@@ -1,152 +1,135 @@
 package tink.state;
 
+import tink.state.Invalidatable;
 import tink.state.Observable;
+import haxe.iterators.*;
 
-using tink.CoreApi;
+@:forward
+abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
 
-private enum Change<T> {
-  Remove(index:Int, values:Array<T>);
-  Insert(index:Int, values:Array<T>);
-  Update(index:Int, values:Array<T>);
+  @:deprecated public var observableValues(get, never):Observable<ArrayIterator<T>>;
+    function get_observableValues()
+      return Observable.auto(() -> this.iterator());
+
+  @:deprecated public var observableLength(get, never):Observable<Int>;
+    function get_observableLength()
+      return Observable.auto(() -> this.length);
+
+  public inline function new(?init:Array<T>)
+    this = new ArrayImpl(switch init {
+      case null: [];
+      case v: v.copy();
+    });
+
+  public function entry(index)
+    return Observable.auto(() -> this.get(index));
+
+  @:deprecated('use iterator instead')
+  public function values()
+    return this.iterator();
+
+  public function keys()
+    return 0...this.length;
+
+  @:op([]) public inline function get(index)
+    return this.get(index);
+
+  @:op([]) public inline function set(index, value)
+    return this.set(index, value);
+
+  @:from static public function fromArray<T>(a:Array<T>):ObservableArray<T>
+    return new ArrayImpl(a.copy());
+
+  @:from static public function fromVector<T>(v:haxe.ds.Vector<T>):ObservableArray<T>
+    return new ArrayImpl(v.toArray());
+
+  @:from static public function fromIterable<T>(i:Iterable<T>):ObservableArray<T>
+    return new ArrayImpl(Lambda.array(i));
 }
 
-private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
+private typedef Self<T> = Iterable<T> & KeyValueIterable<Int, T> & { var length(get, never):Int; }
 
-  var target:ObservableArray<T>;
+private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<T>> {
 
-  public function new(target)
-    this.target = target;
-
-  public function isValid()
-    return true;
-
-  public function getValue()
-    return @:privateAccess target.items.iterator();
-
-  public function onInvalidate(i:Invalidatable)
-    return @:privateAccess target.changes.handle(i.invalidate);
-
-  public function getComparator()
-    return null;
-
-  public function getObservers()
-    return [].iterator();
-}
-
-class ObservableArray<T> extends ObservableBase<Change<T>> {
-
-  var items:Array<T>;
-
-  public var observableValues(default, null):Observable<Iterator<T>>;
-  public var observableLength(default, null):Observable<Int>;
+  var valid = false;
+  var entries:Array<T>;
 
   public var length(get, never):Int;
-    inline function get_length() return observableLength.value;
+    function get_length()
+      return calc(() -> entries.length);
 
-  public function new(?items) {
-    this.items = if (items == null) [] else items;
+  public function new(entries)
+    this.entries = entries;
 
-    super();
+  public function replace(values:Array<T>)
+    update(() -> { entries = values.copy(); });
 
-    this.observableLength = observable(function () return this.items.length, function (_, c) return switch c {
-      case Update(_, _): false;
-      default: true;
-    });
+  public function prepend(values:Array<T>)
+    update(() -> { entries = values.concat(entries); });
 
-    this.observableValues = new ValueIterator(this);
-  }
+  public function append(values:Array<T>)
+    update(() -> { entries = entries.concat(values); });
 
-  public function values() {
-    return this.observableValues.value;
-  }
+  public function sort(fn:T->T->Int)
+    update(() -> { entries.sort(fn); null; });
 
-  public function keys() {
-    return 0...this.length;
-  }
+  public function resize(size:Int)
+    update(() -> { entries.resize(0); null; });
 
-  public function iterator() {
-    var i = 0;
-    length;//not pretty
-    return {
-      hasNext: function () return i < items.length,
-      next: function () return observe(i++),
+  public inline function clear()
+    resize(0);
+
+  public function push(v:T)
+    return update(() -> entries.push(v));
+
+  public function pop()
+    return update(() -> entries.pop());
+
+  public function unshift(v:T)
+    return update(() -> entries.push(v));
+
+  public function shift()
+    return update(() -> entries.pop());
+
+  @:extern inline function update<T>(fn:Void->T) {
+    var ret = fn();
+    if (valid) {
+      valid = false;
+      fire();
     }
-  }
-
-  public function observe(index:Int)
-    return observable(function () return items[index], function (_, c) return @:privateAccess switch c {
-      case Remove(i, { length: l }): i <= index && items.length + l > index;
-      case Insert(i, { length: l }): i <= index && items.length > index;
-      case Update(i, items): i <= index && index <= i + items.length;
-    });
-
-  public function toArray():Array<T>
-    return observable(function () return this.items.copy());
-
-  public function get(index:Int)
-    return observe(index).value;
-
-  public function set(index:Int, value:T)
-    if (index >= items.length)
-      if (index == items.length)
-        insert(index, value)
-      else {
-        var a = [];
-        a[index - items.length] = value;
-        insertMany(index, a);
-      }
-    else if (items[index] != value) {
-      items[index] = value;
-      _changes.trigger(Update(index, [value]));
-    }
-
-  public function remove(item:T)
-    return
-      switch items.indexOf(item) {
-        case -1: false;
-        case v:
-          splice(v, 1);
-          true;
-      }
-
-  public inline function clear() {
-    return splice(0, items.length);
-  }
-
-  public inline function indexOf(item:T):Int
-    return items.indexOf(item);
-
-  public function splice(index:Int, length:Int) {
-    var ret = items.splice(index, length);
-    if (ret.length > 0)
-      _changes.trigger(Remove(index, ret));
     return ret;
   }
 
-  public inline function insert(pos:Int, value:T)
-    insertMany(pos, [value]);
+  public function get(index:Int)
+    return calc(() -> entries[index]);
 
-  public function insertMany(pos:Int, values:Array<T>)
-    if (values.length > 0) {
-      this.items = this.items.slice(0, pos).concat(values).concat(this.items.slice(pos));
-      _changes.trigger(Insert(pos, values));
-    }
+  public function set(index:Int, value:T)
+    return update(() -> entries[index] = value);
 
-  public inline function push(value:T) {
-    this.insert(items.length, value);
-    return items.length;
+  public function observe():Observable<Iterable<T>>
+    return this;
+
+  public function isValid():Bool
+    return valid;
+
+  public function getValue():Self<T>
+    return this;
+
+  public function iterator():ArrayIterator<T>
+    return calc(entries.iterator);
+
+  public function keyValueIterator():ArrayKeyValueIterator<T>
+    return calc(entries.keyValueIterator);
+
+  @:extern inline function calc<T>(f:Void->T) {
+    valid = true;
+    observe().value;
+    return f();
   }
 
-  public inline function pop()
-    return splice(items.length - 1, 1)[0];
+  function eq(a, b)
+    return false;
 
-  public inline function unshift(value:T)
-    insert(0, value);
-
-  public inline function shift()
-    return splice(0, 1)[0];
-
-  public inline function join(sep:String) {
-    return observable(items.join.bind(sep));
-  }
+  public function getComparator()
+    return eq;
 }

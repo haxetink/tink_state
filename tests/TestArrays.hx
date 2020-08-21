@@ -25,7 +25,7 @@ class TestArrays {
 
     a.observableLength.bind({ direct: true }, report('l'));
 
-    a.observe(99).bind({ direct: true }, report('99'));
+    a.entry(99).bind({ direct: true }, report('99'));
 
     asserts.assert(getLog() == 'l:100,99:99');
     clear();
@@ -75,7 +75,7 @@ class TestArrays {
 
     asserts.assert(counter == a.length);
 
-    var evenCount = a.fold(function (v, count) return count + 1 - v.value % 2, 0);
+    var evenCount = a.fold(function (v, count) return count + 1 - v % 2, 0);
     asserts.assert(evenCount == 5);
 
     var keysChanges = 0,
@@ -98,7 +98,7 @@ class TestArrays {
     Observable.auto(function () {
       var first = 0;
       for (v in a) {
-        first += v.value;
+        first += v;
         break;
       }
       return first;
@@ -152,7 +152,7 @@ class TestArrays {
     var log = '';
 
     o.observableLength.bind({ direct: true }, function(v) return log += 'len:$v');
-    for(i in 0...o.length) o.observe(i).bind({ direct: true }, function(v) return log += ',$i:$v');
+    for(i in 0...o.length) o.entry(i).bind({ direct: true }, function(v) return log += ',$i:$v');
     o.clear();
 
     asserts.assert(log.replace('undefined', '-').replace('null', '-') == 'len:3,0:1,1:2,2:3len:0,0:-,1:-,2:-');
