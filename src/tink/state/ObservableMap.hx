@@ -6,9 +6,23 @@ import tink.state.Observable;
 import haxe.iterators.*;
 
 @:forward
-abstract ObservableMap<K, V>(MapImpl<K, V>) from MapImpl<K, V> {
+abstract ObservableMap<K, V>(MapImpl<K, V>) from MapImpl<K, V> to IMap<K, V> {
   public function new(init:Map<K, V>)
     this = new MapImpl(init.copy());
+
+  @:op([]) public inline function get(index)
+    return this.get(index);
+
+  @:op([]) public inline function set(index, value) {
+    this.set(index, value);
+    return value;
+  }
+
+  public function toMap():Map<K, V>
+    return cast this.copy();
+
+  public function copy():ObservableMap<K, V>
+    return new MapImpl(cast this.copy());
 
   public function entry(key:K)
     return Observable.auto(this.get.bind(key));
