@@ -5,9 +5,9 @@ import tink.state.ObservableBase;
 using tink.CoreApi;
 
 @:structInit private class Update<K, V> {
-  public #if haxe4 final #else var #end key #if !haxe4 (default, never) #end:K;
-  public #if haxe4 final #else var #end from #if !haxe4 (default, never) #end:Option<V>;
-  public #if haxe4 final #else var #end to #if !haxe4 (default, never) #end:Option<V>;
+  public final key:K;
+  public final from:Option<V>;
+  public final to:Option<V>;
 }
 
 class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends ObservableBase<Update<K, V>> {
