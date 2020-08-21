@@ -11,7 +11,7 @@ class TestArrays {
 
   public function new() {}
 
-  public function basics() {
+  @:include public function basics() {
     var a = new ObservableArray<Null<Int>>([for (i in 0...100) i]);
     var log = [];
 
@@ -43,7 +43,7 @@ class TestArrays {
 
     clear();
     a.unshift(a.get(0)-1);
-    asserts.assert(getLog() == '99:89,l:100');//It's a good question why exactly this happens out of order
+    asserts.assert(getLog() == 'l:100,99:89');
     clear();
     for (i in 0...10)
       a.push(i);
@@ -108,19 +108,19 @@ class TestArrays {
 
     a.set(2, 4);
 
-    asserts.assert(iteratorChanges == 1);
+    asserts.assert(iteratorChanges == valuesChanges);
     asserts.assert(keysChanges == 1);
     asserts.assert(valuesChanges == 2);
 
     a.set(0, 1);
 
-    asserts.assert(iteratorChanges == 2);
+    asserts.assert(iteratorChanges == valuesChanges);
     asserts.assert(keysChanges == 1);
     asserts.assert(valuesChanges == 3);
 
     a.pop();
 
-    asserts.assert(iteratorChanges == 3);
+    asserts.assert(iteratorChanges == valuesChanges);
     asserts.assert(keysChanges == 2);
     asserts.assert(valuesChanges == 4);
 

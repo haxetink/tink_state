@@ -86,10 +86,10 @@ private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<
     return update(() -> entries.pop());
 
   public function unshift(v:T)
-    return update(() -> entries.push(v));
+    return update(() -> { entries.unshift(v); entries.length; });
 
   public function shift()
-    return update(() -> entries.pop());
+    return update(() -> entries.shift());
 
   @:extern inline function update<T>(fn:Void->T) {
     var ret = fn();
