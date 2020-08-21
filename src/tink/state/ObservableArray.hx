@@ -115,10 +115,10 @@ private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<
   public function getValue():Self<T>
     return this;
 
-  public function iterator():ArrayIterator<T>
+  public function iterator():#if eval Iterator<T> #else ArrayIterator<T> #end
     return calc(entries.iterator);
 
-  public function keyValueIterator():ArrayKeyValueIterator<T>
+  public function keyValueIterator():#if eval KeyValueIterator<Int, T> #else ArrayKeyValueIterator<T> #end
     return calc(entries.keyValueIterator);
 
   @:extern inline function calc<T>(f:Void->T) {
