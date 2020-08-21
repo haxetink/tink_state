@@ -1,6 +1,6 @@
 package tink.state;
 
-import tink.state.ObservableBase;
+import tink.state.legacy.ObservableBase;
 
 using tink.CoreApi;
 
