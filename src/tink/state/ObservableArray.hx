@@ -91,22 +91,13 @@ private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<
   public function shift()
     return update(() -> entries.shift());
 
-  @:extern inline function update<T>(fn:Void->T) {
-    var ret = fn();
-    if (valid) {
-      valid = false;
-      fire();
-    }
-    return ret;
-  }
-
   public function get(index:Int)
     return calc(() -> entries[index]);
 
   public function set(index:Int, value:T)
     return update(() -> entries[index] = value);
 
-  public function observe():Observable<Iterable<T>>
+  public function observe():Observable<Self<T>>
     return this;
 
   public function isValid():Bool
@@ -121,15 +112,24 @@ private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<
   public function keyValueIterator():#if eval KeyValueIterator<Int, T> #else ArrayKeyValueIterator<T> #end
     return calc(entries.keyValueIterator);
 
+  function neverEqual(a, b)
+    return false;
+
+  public function getComparator()
+    return neverEqual;
+
+  @:extern inline function update<T>(fn:Void->T) {
+    var ret = fn();
+    if (valid) {
+      valid = false;
+      fire();
+    }
+    return ret;
+  }
+
   @:extern inline function calc<T>(f:Void->T) {
     valid = true;
     observe().value;
     return f();
   }
-
-  function eq(a, b)
-    return false;
-
-  public function getComparator()
-    return eq;
 }

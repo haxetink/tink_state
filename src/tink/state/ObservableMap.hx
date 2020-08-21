@@ -1,103 +1,86 @@
 package tink.state;
 
-import tink.state.ObservableBase;
+import haxe.Constraints.IMap;
+import tink.state.Invalidatable;
+import tink.state.Observable;
+import haxe.iterators.*;
 
-using tink.CoreApi;
+@:forward
+abstract ObservableMap<K, V>(MapImpl<K, V>) from MapImpl<K, V> {
+  public function new(init:Map<K, V>)
+    this = new MapImpl(init.copy());
 
-@:structInit private class Update<K, V> {
-  public final key:K;
-  public final from:Option<V>;
-  public final to:Option<V>;
+  public function entry(key:K)
+    return Observable.auto(this.get.bind(key));
 }
 
-class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends ObservableBase<Update<K, V>> {
+private typedef Self<K, V> = Iterable<V> & KeyValueIterable<K, V>;
 
-  var map:Map<K, V>;
+private class MapImpl<K, V> extends Invalidator implements ObservableObject<Self<K, V>> implements IMap<K, V> {
 
-  public var observableKeys(default, null):Observable<Iterator<K>>;
-  public var observableValues(default, null):Observable<Iterator<V>>;
+  var valid = false;
+  var entries:Map<K, V>;
 
-  var asString:Observable<String>;
+  public function new(entries:Map<K, V>)
+    this.entries = entries;
 
-  public function new(initial) {
+  public function observe():Observable<Self<K, V>>
+    return this;
 
-    super();
-    this.map = initial;
+  public function isValid():Bool
+    return valid;
 
-    this.observableKeys = ObservableIterator.make(
-      map.keys,
-      changes,
-      function (c) return switch [c.from, c.to] {
-        case [Some(_), Some(_)]: false;
-        default: true;
-      }
-    );
+  public function getValue():Self<K, V>
+    return this;
 
-    this.observableValues = ObservableIterator.make(
-      map.iterator,
-      changes
-    );
+  public function get(k:K):Null<V>
+    return calc(() -> entries.get(k));
 
-    this.asString = observable(map.toString);
-  }
+  public function set(k:K, v:V):Void
+    update(() -> { entries.set(k, v); null; });
 
-  public function observe(key:K):Observable<Null<V>>
-    return observable(map.get.bind(key), function (_, c) return c.key == key);
+  public function exists(k:K):Bool
+    return calc(() -> entries.exists(k));
 
-  public inline function get(key:K):Null<V>
-    return observe(key).value;
+  public function remove(k:K):Bool
+    return update(() -> entries.remove(k));
 
-  public function set(key:K, value:V)
-    switch map[key] {
-      case unchanged if (value == unchanged):
-      case old:
-        var from = if (map.exists(key)) Some(old) else None;
-        map[key] = value;
-        _changes.trigger({ key: key, from: from, to: Some(value) });
+  public function keys():Iterator<K>
+    return calc(() -> entries.keys());
+
+  public function iterator():Iterator<V>
+    return calc(() -> entries.iterator());
+
+  public function keyValueIterator():KeyValueIterator<K, V>
+    return calc(() -> entries.keyValueIterator());
+
+  public function copy():IMap<K, V>
+    return cast calc(() -> entries.copy());
+
+  public function toString():String
+    return calc(() -> entries.toString());
+
+  public function clear():Void
+    update(() -> { entries.clear(); null; });
+
+  function neverEqual(a, b)
+    return false;
+
+  public function getComparator()
+    return neverEqual;
+
+  @:extern inline function update<T>(fn:Void->T) {
+    var ret = fn();
+    if (valid) {
+      valid = false;
+      fire();
     }
-
-  public function remove(key:K):Bool
-    return
-      if (map.exists(key)) {
-        var from = Some(map[key]);
-        map.remove(key);
-        _changes.trigger({ key: key, from: from, to: None });
-        true;
-      }
-      else false;
-
-  public function exists(key:K):Bool {
-    return observable(map.exists.bind(key), function (exists, c) return exists == (c.to == None));
+    return ret;
   }
 
-  public inline function iterator():Iterator<V>
-    return observableValues.value;
-
-  public inline function keyValueIterator():Iterator<{key:K, value:V}> {
-    var keys = keys();
-    return {
-      hasNext: keys.hasNext,
-      next: function () {
-        var key = keys.next();
-        return {
-          key: key,
-          value: get(key)
-        }
-      }
-    }
+  @:extern inline function calc<T>(f:Void->T) {
+    valid = true;
+    observe().value;
+    return f();
   }
-
-  public inline function keys():Iterator<K>
-    return observableKeys.value;
-
-  public inline function toString():String
-    return asString.value;
-
-	public inline function clear():Void {
-		 for (key in map.keys())
-      map.remove(key);
-	}
-
-  public function copy()
-    return new ObservableMap(this.map);
 }
