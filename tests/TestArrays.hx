@@ -11,7 +11,7 @@ class TestArrays {
 
   public function new() {}
 
-  @:include public function basics() {
+  public function basics() {
     var a = new ObservableArray<Null<Int>>([for (i in 0...100) i]);
     var log = [];
 
@@ -134,7 +134,7 @@ class TestArrays {
 
     var vals = o.observableValues;
     Observable.auto(function () {
-        return name.value + ':' + [for (i in vals) i];
+        return name.value + ':' + [for (i in vals.value) i];
     }).bind(function (v) log.push(v));
     Observable.updateAll();//triggers bindings update
     o.push(1);

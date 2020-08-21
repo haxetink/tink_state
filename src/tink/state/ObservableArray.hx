@@ -7,9 +7,9 @@ import haxe.iterators.*;
 @:forward
 abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
 
-  @:deprecated public var observableValues(get, never):Observable<ArrayIterator<T>>;
+  @:deprecated public var observableValues(get, never):Observable<Iterable<T>>;
     function get_observableValues()
-      return Observable.auto(() -> this.iterator());
+      return this;
 
   @:deprecated public var observableLength(get, never):Observable<Int>;
     function get_observableLength()
@@ -74,7 +74,7 @@ private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<
     update(() -> { entries.sort(fn); null; });
 
   public function resize(size:Int)
-    update(() -> { entries.resize(0); null; });
+    update(() -> { entries.resize(size); null; });
 
   public inline function clear()
     resize(0);

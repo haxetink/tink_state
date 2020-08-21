@@ -8,18 +8,21 @@ interface Invalidatable {
 
 class Invalidator {
   final observers = new Map<Invalidatable, Bool>();
+  final list = new CallbackList();//TODO: get rid of the list ... currently it's here to guarantee stable callback order
+  var used = 0;
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return
       if (observers[i]) null;
       else {
         observers[i] = true;
-        observers.remove.bind(i);
+        list.add(i.invalidate) & observers.remove.bind(i);
       }
 
-  public function getObservers()
+  public function getObservers() {
     return observers.keys();
+  }
 
   function fire()
-    for (i in observers.keys()) i.invalidate();
+    list.invoke(Noise);
 }
