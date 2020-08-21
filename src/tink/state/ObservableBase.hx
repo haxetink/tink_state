@@ -12,6 +12,9 @@ class ObservableBase<Change> {
     this.changes = _changes;
   }
 
+  public function getObservers()
+    return [].iterator();
+
   function observable<Ret>(ret:Void->Ret, ?when:Ret->Change->Bool):Observable<Ret>
     return Observable.create(function () {
       var ret = ret();
@@ -36,6 +39,9 @@ class ObservableIterator<T> implements ObservableObject<Iterator<T>> {
     this.iterator = iterator;
     this.changes = changes;
   }
+
+  public function getObservers()
+    return [].iterator();
 
   public function isValid()
     return true;

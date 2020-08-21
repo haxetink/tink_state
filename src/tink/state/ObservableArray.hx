@@ -28,6 +28,9 @@ private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
 
   public function getComparator()
     return null;
+
+  public function getObservers()
+    return [].iterator();
 }
 
 class ObservableArray<T> extends ObservableBase<Change<T>> {
