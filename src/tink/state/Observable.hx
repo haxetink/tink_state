@@ -168,6 +168,7 @@ interface ObservableObject<T> {
   function isValid():Bool;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
+  function getObservers():Iterator<Invalidatable>;
 }
 
 interface Invalidatable {
@@ -192,6 +193,11 @@ private class ConstObservable<T> implements ObservableObject<T> {
 
   public function getComparator()
     return null;
+
+  public function getObservers()
+    return EMPTY.iterator();
+
+  static final EMPTY = [];
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return null;
@@ -220,14 +226,22 @@ private class JustOnce implements Schedulable {
 
 
 class Invalidator {
-  final list = new CallbackList();
+  final observers = new Map<Invalidatable, Bool>();
   function new() {}
 
   public function onInvalidate(i:Invalidatable):CallbackLink
-    return list.add(i.invalidate);//TODO: optimize away this indirection
+    return
+      if (observers[i]) null;
+      else {
+        observers[i] = true;
+        observers.remove.bind(i);
+      }
+
+  public function getObservers()
+    return observers.keys();
 
   function fire()
-    list.invoke(Noise);
+    for (i in observers.keys()) i.invalidate();
 }
 
 abstract Comparator<T>(Null<(T,T)->Bool>) from (T,T)->Bool {
@@ -562,7 +576,7 @@ private class AutoObservable<T> extends Invalidator
 
   public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
     if (valid) {
-      subscriptions.push(new SubscriptionTo(source, cur, this));
+      subscriptions.push(new SubscriptionTo(source, cur, this));//TODO: no need to push twice
     }
 
   public function invalidate()
@@ -624,6 +638,9 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> impl
 
   public function onInvalidate(i)
     return source.onInvalidate(i);
+
+  public function getObservers()
+    return source.getObservers();
 
   public function getValue() {
     if (valid == false) {
