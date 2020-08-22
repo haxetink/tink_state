@@ -18,7 +18,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return new Binding(this, cb, if (options != null && options.direct) null else scheduler, if (options == null) null else options.comparator).cancel;
 
   public inline function new(get:Void->T, changed:Signal<Noise>)
-    this = create(function () return new Measurement(get(), changed.nextTime()));
+    this = new SignalObservable(get, changed);
 
   public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
     return Observable.auto(() -> f(value, that.value));
@@ -159,6 +159,44 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
 }
 
+private class SignalObservable<X, T> implements ObservableObject<T> {
+  var valid = false;
+  var value:Null<T>;
+  final get:Void->T;
+
+  final observers = new Map();
+  final changed:Signal<Noise>;
+
+  public function new(get, changed:Signal<Noise>) {
+    this.get = get;
+    this.changed = changed;
+  }
+
+  public function getValue():T
+    return
+      if (valid) value;
+      else {
+        valid = true;
+        value = get();
+      }
+
+  public function isValid():Bool
+    return valid;
+
+  public function getComparator():Comparator<T>
+    return null;
+
+  public function onInvalidate(i:Invalidatable):CallbackLink
+    return
+      if (observers[i]) null;
+      else {
+        observers[i] = true;
+        changed.handle(i.invalidate);
+      }
+
+  public function getObservers()
+    return observers.keys();
+}
 
 private interface Derived {
   function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
