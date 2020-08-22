@@ -21,8 +21,8 @@ class TestScheduler {
     Observable.updatePending();
     asserts.assert(Math.abs(s1.value - s2.value) == 1);
     var before = s1.value;
-    l1.dissolve();
-    l2.dissolve();
+    l1.cancel();
+    l2.cancel();
     Observable.updatePending();
     asserts.assert(Math.abs(s1.value - s2.value) == 1);
     asserts.assert(before == s1.value);
