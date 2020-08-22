@@ -6,7 +6,7 @@ import tink.state.Invalidatable;
 using tink.CoreApi;
 
 @:forward(set)
-abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
+abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from StateObject<T> {
 
   public var value(get, never):T;
     @:to function get_value() return observe().value;
