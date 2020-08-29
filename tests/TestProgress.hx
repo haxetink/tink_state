@@ -31,8 +31,9 @@ class TestProgress {
     var progress:Progress<String> = Future.sync(state.asProgress());
 
     var p;
-    progress.bind({direct: true}, function(v) { trace(Std.string(v)); p = v; });
+    progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
+    trace(Std.string(progress.status));
     asserts.assert(p.match(InProgress({ value: 0.5, total: None })));
     state.finish('Done');
     progress.result.handle(function(v) {

@@ -170,6 +170,7 @@ private class SignalObservable<X, T> implements ObservableObject<T> {
   public function new(get, changed:Signal<Noise>) {
     this.get = get;
     this.changed = changed;
+    this.changed.handle(function (_) valid = false);
   }
 
   public function getValue():T

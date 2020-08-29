@@ -7,7 +7,6 @@ import tink.core.Callback;
 
 using tink.CoreApi;
 
-// @:forward(result, bind)
 @:require(tink_core >= 2)
 @:forward
 abstract Progress<T>(Plain<T>) from Plain<T> to Plain<T> {
@@ -26,15 +25,15 @@ abstract Progress<T>(Plain<T>) from Plain<T> to Plain<T> {
 
   @:from
   static inline function promise<T>(v:Promise<Progress<T>>):Progress<Outcome<T, Error>>
-    return ((v:Promise<Plain<T>>):Plain<Outcome<T, Error>>);
+    return ((cast v:Promise<Plain<T>>):Plain<Outcome<T, Error>>);
 
   @:from
   static inline function flatten<T>(v:Promise<Progress<Outcome<T, Error>>>):Progress<Outcome<T, Error>>
-    return @:privateAccess Plain.flatten(v);
+    return @:privateAccess Plain.flatten(cast v);
 
   @:from
   static inline function future<T>(v:Future<Progress<T>>):Progress<T>
-  	return ((v:Future<Plain<T>>):Plain<T>);
+  	return ((cast v:Future<Plain<T>>):Plain<T>);
 
   public inline function next(f)
     return this.result.next(f);
@@ -42,7 +41,7 @@ abstract Progress<T>(Plain<T>) from Plain<T> to Plain<T> {
   public inline function observe():Observable<ProgressStatus<T>>
     return switch this.result.status {
       case Ready(l): Observable.const(Finished(l.get()));
-      default: new Observable(() -> this.status, new Signal(fire -> this.listen(function (_) fire(Noise)) & this.handle(function (_) fire(Noise))));
+      default: new Observable(() -> this.status, this.changed.noise());
     }
 
   public inline function bind(?options, cb)
