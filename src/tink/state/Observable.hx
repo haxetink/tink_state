@@ -2,6 +2,9 @@ package tink.state;
 
 import tink.state.Promised;
 import tink.state.Invalidatable;
+#if js
+import js.lib.Map;
+#end
 
 using tink.CoreApi;
 
@@ -190,9 +193,9 @@ private class SignalObservable<X, T> implements ObservableObject<T> {
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return
-      if (observers[i]) null;
+      if (observers.get(i)) null;
       else {
-        observers[i] = true;
+        observers.set(i, true);
         changed.handle(i.invalidate);
       }
 
@@ -480,14 +483,11 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
   }
 }
 
-private interface Subscription {
-  function hasChanged():Bool;
-  function unregister():Void;
-}
+typedef Subscription = SubscriptionTo<Any>;
 
-private class SubscriptionTo<T> implements Subscription {
+private class SubscriptionTo<T> {
 
-  var source:ObservableObject<T>;
+  public final source:ObservableObject<T>;
   var last:T;
   var link:CallbackLink;
 
@@ -507,6 +507,11 @@ private class SubscriptionTo<T> implements Subscription {
     link.cancel();
 }
 
+private enum abstract AutoObservableStatus(Int) {
+  var Dirty;
+  var Computed;
+}
+
 private class AutoObservable<T> extends Invalidator
   implements Invalidatable implements Derived implements ObservableObject<T> {
 
@@ -519,14 +524,15 @@ private class AutoObservable<T> extends Invalidator
       rev.set(rev.value + 1);
     }
   #end
-  var valid:Bool = false;
+  var status = Dirty;
   var last:T = null;
-  var subscriptions:Array<Subscription> = null;
+  var subscriptions:Array<Subscription>;
+  var dependencies = new Map<ObservableObject<Dynamic>, Subscription>();
 
   var comparator:Comparator<T>;
 
   public function isValid()
-    return valid;
+    return status == Computed;
 
   public function getComparator()
     return comparator;
@@ -558,13 +564,24 @@ private class AutoObservable<T> extends Invalidator
   }
 
   public function getValue():T {
-    var count = 0;
 
-    while (!valid)
+    inline function doCompute() {
+      status = Computed;
+      subscriptions = [];
+      dependencies.clear();
+      sync = true;
+      last = computeFor(this, () -> compute(update));
+      sync = false;
+    }
+
+    var prevSubs = subscriptions,
+        count = 0;
+
+    while (status != Computed)
       if (++count == 100)
         throw 'no result after 100 attempts';
       else if (subscriptions != null) {
-        valid = true;
+        var valid = true;
 
         for (s in subscriptions)
           if (s.hasChanged()) {
@@ -572,19 +589,17 @@ private class AutoObservable<T> extends Invalidator
             break;
           }
 
-        if (!valid) {
-          for (s in subscriptions)
-            s.unregister();
-          subscriptions = null;
+        if (valid) status = Computed;
+        else {
+          doCompute();
+          if (prevSubs != null) {
+            for (s in prevSubs)
+              if (dependencies.get(s.source) == null)
+                s.unregister();
+          }
         }
       }
-      else {
-        valid = true;
-        subscriptions = [];
-        sync = true;
-        last = computeFor(this, () -> compute(update));
-        sync = false;
-      }
+      else doCompute();
 
     return last;
   }
@@ -597,13 +612,19 @@ private class AutoObservable<T> extends Invalidator
   }
 
   public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
-    if (valid) {
-      subscriptions.push(new SubscriptionTo(source, cur, this));//TODO: no need to push twice
+    switch dependencies.get(source) {
+      case null:
+        var sub:Subscription = cast new SubscriptionTo(source, cur, this);
+        dependencies.set(source, sub);
+        subscriptions.push(sub);
+      case v:
+        if (subscriptions.indexOf(v) == -1)
+          subscriptions.push(v);
     }
 
   public function invalidate()
-    if (valid) {
-      valid = false;
+    if (status == Computed) {
+      status = Dirty;
       fire();
     }
 

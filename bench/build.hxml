@@ -2,4 +2,9 @@
 -dce full
 -D analyzer-optimize
 -main Bench
--js tink_state-bench.js
+-js bin/tink_state-bench.js
+# -D jvm
+# -java bin
+# -cpp bin/cpp
+-python bin/bench.py
+# -js tink_state-bench.js

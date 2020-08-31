@@ -164,4 +164,25 @@ class TestAuto {
 
     return asserts.done();
   }
+
+  public function selfInvalidating() {
+    var s1 = new State(0),
+        s2 = new State(0);
+
+    var o = Observable.auto(() -> {
+      if (s1.value < 10) s1.value += 1;
+      if (s2.value < 10) s2.value += 1;
+      s1.value + s2.value;
+    });
+
+    asserts.assert(s1.value == 0);
+    asserts.assert(s2.value == 0);
+
+    asserts.assert(o.value == 20);
+
+    asserts.assert(s1.value == 10);
+    asserts.assert(s2.value == 10);
+
+    return asserts.done();
+  }
 }
