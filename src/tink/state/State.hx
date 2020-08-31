@@ -1,17 +1,21 @@
 package tink.state;
 
 import tink.state.Observable;
+import tink.state.Invalidatable;
 
 using tink.CoreApi;
 
 @:forward(set)
-abstract State<T>(StateObject<T>) to Observable<T> from StateObject<T> {
+abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from StateObject<T> {
 
   public var value(get, never):T;
     @:to function get_value() return observe().value;
 
   public inline function new(value, ?comparator, ?guard)
-    this = new SimpleState(value, comparator, guard);
+    this = switch guard {
+      case null: new SimpleState(value, comparator);
+      case f: new GuardedState(value, guard, comparator);
+    }
 
   public inline function observe():Observable<T>
     return this;
@@ -59,6 +63,11 @@ private class CompoundState<T> implements StateObject<T> {
   public function onInvalidate(i)
     return data.onInvalidate(i);
 
+  #if debug_observables
+  public function getObservers()
+    return data.getObservers();
+  #end
+
   public function set(value) {
     update(value);//TODO: consider running comparator here
     return value;
@@ -68,31 +77,47 @@ private class CompoundState<T> implements StateObject<T> {
     return this.comparator;
 }
 
+private class GuardedState<T> extends SimpleState<T> {
+  final guard:T->T;
+  var guardApplied = false;
+
+  public function new(value, guard, ?comparator) {
+    super(value, comparator);
+    this.guard = guard;
+  }
+
+  override function getValue():T
+    return
+      if (!guardApplied) applyGuard();
+      else value;
+
+  @:extern inline function applyGuard():T {
+    this.guardApplied = true;
+    return value = guard(value);
+  }
+
+  override function set(value:T):T {
+    if (guardApplied)
+      applyGuard();
+    return super.set(guard(value));
+  }
+}
+
 private class SimpleState<T> extends Invalidator implements StateObject<T> {
 
   final comparator:Comparator<T>;
-  final guard:T->T;
   var value:T;
-  var guardApplied:Bool;
 
   public function isValid()
     return true;
 
-  public function new(value, ?comparator, ?guard) {
-    super();
+  public function new(value, ?comparator) {
     this.value = value;
-    this.guard = guard;
     this.comparator = comparator;
-    this.guardApplied = guard == null;
   }
 
-  public function getValue() {
-    if (!this.guardApplied) {
-      this.guardApplied = true;
-      value = guard(value);
-    }
+  public function getValue()
     return value;
-  }
 
   public function getComparator()
     return comparator;
@@ -113,11 +138,6 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
     if (Observable.isUpdating)
       warn('Updating state in a binding');
     #end
-
-    if (guard != null) {
-      getValue();
-      value = guard(value);
-    }
 
     if (!comparator.eq(value, this.value)) {
       this.value = value;

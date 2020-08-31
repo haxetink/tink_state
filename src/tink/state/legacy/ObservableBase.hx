@@ -1,9 +1,10 @@
-package tink.state;
+package tink.state.legacy;
 
 import tink.state.Observable;
 
 using tink.CoreApi;
 
+@:deprecated
 class ObservableBase<Change> {
   var _changes = new SignalTrigger<Change>();
   var changes:Signal<Change>;
@@ -11,6 +12,11 @@ class ObservableBase<Change> {
   function new() {
     this.changes = _changes;
   }
+
+  #if debug_observables
+  public function getObservers()
+    return [].iterator();
+  #end
 
   function observable<Ret>(ret:Void->Ret, ?when:Ret->Change->Bool):Observable<Ret>
     return Observable.create(function () {
@@ -36,6 +42,9 @@ class ObservableIterator<T> implements ObservableObject<Iterator<T>> {
     this.iterator = iterator;
     this.changes = changes;
   }
+
+  public function getObservers()
+    return [].iterator();
 
   public function isValid()
     return true;

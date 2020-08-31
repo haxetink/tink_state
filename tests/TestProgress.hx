@@ -16,10 +16,9 @@ class TestProgress {
     var p;
     progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
-    asserts.assert(p.value == 0.5);
-    asserts.assert(p.total.match(None));
+    asserts.assert(p.match(InProgress({ value: 0.5, total: None })));
     state.finish('Done');
-    progress.result().handle(function(v) {
+    progress.result.handle(function(v) {
       asserts.assert(v == 'Done');
       asserts.done();
     });
@@ -34,10 +33,10 @@ class TestProgress {
     var p;
     progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
-    asserts.assert(p.value == 0.5);
-    asserts.assert(p.total.match(None));
+
+    asserts.assert(p.match(InProgress({ value: 0.5, total: None })));
     state.finish('Done');
-    progress.result().handle(function(v) {
+    progress.result.handle(function(v) {
       asserts.assert(v == 'Done');
       asserts.done();
     });
@@ -52,8 +51,7 @@ class TestProgress {
     var p;
     progress.bind({direct: true}, function(v) p = v);
     state.progress(0.5, None);
-    asserts.assert(p.value == 0.5);
-    asserts.assert(p.total.match(None));
+    asserts.assert(p.match(InProgress({ value: 0.5, total: None })));
     state.finish('Done');
     progress.next(function(o) {
       asserts.assert(o.sure() == 'Done');
@@ -63,7 +61,7 @@ class TestProgress {
       asserts.assert(o == 'Done');
       return Noise;
     }).eager();
-    progress.result().handle(function(v) {
+    progress.result.handle(function(v) {
       asserts.assert(v.match(Success('Done')));
       asserts.done();
     });

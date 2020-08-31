@@ -17,8 +17,8 @@ class TestMaps {
     function report(k:Int) return function (v:Int) a.push('$k:$v');
 
     var unlink:CallbackLink = [
-      o.observe(5).bind({ direct: true }, report(5)),
-      o.observe(6).bind({ direct: true }, report(6)),
+      o.entry(5).bind({ direct: true }, report(5)),
+      o.entry(6).bind({ direct: true }, report(6)),
     ];
 
     o.set(5, 1);
@@ -37,8 +37,8 @@ class TestMaps {
     a = [];
     unlink.dissolve();
 
-    o.observe(5).bind(report(5));
-    o.observe(6).bind(report(6));
+    o.entry(5).bind(report(5));
+    o.entry(6).bind(report(6));
 
     o.set(5, 1);
     o.set(5, 2);

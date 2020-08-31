@@ -25,7 +25,7 @@ class TestArrays {
 
     a.observableLength.bind({ direct: true }, report('l'));
 
-    a.observe(99).bind({ direct: true }, report('99'));
+    a.entry(99).bind({ direct: true }, report('99'));
 
     asserts.assert(getLog() == 'l:100,99:99');
     clear();
@@ -43,7 +43,7 @@ class TestArrays {
 
     clear();
     a.unshift(a.get(0)-1);
-    asserts.assert(getLog() == '99:89,l:100');//It's a good question why exactly this happens out of order
+    asserts.assert(getLog() == 'l:100,99:89');
     clear();
     for (i in 0...10)
       a.push(i);
@@ -75,7 +75,7 @@ class TestArrays {
 
     asserts.assert(counter == a.length);
 
-    var evenCount = a.fold(function (v, count) return count + 1 - v.value % 2, 0);
+    var evenCount = a.fold(function (v, count) return count + 1 - v % 2, 0);
     asserts.assert(evenCount == 5);
 
     var keysChanges = 0,
@@ -98,7 +98,7 @@ class TestArrays {
     Observable.auto(function () {
       var first = 0;
       for (v in a) {
-        first += v.value;
+        first += v;
         break;
       }
       return first;
@@ -108,19 +108,19 @@ class TestArrays {
 
     a.set(2, 4);
 
-    asserts.assert(iteratorChanges == 1);
+    asserts.assert(iteratorChanges == valuesChanges);
     asserts.assert(keysChanges == 1);
     asserts.assert(valuesChanges == 2);
 
     a.set(0, 1);
 
-    asserts.assert(iteratorChanges == 2);
+    asserts.assert(iteratorChanges == valuesChanges);
     asserts.assert(keysChanges == 1);
     asserts.assert(valuesChanges == 3);
 
     a.pop();
 
-    asserts.assert(iteratorChanges == 3);
+    asserts.assert(iteratorChanges == valuesChanges);
     asserts.assert(keysChanges == 2);
     asserts.assert(valuesChanges == 4);
 
@@ -134,7 +134,7 @@ class TestArrays {
 
     var vals = o.observableValues;
     Observable.auto(function () {
-        return name.value + ':' + [for (i in vals) i];
+        return name.value + ':' + [for (i in vals.value) i];
     }).bind(function (v) log.push(v));
     Observable.updateAll();//triggers bindings update
     o.push(1);
@@ -152,11 +152,22 @@ class TestArrays {
     var log = '';
 
     o.observableLength.bind({ direct: true }, function(v) return log += 'len:$v');
-    for(i in 0...o.length) o.observe(i).bind({ direct: true }, function(v) return log += ',$i:$v');
+    for(i in 0...o.length) o.entry(i).bind({ direct: true }, function(v) return log += ',$i:$v');
     o.clear();
 
     asserts.assert(log.replace('undefined', '-').replace('null', '-') == 'len:3,0:1,1:2,2:3len:0,0:-,1:-,2:-');
 
+    return asserts.done();
+  }
+
+  public function views() {
+    var a = new ObservableArray<{ final foo:Int; final bar:Int; }>([for (i in 0...100) { foo: i, bar: i % 10 }]);
+    var v = a.filter(o -> o.bar == 0).sorted((o1, o2) -> o2.foo - o1.foo).reduce('', (a, b) -> '${a.foo}:$b');
+    asserts.assert(v.value == '0:10:20:30:40:50:60:70:80:90:');
+    a.set(11, { foo: 123, bar: 0 });
+    asserts.assert(v.value == '0:10:20:30:40:50:60:70:80:90:123:');
+    a.set(10, { foo: 123, bar: 1 });
+    asserts.assert(v.value == '0:20:30:40:50:60:70:80:90:123:');
     return asserts.done();
   }
 }

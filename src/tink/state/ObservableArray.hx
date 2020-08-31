@@ -1,149 +1,270 @@
 package tink.state;
 
+import tink.state.Invalidatable;
 import tink.state.Observable;
+import haxe.iterators.*;
 
-using tink.CoreApi;
+@:forward
+abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
 
-private enum Change<T> {
-  Remove(index:Int, values:Array<T>);
-  Insert(index:Int, values:Array<T>);
-  Update(index:Int, values:Array<T>);
-}
+  @:deprecated public var observableValues(get, never):Observable<ArrayView<T>>;
+    function get_observableValues()
+      return this;
 
-private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
+  @:deprecated public var observableLength(get, never):Observable<Int>;
+    function get_observableLength()
+      return Observable.auto(() -> this.length);
 
-  var target:ObservableArray<T>;
+  public var view(get, never):ObservableArrayView<T>;
+    inline function get_view()
+      return this;
 
-  public function new(target)
-    this.target = target;
-
-  public function isValid()
-    return true;
-
-  public function getValue()
-    return @:privateAccess target.items.iterator();
-
-  public function onInvalidate(i:Invalidatable)
-    return @:privateAccess target.changes.handle(i.invalidate);
-
-  public function getComparator()
-    return null;
-}
-
-class ObservableArray<T> extends ObservableBase<Change<T>> {
-
-  var items:Array<T>;
-
-  public var observableValues(default, null):Observable<Iterator<T>>;
-  public var observableLength(default, null):Observable<Int>;
-
-  public var length(get, never):Int;
-    inline function get_length() return observableLength.value;
-
-  public function new(?items) {
-    this.items = if (items == null) [] else items;
-
-    super();
-
-    this.observableLength = observable(function () return this.items.length, function (_, c) return switch c {
-      case Update(_, _): false;
-      default: true;
+  public inline function new(?init:Array<T>)
+    this = new ArrayImpl(switch init {
+      case null: [];
+      case v: v.copy();
     });
 
-    this.observableValues = new ValueIterator(this);
-  }
+  public function entry(index)
+    return Observable.auto(() -> this.get(index));
 
-  public function values() {
-    return this.observableValues.value;
-  }
+  @:deprecated('use iterator instead')
+  public function values()
+    return this.iterator();
 
-  public function keys() {
+  public function keys()
     return 0...this.length;
-  }
 
-  public function iterator() {
-    var i = 0;
-    length;//not pretty
-    return {
-      hasNext: function () return i < items.length,
-      next: function () return observe(i++),
-    }
-  }
+  @:op([]) public inline function get(index)
+    return this.get(index);
 
-  public function observe(index:Int)
-    return observable(function () return items[index], function (_, c) return @:privateAccess switch c {
-      case Remove(i, { length: l }): i <= index && items.length + l > index;
-      case Insert(i, { length: l }): i <= index && items.length > index;
-      case Update(i, items): i <= index && index <= i + items.length;
-    });
+  @:op([]) public inline function set(index, value)
+    return this.set(index, value);
+
+  public inline function select<R>(f:T->Array<R>)
+    return view.select(f);
+
+  public inline function map<R>(f:T->R)
+    return view.map(f);
+
+  public inline function filter(f:T->Bool)
+    return view.filter(f);
+
+  public inline function sorted(c)
+    return view.sorted(c);
+
+  public inline function reduce<R>(init:R, f:T->R->R):Observable<R>
+    return view.reduce(init, f);
+
+  public inline function count(f:T->Bool):Observable<Int>
+    return view.count(f);
+
+  public function copy():ObservableArray<T>
+    return new ArrayImpl(this.copy());
 
   public function toArray():Array<T>
-    return observable(function () return this.items.copy());
+    return this.copy();
+
+  @:from static public function fromArray<T>(a:Array<T>):ObservableArray<T>
+    return new ArrayImpl(a.copy());
+
+  @:from static public function fromVector<T>(v:haxe.ds.Vector<T>):ObservableArray<T>
+    return new ArrayImpl(v.toArray());
+
+  @:from static public function fromIterable<T>(i:Iterable<T>):ObservableArray<T>
+    return new ArrayImpl(Lambda.array(i));
+}
+
+abstract ObservableArrayView<T>(ArrayView<T>) from ArrayView<T> {
+  public function keys()
+    return 0...this.length;
+
+  @:op([]) public inline function get(index)
+    return this.get(index);
+
+  public function toArray():Array<T>
+    return this.copy();
+
+  public function copy():ObservableArray<T>
+    return new ArrayImpl(this.copy());
+
+  public function reduce<R>(init:R, f:T->R->R):Observable<R>
+    return Observable.auto(() -> {
+      var ret = init;
+      for (x in this)
+        ret = f(x, ret);
+      ret;
+    });
+
+  public function count(f:T->Bool):Observable<Int>
+    return Observable.auto(() -> {
+      var ret = 0;
+      for (x in this)
+        if (f(x)) ret++;
+      ret;
+    });
+
+  inline function derive<R>(f:Void->Array<R>):ObservableArrayView<R>
+    return new DerivedView<R>(Observable.auto(f));
+
+  public function select<R>(f:T->Array<R>)
+    return derive(() -> [for (i in this) for (o in f(i)) o]);
+
+  public function map<R>(f:T->R)
+    return derive(() -> [for (i in this) f(i)]);
+
+  public function filter(f:T->Bool)
+    return derive(() -> [for (i in this) if (f(i)) i]);
+
+  public function sorted(f)
+    return derive(() -> {
+      var a = this.copy();
+      a.sort(f);
+      a;
+    });
+
+}
+
+private interface ArrayView<T> extends ObservableObject<ArrayView<T>> {
+  var length(get, never):Int;
+  function copy():Array<T>;
+  function get(index:Int):T;
+  function iterator():ArrayIterator<T>;
+  function keyValueIterator():ArrayKeyValueIterator<T>;
+}
+
+private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
+
+  var valid = false;
+  var entries:Array<T>;
+
+  public var length(get, never):Int;
+    function get_length()
+      return calc(() -> entries.length);
+
+  public function new(entries)
+    this.entries = entries;
+
+  public function replace(values:Array<T>)
+    update(() -> { entries = values.copy(); });
+
+  public function prepend(values:Array<T>)
+    update(() -> { entries = values.concat(entries); });
+
+  public function append(values:Array<T>)
+    update(() -> { entries = entries.concat(values); });
+
+  public function sort(fn:T->T->Int)
+    update(() -> { entries.sort(fn); null; });
+
+  public function resize(size:Int)
+    update(() -> { entries.resize(size); null; });
+
+  public inline function clear()
+    resize(0);
+
+  public function push(v:T)
+    return update(() -> entries.push(v));
+
+  public function pop()
+    return update(() -> entries.pop());
+
+  public function unshift(v:T)
+    return update(() -> { entries.unshift(v); entries.length; });
+
+  public function shift()
+    return update(() -> entries.shift());
 
   public function get(index:Int)
-    return observe(index).value;
+    return calc(() -> entries[index]);
 
   public function set(index:Int, value:T)
-    if (index >= items.length)
-      if (index == items.length)
-        insert(index, value)
-      else {
-        var a = [];
-        a[index - items.length] = value;
-        insertMany(index, a);
-      }
-    else if (items[index] != value) {
-      items[index] = value;
-      _changes.trigger(Update(index, [value]));
+    return update(() -> entries[index] = value);
+
+  public function observe():Observable<ArrayView<T>>
+    return this;
+
+  public function isValid():Bool
+    return valid;
+
+  public function getValue():ArrayView<T>
+    return this;
+
+  public function iterator():ArrayIterator<T>
+    return calc(() -> entries.iterator());
+
+  public function keyValueIterator():ArrayKeyValueIterator<T>
+    return calc(() -> entries.keyValueIterator());
+
+  function neverEqual(a, b)
+    return false;
+
+  public function getComparator()
+    return neverEqual;
+
+  public function copy()
+    return calc(() -> entries.copy());
+
+  @:extern inline function update<T>(fn:Void->T) {
+    var ret = fn();
+    if (valid) {
+      valid = false;
+      fire();
     }
-
-  public function remove(item:T)
-    return
-      switch items.indexOf(item) {
-        case -1: false;
-        case v:
-          splice(v, 1);
-          true;
-      }
-
-  public inline function clear() {
-    return splice(0, items.length);
-  }
-
-  public inline function indexOf(item:T):Int
-    return items.indexOf(item);
-
-  public function splice(index:Int, length:Int) {
-    var ret = items.splice(index, length);
-    if (ret.length > 0)
-      _changes.trigger(Remove(index, ret));
     return ret;
   }
 
-  public inline function insert(pos:Int, value:T)
-    insertMany(pos, [value]);
-
-  public function insertMany(pos:Int, values:Array<T>)
-    if (values.length > 0) {
-      this.items = this.items.slice(0, pos).concat(values).concat(this.items.slice(pos));
-      _changes.trigger(Insert(pos, values));
-    }
-
-  public inline function push(value:T) {
-    this.insert(items.length, value);
-    return items.length;
+  @:extern inline function calc<T>(f:Void->T) {
+    valid = true;
+    observe().value;
+    return f();
   }
+}
 
-  public inline function pop()
-    return splice(items.length - 1, 1)[0];
+private class DerivedView<T> implements ArrayView<T> {
 
-  public inline function unshift(value:T)
-    insert(0, value);
+  public var length(get, never):Int;
+    function get_length()
+      return o.value.length;
 
-  public inline function shift()
-    return splice(0, 1)[0];
+  final o:Observable<Array<T>>;
 
-  public inline function join(sep:String) {
-    return observable(items.join.bind(sep));
-  }
+  public function new(o)
+    this.o = o;
+
+  public function get(index:Int)
+    return o.value[index];
+
+  inline function self()
+    return (o:ObservableObject<Array<T>>);
+
+  #if debug_observables
+  public function getObservers()
+    return self().getObservers();
+  #end
+
+  public function getValue():ArrayView<T>
+    return this;
+
+  public function isValid()
+    return self().isValid();
+
+  public function onInvalidate(i)
+    return self().onInvalidate(i);
+
+  public function copy()
+    return o.value.copy();
+
+  function neverEqual(a, b)
+    return false;
+
+  public function getComparator()
+    return neverEqual;
+
+  public function iterator()
+    return o.value.iterator();
+
+  public function keyValueIterator()
+    return o.value.keyValueIterator();
+
 }

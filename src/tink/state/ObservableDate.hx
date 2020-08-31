@@ -9,6 +9,7 @@ class ObservableDate implements ObservableObject<Bool> {
   static var PASSED = Observable.const(true);
 
   var _observable:ObservableObject<Bool>;
+
   public var date(default, null):Date;
   public var passed(get, never):Bool;
     inline function get_passed():Bool
@@ -31,7 +32,7 @@ class ObservableDate implements ObservableObject<Bool> {
     this.date = date;
 
     var now = Date.now().getTime(),
-      stamp = date.getTime();
+        stamp = date.getTime();
 
     var passed = now >= stamp;
 
@@ -43,6 +44,11 @@ class ObservableDate implements ObservableObject<Bool> {
         state;
       }
   }
+
+  #if debug_observables
+  public function getObservers()
+    return [].iterator();
+  #end
 
   public function observe():Observable<Bool>
     return _observable;

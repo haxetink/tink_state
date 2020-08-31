@@ -1,10 +1,11 @@
 package tink.state;
 
 import tink.state.Promised;
+import tink.state.Invalidatable;
 
 using tink.CoreApi;
 
-#if haxe4 @:using(tink.state.Observable.ObservableTools) #end
+@:using(tink.state.Observable.ObservableTools)
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   public var value(get, never):T;
     @:to function get_value()
@@ -17,7 +18,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return new Binding(this, cb, if (options != null && options.direct) null else scheduler, if (options == null) null else options.comparator).cancel;
 
   public inline function new(get:Void->T, changed:Signal<Noise>)
-    this = create(function () return new Measurement(get(), changed.nextTime()));
+    this = new SignalObservable(get, changed);
 
   public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
     return Observable.auto(() -> f(value, that.value));
@@ -65,6 +66,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   public function mapAsync<R>(f:Transform<T, Promise<R>>):Observable<Promised<R>>
     return Observable.auto(() -> f.apply(this.getValue()));
 
+  @:deprecated('use auto instead')
   public function switchSync<R>(cases:Array<{ when: T->Bool, then: Lazy<Observable<R>> } > , dfault:Lazy<Observable<R>>):Observable<R>
     return Observable.auto(() -> {
       var v = value;
@@ -130,18 +132,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public function updateAll()
     updatePending(Math.POSITIVE_INFINITY);
 
-  static inline function lift<T>(o:Observable<T>) return o;
-
-  #if !haxe4
-  @:impl static public function deliver<T>(o:ObservableObject<Promised<T>>, initial:T):Observable<T>
-    return lift(o).map(function (p) return switch p {
-      case Done(v): initial = v;
-      default: initial;
-    });
-
-  @:impl static public function flatten<T>(o:ObservableObject<Observable<T>>)
-    return Observable.auto(() -> lift(o).value.value);
-  #end
+  static public inline function lift<T>(o:Observable<T>) return o;
 
   static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>>
     return Observable.auto(() -> p);
@@ -169,8 +160,49 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
 }
 
+private class SignalObservable<X, T> implements ObservableObject<T> {
+  var valid = false;
+  var value:Null<T>;
+  final get:Void->T;
 
-interface Derived {
+  final observers = new Map();
+  final changed:Signal<Noise>;
+
+  public function new(get, changed:Signal<Noise>) {
+    this.get = get;
+    this.changed = changed;
+    this.changed.handle(function (_) valid = false);
+  }
+
+  public function getValue():T
+    return
+      if (valid) value;
+      else {
+        valid = true;
+        value = get();
+      }
+
+  public function isValid():Bool
+    return valid;
+
+  public function getComparator():Comparator<T>
+    return null;
+
+  public function onInvalidate(i:Invalidatable):CallbackLink
+    return
+      if (observers[i]) null;
+      else {
+        observers[i] = true;
+        changed.handle(i.invalidate);
+      }
+
+  #if debug_observables
+  public function getObservers()
+    return observers.keys();
+  #end
+}
+
+private interface Derived {
   function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
 }
 
@@ -179,10 +211,10 @@ interface ObservableObject<T> {
   function isValid():Bool;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
-}
-
-interface Invalidatable {
-  function invalidate():Void;
+  #if debug_observables
+  function getObservers():Iterator<Invalidatable>;
+  function getDependencies():Iterator<Observable<Any>>;
+  #end
 }
 
 interface Schedulable {
@@ -203,6 +235,13 @@ private class ConstObservable<T> implements ObservableObject<T> {
 
   public function getComparator()
     return null;
+
+  #if debug_observables
+  public function getObservers()
+    return EMPTY.iterator();
+  #end
+
+  static final EMPTY = [];
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return null;
@@ -227,18 +266,6 @@ private class JustOnce implements Schedulable {
     ret.f = f;
     return ret;
   }
-}
-
-
-class Invalidator {
-  final list = new CallbackList();
-  function new() {}
-
-  public function onInvalidate(i:Invalidatable):CallbackLink
-    return list.add(i.invalidate);//TODO: optimize away this indirection
-
-  function fire()
-    list.invoke(Noise);
 }
 
 abstract Comparator<T>(Null<(T,T)->Bool>) from (T,T)->Bool {
@@ -271,7 +298,6 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
   var comparator:Comparator<T>;
 
   public function new(poll, ?comparator) {
-    super();
     this._poll = poll;
     this.comparator = comparator;
   }
@@ -506,7 +532,6 @@ private class AutoObservable<T> extends Invalidator
     return comparator;
 
   public function new(compute, ?comparator) {
-    super();
     this.compute = compute;
     this.comparator = comparator;
   }
@@ -573,7 +598,7 @@ private class AutoObservable<T> extends Invalidator
 
   public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
     if (valid) {
-      subscriptions.push(new SubscriptionTo(source, cur, this));
+      subscriptions.push(new SubscriptionTo(source, cur, this));//TODO: no need to push twice
     }
 
   public function invalidate()
@@ -636,6 +661,11 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> impl
   public function onInvalidate(i)
     return source.onInvalidate(i);
 
+  #if debug_observables
+  public function getObservers()
+    return source.getObservers();
+  #end
+
   public function getValue() {
     if (valid == false) {
       valid = true;
@@ -647,7 +677,7 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> impl
   public function getComparator()
     return null;
 }
-#if haxe4
+
 @:access(tink.state.Observable)
 class ObservableTools {
 
@@ -661,4 +691,3 @@ class ObservableTools {
     return Observable.auto(() -> Observable.lift(o).value.value);
 
 }
-#end
