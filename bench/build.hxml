@@ -1,0 +1,5 @@
+-lib tink_state
+-dce full
+-D analyzer-optimize
+-main Bench
+-js tink_state-bench.js
