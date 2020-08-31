@@ -19,10 +19,6 @@ abstract Progress<T>(Plain<T>) from Plain<T> to Plain<T> {
   static public function make<T>(f:(progress:(value:Float, total:Option<Float>)->Void, finish:(result:T)->Void)->CallbackLink):Progress<T>
     return Plain.make(f);
 
-  // @:impl
-  // public static inline function asPromise<T>(p:ProgressObject<Outcome<T, Error>>):Promise<T>
-  // 	return p.result();
-
   @:from
   static inline function promise<T>(v:Promise<Progress<T>>):Progress<Outcome<T, Error>>
     return ((cast v:Promise<Plain<T>>):Plain<Outcome<T, Error>>);
