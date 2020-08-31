@@ -7,6 +7,10 @@ import haxe.iterators.*;
 
 @:forward
 abstract ObservableMap<K, V>(MapImpl<K, V>) from MapImpl<K, V> to IMap<K, V> {
+
+  public var view(get, never):ObservableMapView<K, V>;
+    inline function get_view() return this;
+
   public function new(init:Map<K, V>)
     this = new MapImpl(init.copy());
 
@@ -19,6 +23,21 @@ abstract ObservableMap<K, V>(MapImpl<K, V>) from MapImpl<K, V> to IMap<K, V> {
   }
 
   public function toMap():Map<K, V>
+    return view.toMap();
+
+  public function copy():ObservableMap<K, V>
+    return view.copy();
+
+  public function entry(key:K)
+    return Observable.auto(this.get.bind(key));
+}
+
+@:forward
+abstract ObservableMapView<K, V>(MapView<K, V>) from MapView<K, V> {
+  @:op([]) public inline function get(index)
+    return this.get(index);
+
+  public function toMap():Map<K, V>
     return cast this.copy();
 
   public function copy():ObservableMap<K, V>
@@ -28,9 +47,58 @@ abstract ObservableMap<K, V>(MapImpl<K, V>) from MapImpl<K, V> to IMap<K, V> {
     return Observable.auto(this.get.bind(key));
 }
 
-private typedef Self<K, V> = Iterable<V> & KeyValueIterable<K, V>;
+private interface MapView<K, V> extends ObservableObject<MapView<K, V>> {
+  function copy():IMap<K, V>;
+  function exists(key:K):Bool;
+  function get(key:K):Null<V>;
+  function iterator():Iterator<V>;
+  function keys():Iterator<K>;
+  function keyValueIterator():KeyValueIterator<K, V>;
+}
 
-private class MapImpl<K, V> extends Invalidator implements ObservableObject<Self<K, V>> implements IMap<K, V> {
+private class Derived<K, V> implements MapView<K, V> {
+  final o:Observable<Map<K, V>>;
+  public function new(o)
+    this.o = o;
+
+  public function exists(key:K):Bool
+    return o.value.exists(key);
+
+  public function get(key:K):Null<V>
+    return o.value.get(key);
+
+  public function iterator():Iterator<V>
+    return o.value.iterator();
+
+  public function keys():Iterator<K>
+    return o.value.keys();
+
+  public function keyValueIterator():KeyValueIterator<K, V>
+    return o.value.keyValueIterator();
+
+  public function copy():IMap<K, V>
+    return cast o.value.copy();
+
+  inline function self()
+    return (o:ObservableObject<Map<K, V>>);
+
+  public function getValue()
+    return this;
+
+  public function isValid()
+    return self().isValid();
+
+  public function onInvalidate(i)
+    return self().onInvalidate(i);
+
+  function neverEqual(a, b)
+    return false;
+
+  public function getComparator()
+    return neverEqual;
+}
+
+private class MapImpl<K, V> extends Invalidator implements MapView<K, V> implements IMap<K, V> {
 
   var valid = false;
   var entries:Map<K, V>;
@@ -38,13 +106,13 @@ private class MapImpl<K, V> extends Invalidator implements ObservableObject<Self
   public function new(entries:Map<K, V>)
     this.entries = entries;
 
-  public function observe():Observable<Self<K, V>>
+  public function observe():Observable<MapView<K, V>>
     return this;
 
   public function isValid():Bool
     return valid;
 
-  public function getValue():Self<K, V>
+  public function getValue():MapView<K, V>
     return this;
 
   public function get(k:K):Null<V>
