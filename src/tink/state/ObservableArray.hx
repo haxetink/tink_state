@@ -191,10 +191,10 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
     return this;
 
   public function iterator():ArrayIterator<T>
-    return calc(entries.iterator);
+    return calc(() -> entries.iterator());
 
   public function keyValueIterator():ArrayKeyValueIterator<T>
-    return calc(entries.keyValueIterator);
+    return calc(() -> entries.keyValueIterator());
 
   function neverEqual(a, b)
     return false;
