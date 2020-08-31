@@ -8,8 +8,12 @@ using tink.CoreApi;
 @:forward(set)
 abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from StateObject<T> {
 
-  public var value(get, never):T;
+  public var value(get, set):T;
     @:to function get_value() return observe().value;
+    function set_value(param) {
+      this.set(param);
+      return param;
+    }
 
   public inline function new(value, ?comparator, ?guard)
     this = switch guard {
