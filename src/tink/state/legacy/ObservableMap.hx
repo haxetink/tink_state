@@ -1,4 +1,4 @@
-package tink.state;
+package tink.state.legacy;
 
 import tink.state.legacy.ObservableBase;
 
