@@ -7,13 +7,17 @@ import haxe.iterators.*;
 @:forward
 abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
 
-  @:deprecated public var observableValues(get, never):Observable<Iterable<T>>;
+  @:deprecated public var observableValues(get, never):Observable<ArrayView<T>>;
     function get_observableValues()
       return this;
 
   @:deprecated public var observableLength(get, never):Observable<Int>;
     function get_observableLength()
       return Observable.auto(() -> this.length);
+
+  public var view(get, never):ObservableArrayView<T>;
+    inline function get_view()
+      return this;
 
   public inline function new(?init:Array<T>)
     this = new ArrayImpl(switch init {
@@ -37,6 +41,24 @@ abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
   @:op([]) public inline function set(index, value)
     return this.set(index, value);
 
+  public inline function select<R>(f:T->Array<R>)
+    return view.select(f);
+
+  public inline function map<R>(f:T->R)
+    return view.map(f);
+
+  public inline function filter(f:T->Bool)
+    return view.filter(f);
+
+  public inline function sorted(c)
+    return view.sorted(c);
+
+  public inline function reduce<R>(init:R, f:T->R->R):Observable<R>
+    return view.reduce(init, f);
+
+  public inline function count(f:T->Bool):Observable<Int>
+    return view.count(f);
+
   public function copy():ObservableArray<T>
     return new ArrayImpl(this.copy());
 
@@ -53,9 +75,65 @@ abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
     return new ArrayImpl(Lambda.array(i));
 }
 
-private typedef Self<T> = Iterable<T> & KeyValueIterable<Int, T> & { var length(get, never):Int; }
+abstract ObservableArrayView<T>(ArrayView<T>) from ArrayView<T> {
+  public function keys()
+    return 0...this.length;
 
-private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<T>> {
+  @:op([]) public inline function get(index)
+    return this.get(index);
+
+  public function toArray():Array<T>
+    return this.copy();
+
+  public function copy():ObservableArray<T>
+    return new ArrayImpl(this.copy());
+
+  public function reduce<R>(init:R, f:T->R->R):Observable<R>
+    return Observable.auto(() -> {
+      var ret = init;
+      for (x in this)
+        ret = f(x, ret);
+      ret;
+    });
+
+  public function count(f:T->Bool):Observable<Int>
+    return Observable.auto(() -> {
+      var ret = 0;
+      for (x in this)
+        if (f(x)) ret++;
+      ret;
+    });
+
+  inline function derive<R>(f:Void->Array<R>):ObservableArrayView<R>
+    return new DerivedView<R>(Observable.auto(f));
+
+  public function select<R>(f:T->Array<R>)
+    return derive(() -> [for (i in this) for (o in f(i)) o]);
+
+  public function map<R>(f:T->R)
+    return derive(() -> [for (i in this) f(i)]);
+
+  public function filter(f:T->Bool)
+    return derive(() -> [for (i in this) if (f(i)) i]);
+
+  public function sorted(f)
+    return derive(() -> {
+      var a = this.copy();
+      a.sort(f);
+      a;
+    });
+
+}
+
+private interface ArrayView<T> extends ObservableObject<ArrayView<T>> {
+  var length(get, never):Int;
+  function copy():Array<T>;
+  function get(index:Int):T;
+  function iterator():ArrayIterator<T>;
+  function keyValueIterator():ArrayKeyValueIterator<T>;
+}
+
+private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
 
   var valid = false;
   var entries:Array<T>;
@@ -103,19 +181,19 @@ private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<
   public function set(index:Int, value:T)
     return update(() -> entries[index] = value);
 
-  public function observe():Observable<Self<T>>
+  public function observe():Observable<ArrayView<T>>
     return this;
 
   public function isValid():Bool
     return valid;
 
-  public function getValue():Self<T>
+  public function getValue():ArrayView<T>
     return this;
 
-  public function iterator():#if eval Iterator<T> #else ArrayIterator<T> #end
+  public function iterator():ArrayIterator<T>
     return calc(entries.iterator);
 
-  public function keyValueIterator():#if eval KeyValueIterator<Int, T> #else ArrayKeyValueIterator<T> #end
+  public function keyValueIterator():ArrayKeyValueIterator<T>
     return calc(entries.keyValueIterator);
 
   function neverEqual(a, b)
@@ -141,4 +219,50 @@ private class ArrayImpl<T> extends Invalidator implements ObservableObject<Self<
     observe().value;
     return f();
   }
+}
+
+private class DerivedView<T> implements ArrayView<T> {
+
+  public var length(get, never):Int;
+    function get_length()
+      return o.value.length;
+
+  final o:Observable<Array<T>>;
+
+  public function new(o)
+    this.o = o;
+
+  public function get(index:Int)
+    return o.value[index];
+
+  inline function self()
+    return (o:ObservableObject<Array<T>>);
+
+  public function getObservers()
+    return self().getObservers();
+
+  public function getValue():ArrayView<T>
+    return this;
+
+  public function isValid()
+    return self().isValid();
+
+  public function onInvalidate(i)
+    return self().onInvalidate(i);
+
+  public function copy()
+    return o.value.copy();
+
+  function neverEqual(a, b)
+    return false;
+
+  public function getComparator()
+    return neverEqual;
+
+  public function iterator()
+    return o.value.iterator();
+
+  public function keyValueIterator()
+    return o.value.keyValueIterator();
+
 }
