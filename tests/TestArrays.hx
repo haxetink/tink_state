@@ -160,7 +160,7 @@ class TestArrays {
     return asserts.done();
   }
 
-  @:include public function views() {
+  public function views() {
     var a = new ObservableArray<{ final foo:Int; final bar:Int; }>([for (i in 0...100) { foo: i, bar: i % 10 }]);
     var v = a.filter(o -> o.bar == 0).sorted((o1, o2) -> o2.foo - o1.foo).reduce('', (a, b) -> '${a.foo}:$b');
     asserts.assert(v.value == '0:10:20:30:40:50:60:70:80:90:');

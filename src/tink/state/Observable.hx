@@ -195,8 +195,10 @@ private class SignalObservable<X, T> implements ObservableObject<T> {
         changed.handle(i.invalidate);
       }
 
+  #if debug_observables
   public function getObservers()
     return observers.keys();
+  #end
 }
 
 private interface Derived {
@@ -208,7 +210,10 @@ interface ObservableObject<T> {
   function isValid():Bool;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
+  #if debug_observables
   function getObservers():Iterator<Invalidatable>;
+  function getDependencies():Iterator<Observable<Any>>;
+  #end
 }
 
 interface Schedulable {
@@ -230,8 +235,10 @@ private class ConstObservable<T> implements ObservableObject<T> {
   public function getComparator()
     return null;
 
+  #if debug_observables
   public function getObservers()
     return EMPTY.iterator();
+  #end
 
   static final EMPTY = [];
 
@@ -653,8 +660,10 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> impl
   public function onInvalidate(i)
     return source.onInvalidate(i);
 
+  #if debug_observables
   public function getObservers()
     return source.getObservers();
+  #end
 
   public function getValue() {
     if (valid == false) {

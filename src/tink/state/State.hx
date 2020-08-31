@@ -63,8 +63,10 @@ private class CompoundState<T> implements StateObject<T> {
   public function onInvalidate(i)
     return data.onInvalidate(i);
 
+  #if debug_observables
   public function getObservers()
     return data.getObservers();
+  #end
 
   public function set(value) {
     update(value);//TODO: consider running comparator here

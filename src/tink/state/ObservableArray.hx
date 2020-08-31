@@ -238,8 +238,10 @@ private class DerivedView<T> implements ArrayView<T> {
   inline function self()
     return (o:ObservableObject<Array<T>>);
 
+  #if debug_observables
   public function getObservers()
     return self().getObservers();
+  #end
 
   public function getValue():ArrayView<T>
     return this;

@@ -29,10 +29,13 @@ private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
   public function getComparator()
     return null;
 
+  #if debug_observables
   public function getObservers()
     return [].iterator();
+  #end
 }
 
+@:deprecated
 class ObservableArray<T> extends ObservableBase<Change<T>> {
 
   var items:Array<T>;

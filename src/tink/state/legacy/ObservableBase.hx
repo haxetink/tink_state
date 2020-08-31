@@ -4,6 +4,7 @@ import tink.state.Observable;
 
 using tink.CoreApi;
 
+@:deprecated
 class ObservableBase<Change> {
   var _changes = new SignalTrigger<Change>();
   var changes:Signal<Change>;
@@ -12,8 +13,10 @@ class ObservableBase<Change> {
     this.changes = _changes;
   }
 
+  #if debug_observables
   public function getObservers()
     return [].iterator();
+  #end
 
   function observable<Ret>(ret:Void->Ret, ?when:Ret->Change->Bool):Observable<Ret>
     return Observable.create(function () {

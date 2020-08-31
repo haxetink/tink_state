@@ -19,9 +19,10 @@ class Invalidator {
         list.add(i.invalidate) & observers.remove.bind(i);
       }
 
-  public function getObservers() {
+  #if debug_observables
+  public function getObservers()
     return observers.keys();
-  }
+  #end
 
   function fire()
     list.invoke(Noise);

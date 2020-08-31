@@ -10,6 +10,7 @@ using tink.CoreApi;
   public final to:Option<V>;
 }
 
+@:deprecated
 class ObservableMap<K, V> implements haxe.Constraints.IMap<K, V> extends ObservableBase<Update<K, V>> {
 
   var map:Map<K, V>;
