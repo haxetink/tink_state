@@ -26,19 +26,22 @@ class Bench {
 
         unfinishedTodoCount.bind({ direct: !batched }, function (x) {});
 
-        for (i in 0...todos.length) {
-          todos[Std.random(todos.length)].done.value = true;
-        }
+        for (t in todos)
+          t.done.value = true;
 
         if (batched)
           Observable.updateAll();
+
       }, if (batched) 100 else 10);
   }
 
   static function measure(name, f:()->Void, ?repeat = 1) {
     f();
     var start = Date.now().getTime();
+    var old = haxe.Log.trace;
+    haxe.Log.trace = function (_, ?_) {}
     for (i in 0...repeat) f();
+    haxe.Log.trace = old;
     #if sys
       Sys.println
     #elseif js
