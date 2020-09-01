@@ -351,7 +351,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
     return poll().value;
 }
 
-interface Scheduler {
+private interface Scheduler {
   function progress(maxSeconds:Float):Bool;
   function schedule(s:Schedulable):Void;
 }
