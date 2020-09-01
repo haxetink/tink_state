@@ -1,6 +1,6 @@
 # Tinkerbell Reactive State Handling
 
-Dealing with mutable state is a tricky business, which very often results in some parts of your application having stale data, resulting in poor UX at best and outright incorrect behavior at worst. There are many attempts to overcome the issue, and tink_state is one of them. In a nutshell tink_state provides:
+Dealing with mutable state is a tricky business, which very often results in some parts of your application having stale data, leading to poor UX at best and outright incorrect behavior at worst. There are many attempts to overcome the issue, and tink_state is one of them. In a nutshell tink_state provides:
 
 - observable data structures (i.e. changes to those data structures can be subscribed to)
 - the means to derive live-computed data from those (i.e. changes to the source data will update the derived data)
@@ -14,6 +14,4 @@ The main inspiration for tink_state was the dependency tracking from [Knockout.j
 
 ## Caveats
 
-If you're modifying data that is not backed by tink_state's observable data structures (i.e. `State`, `ObservableArray` or `ObservableMap`), tink_state will not be able to detect the changes (unless you're familiar enough with the implementation to ensure this otherwise). It will thus not update values or trigger bindings. For things to work correctly, all data must either be immutable, or observable (i.e. mutations may only be performed on `State`, `ObservableArray` or `ObservableMap`).
-
-Ensuring this is your responsibility. You may be interested in [coconut.data](https://github.com/MVCoconut/coconut.data/) which attempts to statically ensure you only use immutable or observable data types.
+If you're modifying data that is not backed by tink_state's observable data structures (i.e. `State`, `ObservableArray` or `ObservableMap`), tink_state will not be able to detect the changes (unless you're familiar enough with the implementation to ensure this otherwise). It will thus not update values or trigger bindings. For things to work correctly, all data must either be immutable, or observable (i.e. mutations may only be performed on `State`, `ObservableArray` or `ObservableMap`). Ensuring this is your responsibility. You may be interested in [coconut.data](https://github.com/MVCoconut/coconut.data/) which attempts to statically ensure you only use immutable or observable data types.
