@@ -583,6 +583,19 @@ private class AutoObservable<T> extends Invalidator
 
   var comparator:Comparator<T>;
 
+  override function getRevision() {
+    var ret = -1;
+    switch subscriptions {
+      case null:
+      case subs:
+        for (s in subs) {
+          var rev = s.source.getRevision();
+          if (rev > ret) ret = rev;
+        }
+    }
+    return ret;
+  }
+
   function subsValid() {
     if (subscriptions == null)
       return false;
