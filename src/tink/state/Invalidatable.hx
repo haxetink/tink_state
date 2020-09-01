@@ -10,9 +10,13 @@ interface Invalidatable {
 }
 
 class Invalidator {
+  var revision = 0;
   final observers = new Map<Invalidatable, Bool>();
   final list = new CallbackList();//TODO: get rid of the list ... currently it's here to guarantee stable callback order
   var used = 0;
+
+  public function getRevision()
+    return revision;
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return
@@ -27,6 +31,8 @@ class Invalidator {
     return observers.keys();
   #end
 
-  function fire()
+  function fire() {
+    revision++;
     list.invoke(Noise);
+  }
 }

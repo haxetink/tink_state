@@ -15,6 +15,9 @@ class ObservableDate implements ObservableObject<Bool> {
     inline function get_passed():Bool
       return _observable.getValue();
 
+  public function getRevision()
+    return _observable.getRevision();
+
   public function isValid()
     return _observable.isValid();
 

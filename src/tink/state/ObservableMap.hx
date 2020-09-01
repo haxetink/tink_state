@@ -61,6 +61,9 @@ private class Derived<K, V> implements MapView<K, V> {
   public function new(o)
     this.o = o;
 
+  public function getRevision()
+    return self().getRevision();
+
   public function exists(key:K):Bool
     return o.value.exists(key);
 

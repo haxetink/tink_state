@@ -36,12 +36,12 @@ class TestScheduler {
 
     var log = [];
 
-    s1.observe().bind(function (v) {
+    var watch = s1.observe().bind(function (v) {
       s2.set('foo($v)');
       s3.set('bar($v)');
     });
 
-    Observable.auto(function () {
+    watch &= Observable.auto(function () {
       return s2.value + s3.value;
     }).bind(log.push);
 
@@ -57,6 +57,8 @@ class TestScheduler {
     Observable.updateAll();
 
     checkLog('foo(0)bar(0),foo(1)bar(1)');
+
+    watch.cancel();
 
     return asserts.done();
   }

@@ -171,6 +171,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 private class SignalObservable<X, T> implements ObservableObject<T> {
   var valid = false;
   var value:Null<T>;
+  var revision = 0;
+
+  public function getRevision()
+    return revision;
+
   final get:Void->T;
 
   final observers = new Map();
@@ -179,7 +184,10 @@ private class SignalObservable<X, T> implements ObservableObject<T> {
   public function new(get, changed:Signal<Noise>) {
     this.get = get;
     this.changed = changed;
-    this.changed.handle(function (_) valid = false);
+    this.changed.handle(function (_) if (valid) {
+      revision++;
+      valid = false;
+    });
   }
 
   public function getValue():T
@@ -216,6 +224,7 @@ private interface Derived {
 
 interface ObservableObject<T> {
   function getValue():T;
+  function getRevision():Int;
   function isValid():Bool;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
@@ -231,6 +240,9 @@ interface Schedulable {
 
 private class ConstObservable<T> implements ObservableObject<T> {
   final value:T;
+
+  public function getRevision()
+    return 0;
 
   public function new(value)
     this.value = value;
@@ -495,19 +507,21 @@ private class SubscriptionTo<T> {
   public final source:ObservableObject<T>;
   var last:T;
   var link:CallbackLink;
+  final owner:Invalidatable;
+
   public var reused = false;
+
   #if tink_state_test_subs
     static public var liveCount(default, null) = 0;
-    var alive = true;
+    var alive:Bool;
   #end
 
-  public function new(source, cur, target) {
-    #if tink_state_test_subs
-      liveCount++;
-    #end
+  public function new<X>(source, cur, owner:AutoObservable<X>) {
     this.source = source;
     this.last = cur;
-    this.link = source.onInvalidate(target);
+    this.owner = owner;
+
+    if (owner.hot) register();
   }
 
   public function hasChanged():Bool {
@@ -525,6 +539,14 @@ private class SubscriptionTo<T> {
       else throw 'what?';
     #end
     link.cancel();
+  }
+
+  public function register():Void {
+    #if tink_state_test_subs
+      alive = true;
+      liveCount++;
+    #end
+    this.link = source.onInvalidate(owner);
   }
 }
 
@@ -545,6 +567,7 @@ private class AutoObservable<T> extends Invalidator
       rev.set(rev.value + 1);
     }
   #end
+  public var hot(default, null) = false;
   var status = Dirty;
   var last:T = null;
   var subscriptions:Array<Subscription>;
@@ -561,6 +584,20 @@ private class AutoObservable<T> extends Invalidator
   public function new(compute, ?comparator) {
     this.compute = compute;
     this.comparator = comparator;
+    this.list.ondrain = heatup;
+    this.list.onfill = cooldown;
+  }
+
+  function heatup() {
+    hot = true;
+    if (subscriptions != null)
+      for (s in subscriptions) s.register();
+  }
+
+  function cooldown() {
+    hot = false;
+    if (subscriptions != null)
+      for (s in subscriptions) s.unregister();
   }
 
   static public inline function computeFor<T>(o:Derived, fn:Void->T) {
@@ -617,7 +654,7 @@ private class AutoObservable<T> extends Invalidator
           if (prevSubs != null) {
             for (s in prevSubs)
               if (!s.reused) {
-                s.unregister();
+                if (hot) s.unregister();
                 #if js
                   dependencies.delete
                 #else
@@ -690,9 +727,9 @@ abstract Transform<T, R>(T->R) {
     return new Transform(f);
 }
 
-private class TransformObservable<In, Out> implements ObservableObject<Out> implements Invalidatable {
+private class TransformObservable<In, Out> implements ObservableObject<Out> {
 
-  var valid = false;
+  var lastSeenRevision = -1;
   var last:Out = null;
   var transform:Transform<In, Out>;
   var source:ObservableObject<In>;
@@ -700,14 +737,13 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> impl
   public function new(source, transform) {
     this.source = source;
     this.transform = transform;
-    source.onInvalidate(this);
   }
 
-  public function isValid()
-    return valid;
+  public function getRevision()
+    return source.getRevision();
 
-  public function invalidate()
-    valid = false;
+  public function isValid()
+    return lastSeenRevision == source.getRevision();
 
   public function onInvalidate(i)
     return source.onInvalidate(i);
@@ -718,8 +754,9 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> impl
   #end
 
   public function getValue() {
-    if (valid == false) {
-      valid = true;
+    var rev = source.getRevision();
+    if (rev > lastSeenRevision) {
+      lastSeenRevision = rev;
       last = transform.apply(source.getValue());
     }
     return last;

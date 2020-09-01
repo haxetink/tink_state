@@ -229,6 +229,9 @@ private class DerivedView<T> implements ArrayView<T> {
 
   final o:Observable<Array<T>>;
 
+  public function getRevision()
+    return self().getRevision();
+
   public function new(o)
     this.o = o;
 
