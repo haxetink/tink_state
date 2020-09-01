@@ -23,8 +23,8 @@ class TestBasic {
         o2 = Observable.auto(function () {
           return s.value;
         });
-    watch &= o1.bind({ direct: true, comparator: function(v1, v2) return v1 == v2 }, o1Log.push);
-    watch &= o2.bind({ direct: true, comparator: function(v1, v2) return v1 == v2 }, o2Log.push);
+    watch &= o1.bind({ direct: true }, o1Log.push);
+    watch &= o2.bind({ direct: true }, o2Log.push);
 
     asserts.assert(sLog.join(',') == '0');
     asserts.assert(o1Log.join(',') == '0');

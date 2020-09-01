@@ -506,6 +506,7 @@ private class SubscriptionTo<T> {
 
   public final source:ObservableObject<T>;
   var last:T;
+  var lastRev:Int;
   var link:CallbackLink;
   final owner:Invalidatable;
 
@@ -519,12 +520,19 @@ private class SubscriptionTo<T> {
   public function new<X>(source, cur, owner:AutoObservable<X>) {
     this.source = source;
     this.last = cur;
+    this.lastRev = source.getRevision();
     this.owner = owner;
 
     if (owner.hot) register();
   }
 
+  public function isValid()
+    return source.getRevision() == lastRev;
+
   public function hasChanged():Bool {
+    var nextRev = source.getRevision();
+    if (nextRev == lastRev) return false;
+    lastRev = nextRev;
     var before = last;
     last = Observable.untracked(source.getValue);// not sure this has to be untracked
     return !source.getComparator().eq(last, before);
@@ -575,8 +583,19 @@ private class AutoObservable<T> extends Invalidator
 
   var comparator:Comparator<T>;
 
+  function subsValid() {
+    if (subscriptions == null)
+      return false;
+
+    for (s in subscriptions)
+      if (!s.isValid())
+        return false;
+
+    return true;
+  }
+
   public function isValid()
-    return status == Computed;
+    return status != Dirty && (hot || subsValid());
 
   public function getComparator()
     return comparator;
@@ -584,8 +603,8 @@ private class AutoObservable<T> extends Invalidator
   public function new(compute, ?comparator) {
     this.compute = compute;
     this.comparator = comparator;
-    this.list.ondrain = heatup;
-    this.list.onfill = cooldown;
+    this.list.onfill = heatup;
+    this.list.ondrain = cooldown;
   }
 
   function heatup() {
@@ -632,6 +651,9 @@ private class AutoObservable<T> extends Invalidator
       last = computeFor(this, () -> compute(update));
       sync = false;
     }
+
+    if (!isValid())
+      status = Dirty;
 
     var prevSubs = subscriptions,
         count = 0;

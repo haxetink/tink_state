@@ -187,7 +187,7 @@ class TestAuto {
   }
 
   #if tink_state_test_subs
-  @:include public function testSubs() {
+  @:exclude public function testSubs() {
     var states = [for (i in 0...10) new State(i)];
     var select = new State([for (i in 0...states.length) i % 3 == 0]);
 
