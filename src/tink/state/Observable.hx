@@ -652,13 +652,10 @@ private class AutoObservable<T> extends Invalidator
       sync = false;
     }
 
-    if (!isValid())
-      status = Dirty;
-
     var prevSubs = subscriptions,
         count = 0;
 
-    while (status != Computed)
+    while (!isValid())
       if (++count == 100)
         throw 'no result after 100 attempts';
       else if (subscriptions != null) {

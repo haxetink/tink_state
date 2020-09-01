@@ -47,7 +47,7 @@ class TestAuto {
 
     var sum = 0;
 
-    o.bind({ direct: true }, function (v) sum = v);
+    var watch = o.bind({ direct: true }, function (v) sum = v);
 
     asserts.assert(sum == s1.value + s2.value);
     asserts.assert(calls == 1);
@@ -63,6 +63,8 @@ class TestAuto {
 
     asserts.assert(sum == s1.value + s2.value);
     asserts.assert(calls == 5);
+
+    watch.cancel();
 
     return asserts.done();
   }
@@ -144,7 +146,7 @@ class TestAuto {
       });
     }
 
-    o.bind({ direct: true }, function () {});
+    var watch = o.bind({ direct: true }, function () {});
 
     asserts.assert(o.value == 1);
 
@@ -161,6 +163,8 @@ class TestAuto {
     asserts.assert(o.value == 2);
 
     asserts.assert('32,16,8,4,2' == a.join(','));
+
+    watch.cancel();
 
     return asserts.done();
   }
@@ -187,7 +191,12 @@ class TestAuto {
   }
 
   #if tink_state_test_subs
-  @:exclude public function testSubs() {
+  public function testSubs() {
+    function count()
+      return @:privateAccess Observable.subscriptionCount();
+
+    var initial = count();//it's possible other tests leave behind subscriptions ... should probably warn in that case
+
     var states = [for (i in 0...10) new State(i)];
     var select = new State([for (i in 0...states.length) i % 3 == 0]);
 
@@ -199,18 +208,22 @@ class TestAuto {
     }
 
     var selectedCount = select.observe().map(a -> Lambda.count(a, x -> x));
-    var selected = Observable.auto(add);
+
+    var result = 0;
+    var watch = Observable.auto(add).bind({ direct: true }, x -> result = x);
 
     function check(?pos:haxe.PosInfos)
-      asserts.assert(selectedCount.value + 1 == @:privateAccess Observable.subscriptionCount());
-    asserts.assert(selected.value == 18);
+      asserts.assert(selectedCount.value + 1 + initial == count());
+    asserts.assert(result == 18);
     check();
 
     for (i in 0...10) {
       select.set([for (i in 0...states.length) Math.random() > .5]);
-      asserts.assert(selected.value == add());
+      asserts.assert(result == add());
       check();
     }
+
+    watch.cancel();
 
     return asserts.done();
   }
