@@ -160,6 +160,9 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   public function resize(size:Int)
     update(() -> { entries.resize(size); null; });
 
+  public function getDependencies()
+    return [].iterator();
+
   public inline function clear()
     resize(0);
 
@@ -244,6 +247,9 @@ private class DerivedView<T> implements ArrayView<T> {
   #if debug_observables
   public function getObservers()
     return self().getObservers();
+
+  public function getDependencies()
+    return [(cast o:Observable<Any>)].iterator();
   #end
 
   public function getValue():ArrayView<T>

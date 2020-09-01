@@ -2,9 +2,6 @@ package tink.state;
 
 import tink.state.Promised;
 import tink.state.Invalidatable;
-#if js
-import js.lib.Map;
-#end
 
 using tink.CoreApi;
 
@@ -61,7 +58,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   }
 
   public function map<R>(f:Transform<T, R>):Observable<R>
-    return new TransformObservable(this, f);
+    return Observable.auto(() -> f.apply(value));
+    // return new TransformObservable(this, f);
 
   public function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>
      return Observable.auto(() -> f(value, that.value));
@@ -215,6 +213,9 @@ private class SignalObservable<X, T> implements ObservableObject<T> {
   #if debug_observables
   public function getObservers()
     return observers.keys();
+
+  public function getDependencies()
+    return [].iterator();
   #end
 }
 
@@ -259,6 +260,9 @@ private class ConstObservable<T> implements ObservableObject<T> {
   #if debug_observables
   public function getObservers()
     return EMPTY.iterator();
+
+  public function getDependencies()
+    return [].iterator();
   #end
 
   static final EMPTY = [];
@@ -349,6 +353,11 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
 
   public function getValue()
     return poll().value;
+
+  #if debug_observables
+  public function getDependencies()
+    return [].iterator();
+  #end
 }
 
 private interface Scheduler {
@@ -584,14 +593,12 @@ private class AutoObservable<T> extends Invalidator
   var comparator:Comparator<T>;
 
   override function getRevision() {
+    if (subscriptions == null)
+      getValue();
     var ret = -1;
-    switch subscriptions {
-      case null:
-      case subs:
-        for (s in subs) {
-          var rev = s.source.getRevision();
-          if (rev > ret) ret = rev;
-        }
+    for (s in subscriptions) {
+      var rev = s.source.getRevision();
+      if (rev > ret) ret = rev;
     }
     return ret;
   }
@@ -687,11 +694,7 @@ private class AutoObservable<T> extends Invalidator
             for (s in prevSubs)
               if (!s.reused) {
                 if (hot) s.unregister();
-                #if js
-                  dependencies.delete
-                #else
-                  dependencies.remove
-                #end(s.source);
+                dependencies.remove(s.source);
               }
           }
         }
@@ -727,6 +730,10 @@ private class AutoObservable<T> extends Invalidator
       fire();
     }
 
+  #if debug_observables
+  public function getDependencies()
+    return cast dependencies.keys();
+  #end
 }
 
 typedef BindingOptions<T> = {
@@ -783,6 +790,8 @@ private class TransformObservable<In, Out> implements ObservableObject<Out> {
   #if debug_observables
   public function getObservers()
     return source.getObservers();
+  public function getDependencies()
+    return [(cast source:Observable<Any>)].iterator();
   #end
 
   public function getValue() {

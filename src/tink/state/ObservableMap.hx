@@ -99,6 +99,14 @@ private class Derived<K, V> implements MapView<K, V> {
 
   public function getComparator()
     return neverEqual;
+
+  #if debug_observables
+  public function getObservers()
+    return self().getObservers();
+
+  public function getDependencies()
+    return self().getDependencies();
+  #end
 }
 
 private class MapImpl<K, V> extends Invalidator implements MapView<K, V> implements IMap<K, V> {
@@ -168,4 +176,9 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
     observe().value;
     return f();
   }
+
+  #if debug_observables
+  public function getDependencies()
+    return [].iterator();
+  #end
 }

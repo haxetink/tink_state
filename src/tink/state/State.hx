@@ -72,7 +72,10 @@ private class CompoundState<T> implements StateObject<T> {
 
   #if debug_observables
   public function getObservers()
-    return data.getObservers();
+    return data.getObservers();//TODO: this is not very exact
+
+  public function getDependencies()
+    return [(cast data:Observable<Any>)].iterator();
   #end
 
   public function set(value) {
@@ -152,4 +155,10 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
     }
     return value;
   }
+
+  #if debug_observables
+  public function getDependencies()
+    return [].iterator();
+  #end
+
 }

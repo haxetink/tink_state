@@ -50,6 +50,9 @@ class ObservableDate implements ObservableObject<Bool> {
 
   #if debug_observables
   public function getObservers()
+    return _observable.getObservers();
+
+  public function getDependencies()
     return [].iterator();
   #end
 
