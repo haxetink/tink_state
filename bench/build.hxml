@@ -6,5 +6,5 @@
 # -D jvm
 # -java bin
 # -cpp bin/cpp
--python bin/bench.py
+# -python bin/bench.py
 # -js tink_state-bench.js
