@@ -11,29 +11,44 @@ class Bench {
         });
       return todos;
     }
-    // measure('create 100000 todos', () -> makeTodos(100000));
+    measure('create 10000 todos', () -> makeTodos(1000), 100);
 
     for (batched in [false, true])
       measure('create 1000 todos, finish all [${batched ? 'batched' : 'direct'}]', () -> {
         var todos = makeTodos(1000);
 
-        var unfinishedTodoCount = todos.reduce(0, (t, sum) -> if (t.done.value) sum else sum + 1);
+        var unfinishedTodoCount = Observable.auto(() -> {
+          var sum = 0;
+          for (t in todos)
+            if (!t.done.value) sum++;
+          sum;
+        });
 
         unfinishedTodoCount.bind({ direct: !batched }, function (x) {});
 
-        for (i in 0...todos.length) {
-          todos[Std.random(todos.length)].done.value = true;
-        }
+        for (t in todos)
+          t.done.value = true;
 
         if (batched)
           Observable.updateAll();
-      }, if (batched) 10 else 1);
 
+      }, if (batched) 100 else 10);
   }
 
   static function measure(name, f:()->Void, ?repeat = 1) {
+    f();
     var start = Date.now().getTime();
+    var old = haxe.Log.trace;
+    haxe.Log.trace = function (_, ?_) {}
     for (i in 0...repeat) f();
-    js.Browser.console.log('$name: ${(Date.now().getTime() - start) / repeat}ms');
+    haxe.Log.trace = old;
+    #if sys
+      Sys.println
+    #elseif js
+      js.Browser.console.log
+    #else
+      trace
+    #end
+      ('$name: ${(Date.now().getTime() - start) / repeat}ms (avg. of ${repeat} runs)');
   }
 }

@@ -1,5 +1,8 @@
 package tink.state;
 
+#if js
+import js.lib.Map;
+#end
 using tink.CoreApi;
 
 interface Invalidatable {
@@ -13,10 +16,10 @@ class Invalidator {
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return
-      if (observers[i]) null;
+      if (observers.get(i)) null;
       else {
-        observers[i] = true;
-        list.add(i.invalidate) & observers.remove.bind(i);
+        observers.set(i, true);
+        list.add(i.invalidate) & #if js () -> observers.delete(i) #else observers.remove.bind(i) #end;
       }
 
   #if debug_observables

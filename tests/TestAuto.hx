@@ -164,4 +164,55 @@ class TestAuto {
 
     return asserts.done();
   }
+
+  public function selfInvalidating() {
+    var s1 = new State(0),
+        s2 = new State(0);
+
+    var o = Observable.auto(() -> {
+      if (s1.value < 10) s1.value += 1;
+      if (s2.value < 10) s2.value += 1;
+      s1.value + s2.value;
+    });
+
+    asserts.assert(s1.value == 0);
+    asserts.assert(s2.value == 0);
+
+    asserts.assert(o.value == 20);
+
+    asserts.assert(s1.value == 10);
+    asserts.assert(s2.value == 10);
+
+    return asserts.done();
+  }
+
+  #if tink_state_test_subs
+  @:include public function testSubs() {
+    var states = [for (i in 0...10) new State(i)];
+    var select = new State([for (i in 0...states.length) i % 3 == 0]);
+
+    function add() {
+      var ret = 0;
+      for (i => s in select.value)
+        if (s) ret += states[i].value;
+      return ret;
+    }
+
+    var selectedCount = select.observe().map(a -> Lambda.count(a, x -> x));
+    var selected = Observable.auto(add);
+
+    function check(?pos:haxe.PosInfos)
+      asserts.assert(selectedCount.value + 1 == @:privateAccess Observable.subscriptionCount());
+    asserts.assert(selected.value == 18);
+    check();
+
+    for (i in 0...10) {
+      select.set([for (i in 0...states.length) Math.random() > .5]);
+      asserts.assert(selected.value == add());
+      check();
+    }
+
+    return asserts.done();
+  }
+  #end
 }

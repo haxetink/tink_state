@@ -1,4 +1,5 @@
 -cp tests
+-D tink_state_test_subs
 -lib tink_unittest
 -main RunTests
 
