@@ -490,6 +490,7 @@ private class SubscriptionTo<T> {
   public final source:ObservableObject<T>;
   var last:T;
   var link:CallbackLink;
+  public var reused = false;
 
   public function new(source, cur, target) {
     this.source = source;
@@ -567,8 +568,9 @@ private class AutoObservable<T> extends Invalidator
 
     inline function doCompute() {
       status = Computed;
+      if (subscriptions != null)
+        for (s in subscriptions) s.reused = false;
       subscriptions = [];
-      dependencies.clear();
       sync = true;
       last = computeFor(this, () -> compute(update));
       sync = false;
@@ -594,8 +596,14 @@ private class AutoObservable<T> extends Invalidator
           doCompute();
           if (prevSubs != null) {
             for (s in prevSubs)
-              if (dependencies.get(s.source) == null)
+              if (!s.reused) {
                 s.unregister();
+                #if js
+                  dependencies.delete
+                #else
+                  dependencies.remove
+                #end(s.source);
+              }
           }
         }
       }
@@ -618,8 +626,10 @@ private class AutoObservable<T> extends Invalidator
         dependencies.set(source, sub);
         subscriptions.push(sub);
       case v:
-        if (subscriptions.indexOf(v) == -1)
+        if (!v.reused) {
+          v.reused = true;
           subscriptions.push(v);
+        }
     }
 
   public function invalidate()
