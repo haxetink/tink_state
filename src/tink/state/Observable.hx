@@ -161,6 +161,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static inline function neq<T>(a:Observable<T>, b:Observable<T>):Bool
     return !eq(a, b);
 
+  #if tink_state_test_subs
+    static function subscriptionCount()
+      return Subscription.liveCount;
+  #end
+
 }
 
 private class SignalObservable<X, T> implements ObservableObject<T> {
@@ -491,8 +496,15 @@ private class SubscriptionTo<T> {
   var last:T;
   var link:CallbackLink;
   public var reused = false;
+  #if tink_state_test_subs
+    static public var liveCount(default, null) = 0;
+    var alive = true;
+  #end
 
   public function new(source, cur, target) {
+    #if tink_state_test_subs
+      liveCount++;
+    #end
     this.source = source;
     this.last = cur;
     this.link = source.onInvalidate(target);
@@ -504,8 +516,16 @@ private class SubscriptionTo<T> {
     return !source.getComparator().eq(last, before);
   }
 
-  public function unregister():Void
+  public function unregister():Void {
+    #if tink_state_test_subs
+      if (alive) {
+        liveCount--;
+        alive = false;
+      }
+      else throw 'what?';
+    #end
     link.cancel();
+  }
 }
 
 private enum abstract AutoObservableStatus(Int) {
