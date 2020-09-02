@@ -1,5 +1,6 @@
 package tink.state;
 
+import tink.state.internal.Revision;
 import tink.state.Promised;
 import tink.state.Invalidatable;
 
@@ -169,7 +170,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 private class SignalObservable<X, T> implements ObservableObject<T> {
   var valid = false;
   var value:Null<T>;
-  var revision = 0;
+  var revision = new Revision();
 
   public function getRevision()
     return revision;
@@ -183,7 +184,7 @@ private class SignalObservable<X, T> implements ObservableObject<T> {
     this.get = get;
     this.changed = changed;
     this.changed.handle(function (_) if (valid) {
-      revision++;
+      revision = new Revision();
       valid = false;
     });
   }
@@ -225,7 +226,7 @@ private interface Derived {
 
 interface ObservableObject<T> {
   function getValue():T;
-  function getRevision():Int;
+  function getRevision():Revision;
   function isValid():Bool;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
@@ -241,9 +242,10 @@ interface Schedulable {
 
 private class ConstObservable<T> implements ObservableObject<T> {
   final value:T;
+  final revision = new Revision();
 
   public function getRevision()
-    return 0;
+    return revision;
 
   public function new(value)
     this.value = value;
@@ -515,7 +517,7 @@ private class SubscriptionTo<T> {
 
   public final source:ObservableObject<T>;
   var last:T;
-  var lastRev:Int;
+  var lastRev:Revision;
   var link:CallbackLink;
   final owner:Invalidatable;
 
@@ -593,14 +595,17 @@ private class AutoObservable<T> extends Invalidator
   var comparator:Comparator<T>;
 
   override function getRevision() {
+    if (hot)
+      return revision;
     if (subscriptions == null)
       getValue();
-    var ret = -1;
-    for (s in subscriptions) {
-      var rev = s.source.getRevision();
-      if (rev > ret) ret = rev;
-    }
-    return ret;
+    var max = Revision.ZERO;
+    for (s in subscriptions)
+      max *= s.source.getRevision();
+    if (max > revision)
+      revision = new Revision();
+
+    return revision;
   }
 
   function subsValid() {
@@ -628,9 +633,11 @@ private class AutoObservable<T> extends Invalidator
   }
 
   function heatup() {
-    hot = true;
+    getValue();
+    getRevision();
     if (subscriptions != null)
       for (s in subscriptions) s.register();
+    hot = true;
   }
 
   function cooldown() {
@@ -766,46 +773,46 @@ abstract Transform<T, R>(T->R) {
     return new Transform(f);
 }
 
-private class TransformObservable<In, Out> implements ObservableObject<Out> {
+// private class TransformObservable<In, Out> implements ObservableObject<Out> {
 
-  var lastSeenRevision = -1;
-  var last:Out = null;
-  var transform:Transform<In, Out>;
-  var source:ObservableObject<In>;
+//   var lastSeenRevision = -1;
+//   var last:Out = null;
+//   var transform:Transform<In, Out>;
+//   var source:ObservableObject<In>;
 
-  public function new(source, transform) {
-    this.source = source;
-    this.transform = transform;
-  }
+//   public function new(source, transform) {
+//     this.source = source;
+//     this.transform = transform;
+//   }
 
-  public function getRevision()
-    return source.getRevision();
+//   public function getRevision()
+//     return source.getRevision();
 
-  public function isValid()
-    return lastSeenRevision == source.getRevision();
+//   public function isValid()
+//     return lastSeenRevision == source.getRevision();
 
-  public function onInvalidate(i)
-    return source.onInvalidate(i);
+//   public function onInvalidate(i)
+//     return source.onInvalidate(i);
 
-  #if debug_observables
-  public function getObservers()
-    return source.getObservers();
-  public function getDependencies()
-    return [(cast source:Observable<Any>)].iterator();
-  #end
+//   #if debug_observables
+//   public function getObservers()
+//     return source.getObservers();
+//   public function getDependencies()
+//     return [(cast source:Observable<Any>)].iterator();
+//   #end
 
-  public function getValue() {
-    var rev = source.getRevision();
-    if (rev > lastSeenRevision) {
-      lastSeenRevision = rev;
-      last = transform.apply(source.getValue());
-    }
-    return last;
-  }
+//   public function getValue() {
+//     var rev = source.getRevision();
+//     if (rev > lastSeenRevision) {
+//       lastSeenRevision = rev;
+//       last = transform.apply(source.getValue());
+//     }
+//     return last;
+//   }
 
-  public function getComparator()
-    return null;
-}
+//   public function getComparator()
+//     return null;
+// }
 
 @:access(tink.state.Observable)
 class ObservableTools {
