@@ -1,6 +1,6 @@
 package tink.state;
 
-import tink.state.internal.Revision;
+import tink.state.internal.*;
 using tink.CoreApi;
 
 interface Invalidatable {
@@ -9,8 +9,8 @@ interface Invalidatable {
 
 class Invalidator {
   var revision = new Revision();
-  final observers = new Map<Invalidatable, Bool>();
-  final list = new CallbackList();//TODO: get rid of the list ... currently it's here to guarantee stable callback order
+  final observers = new ObjectMap<Invalidatable, Bool>();
+  final list = new CallbackList();//TODO: get rid of the list ... currently primarily here to guarantee stable callback order
   var used = 0;
 
   public function getRevision()

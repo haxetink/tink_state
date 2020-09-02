@@ -1,6 +1,6 @@
 package tink.state;
 
-import tink.state.internal.Revision;
+import tink.state.internal.*;
 import tink.state.Promised;
 import tink.state.Invalidatable;
 
@@ -590,7 +590,7 @@ private class AutoObservable<T> extends Invalidator
   var status = Dirty;
   var last:T = null;
   var subscriptions:Array<Subscription>;
-  var dependencies = new Map<ObservableObject<Dynamic>, Subscription>();
+  var dependencies = new ObjectMap<ObservableObject<Dynamic>, Subscription>();
 
   var comparator:Comparator<T>;
 
