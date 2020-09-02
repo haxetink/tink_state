@@ -59,7 +59,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   }
 
   public function map<R>(f:Transform<T, R>):Observable<R>
-    return Observable.auto(() -> f.apply(value));
+    return Observable.auto(() -> f.apply(value));//TODO: benchmark TransformObservable and if it's noticably faster, use it
     // return new TransformObservable(this, f);
 
   public function combineAsync<A, R>(that:Observable<A>, f:T->A->Promise<R>):Observable<Promised<R>>
