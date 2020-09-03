@@ -1,7 +1,4 @@
-package tink.state;
-
-import tink.state.internal.*;
-using tink.CoreApi;
+package tink.state.internal;
 
 interface Invalidatable {
   function invalidate():Void;

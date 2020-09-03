@@ -1,7 +1,5 @@
 package tink.state;
 
-import tink.state.Observable;
-using tink.CoreApi;
 using DateTools;
 
 class ObservableDate implements ObservableObject<Bool> {

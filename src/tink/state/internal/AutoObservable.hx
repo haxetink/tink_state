@@ -1,11 +1,5 @@
 package tink.state.internal;
 
-import tink.state.Observable;
-import tink.state.Invalidatable;
-
-import tink.state.Promised;
-using tink.CoreApi;
-
 @:callable
 private abstract Computation<T>((T->Void)->?Noise->T) {
   inline function new(f) this = f;

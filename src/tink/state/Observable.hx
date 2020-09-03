@@ -1,11 +1,5 @@
 package tink.state;
 
-import tink.state.internal.*;
-import tink.state.Promised;
-import tink.state.Invalidatable;
-
-using tink.CoreApi;
-
 @:using(tink.state.Observable.ObservableTools)
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   public var value(get, never):T;

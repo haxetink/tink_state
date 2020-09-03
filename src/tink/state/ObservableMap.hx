@@ -1,8 +1,6 @@
 package tink.state;
 
 import haxe.Constraints.IMap;
-import tink.state.Invalidatable;
-import tink.state.Observable;
 import haxe.iterators.*;
 
 @:forward

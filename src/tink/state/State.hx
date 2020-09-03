@@ -1,10 +1,5 @@
 package tink.state;
 
-import tink.state.Observable;
-import tink.state.Invalidatable;
-
-using tink.CoreApi;
-
 @:forward(set)
 abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from StateObject<T> {
 
@@ -27,7 +22,7 @@ abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from S
   public function transform<R>(rules:{ function read(v:T):R; function write(v:R):T; }):State<R>
     return new CompoundState(observe().map(rules.read), function (value) this.set(rules.write(value)));
 
-  public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink
+  public inline function bind(?options, cb:Callback<T>):CallbackLink
     return observe().bind(options, cb);
 
   @:impl static public function toggle(s:StateObject<Bool>) {

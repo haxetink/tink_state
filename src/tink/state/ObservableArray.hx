@@ -1,7 +1,5 @@
 package tink.state;
 
-import tink.state.Invalidatable;
-import tink.state.Observable;
 import haxe.iterators.*;
 
 @:forward
