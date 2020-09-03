@@ -62,10 +62,10 @@ private class SubscriptionTo<T> {
     if (owner.hot) connect();
   }
 
-  public function isValid()
+  public inline function isValid()
     return source.getRevision() == lastRev;
 
-  public function hasChanged():Bool {
+  public inline function hasChanged():Bool {
     var nextRev = source.getRevision();
     if (nextRev == lastRev) return false;
     lastRev = nextRev;
@@ -74,7 +74,7 @@ private class SubscriptionTo<T> {
     return !source.getComparator().eq(last, before);
   }
 
-  public function disconnect():Void {
+  public inline function disconnect():Void {
     #if tink_state.test_subscriptions
       if (connected) {
         @:privateAccess AutoObservable.subscriptionCount--;
@@ -85,7 +85,7 @@ private class SubscriptionTo<T> {
     link.cancel();
   }
 
-  public function connect():Void {
+  public inline function connect():Void {
     #if tink_state.test_subscriptions
       if (connected) throw 'what?';
       else {
