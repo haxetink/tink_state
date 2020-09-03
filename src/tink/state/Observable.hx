@@ -212,7 +212,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
 
 typedef BindingOptions<T> = {
   ?direct:Bool,
-  ?comparator:T->T->Bool
+  ?comparator:Comparator<T>,
 }
 
 private abstract Transform<T, R>(T->R) {
