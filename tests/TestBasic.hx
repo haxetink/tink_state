@@ -62,7 +62,7 @@ class TestBasic {
       }
 
     var combined = sa.observe().combineAsync(sb, function (a, b):Promise<String> {
-      return Future.async(function (cb) {
+      return Future.irreversible(function (cb) {
         queue.push(cb.bind('$a $b'));
       });
     });

@@ -23,7 +23,7 @@ class TestArrays {
 
     function report(name:String) return function (v:Null<Int>) log.push('$name:$v');
 
-    a.observableLength.bind({ direct: true }, report('l'));
+    Observable.auto(() -> a.length).bind({ direct: true }, report('l'));
 
     a.entry(99).bind({ direct: true }, report('99'));
 
@@ -70,7 +70,7 @@ class TestArrays {
     for (i in 0...10)
       a.push(i);
 
-    for (i in a.observableValues.value)
+    for (i in a)
       counter++;
 
     asserts.assert(counter == a.length);
@@ -89,7 +89,7 @@ class TestArrays {
       return ret;
     }
 
-    Observable.auto(function () return sum(a.values()))
+    Observable.auto(function () return sum(a.iterator()))
       .bind({ direct: true }, function () valuesChanges++);
 
     Observable.auto(function () return sum(a.keys()))
@@ -127,31 +127,12 @@ class TestArrays {
     return asserts.done();
   }
 
-  public function testIteratorResets() {
-    var o = new ObservableArray<Int>(),
-        name = new State('Alice'),
-        log = [];
-
-    var vals = o.observableValues;
-    Observable.auto(function () {
-        return name.value + ':' + [for (i in vals.value) i];
-    }).bind(function (v) log.push(v));
-    Observable.updateAll();//triggers bindings update
-    o.push(1);
-    o.push(2);
-    Observable.updateAll();
-    name.set('Bob');
-    Observable.updateAll();
-    asserts.assert(log.join(';') == 'Alice:[];Alice:[1,2];Bob:[1,2]');
-    return asserts.done();
-  }
-
   public function clear() {
     var o = new ObservableArray<Null<Int>>([1,2,3]);
 
     var log = '';
 
-    o.observableLength.bind({ direct: true }, function(v) return log += 'len:$v');
+    Observable.auto(() -> o.length).bind({ direct: true }, function(v) return log += 'len:$v');
     for(i in 0...o.length) o.entry(i).bind({ direct: true }, function(v) return log += ',$i:$v');
     o.clear();
 

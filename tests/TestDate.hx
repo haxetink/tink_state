@@ -21,9 +21,7 @@ class TestDate {
     Observable.updateAll();
     asserts.assert(compare([false,false], log));
 
-    return Future.async(function (done) {
-      haxe.Timer.delay(done.bind(Noise), 1100);
-    }).next(function (_) {
+    return Future.delay(1100, Noise).next(function (_) {
       asserts.assert(compare([false,false,true], log));
       watch.cancel();
       return asserts.done();
