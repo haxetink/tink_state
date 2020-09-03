@@ -1,4 +1,4 @@
-package tink.state.internal;
+package tink.state;
 
 @:forward
 abstract Scheduler(SchedulerObject) from SchedulerObject {
