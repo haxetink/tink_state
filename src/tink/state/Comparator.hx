@@ -21,4 +21,7 @@ abstract Comparator<T>(Null<(T,T)->Bool>) from (T,T)->Bool {
       case [null, v] | [v, null]: v;
       case [c1, c2]: (a, b) -> c1(a, b) || c2(a, b);
     }
+
+  @:from static inline function byDerived<In, Out>(f:In->Out):Comparator<In>
+    return (a, b) -> f(a) == f(b);
 }
