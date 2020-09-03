@@ -643,7 +643,6 @@ private class AutoObservable<T> extends Invalidator
   function heatup() {
     getValue();
     getRevision();
-    trace(subscriptions[0] == subscriptions[1]);
     if (subscriptions != null)
       for (s in subscriptions) s.connect();
     hot = true;
