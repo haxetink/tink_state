@@ -512,7 +512,7 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
   }
 }
 
-typedef Subscription = SubscriptionTo<Any>;
+private typedef Subscription = SubscriptionTo<Any>;
 
 private class SubscriptionTo<T> {
 
@@ -526,8 +526,8 @@ private class SubscriptionTo<T> {
 
   #if tink_state.test_subscriptions
     static public var liveCount(default, null) = 0;
+    var connected:Bool = false;
   #end
-  var connected:Bool = false;
 
   public function new<X>(source, cur, owner:AutoObservable<X>) {
     this.source = source;
@@ -551,28 +551,21 @@ private class SubscriptionTo<T> {
   }
 
   public function disconnect():Void {
-    if (connected) {
-      #if tink_state.test_subscriptions
-        liveCount--;
-      #end
-      connected = false;
-    }
     #if tink_state.test_subscriptions
-      else throw 'what?';
+    if (connected) {
+        liveCount--;
+        connected = false;
+    }
+    else throw 'what?';
     #end
     link.cancel();
   }
 
   public function connect():Void {
-    if (connected)
-      #if tink_state.test_subscriptions
-        throw 'what?';
-      #else
-        return;
-      #end
-    connected = true;
     #if tink_state.test_subscriptions
-      liveCount++;
+    if (connected) throw 'what?';
+    connected = true;
+    liveCount++;
     #end
     this.link = source.onInvalidate(owner);
   }
