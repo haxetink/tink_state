@@ -525,8 +525,8 @@ private class SubscriptionTo<T> {
 
   #if tink_state_test_subs
     static public var liveCount(default, null) = 0;
-    var alive:Bool;
   #end
+  var alive:Bool = false;
 
   public function new<X>(source, cur, owner:AutoObservable<X>) {
     this.source = source;
@@ -550,19 +550,20 @@ private class SubscriptionTo<T> {
   }
 
   public function unregister():Void {
-    #if tink_state_test_subs
-      if (alive) {
+    if (alive) {
+      #if tink_state_test_subs
         liveCount--;
-        alive = false;
-      }
-      else throw 'what?';
-    #end
+      #end
+      alive = false;
+    }
+    else throw 'what?';
     link.cancel();
   }
 
   public function register():Void {
+    if (alive) return;
+    alive = true;
     #if tink_state_test_subs
-      alive = true;
       liveCount++;
     #end
     this.link = source.onInvalidate(owner);
