@@ -76,43 +76,13 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   static var scheduler:Scheduler =
     #if macro
-      DirectScheduler.inst;
+      Scheduler.inst;
     #else
-      new BatchScheduler({
-        function later(fn)
-          haxe.Timer.delay(fn, 10);
-        #if js
-          var later =
-            try
-              if (js.Browser.window.requestAnimationFrame != null)
-                function (fn:Void->Void)
-                  js.Browser.window.requestAnimationFrame(cast fn);
-              else
-                throw 'nope'
-            catch (e:Dynamic)
-              later;
-        #end
-
-        function asap(fn)
-          later(fn);
-        #if js
-          var asap =
-            try {
-              var p = js.lib.Promise.resolve(42);
-              function (fn:Void->Void) p.then(cast fn);
-            }
-            catch (e:Dynamic)
-              asap;
-        #end
-
-        function (b:BatchScheduler, isRerun:Bool) {
-          (if (isRerun) later else asap)(b.progress.bind(.01));
-        }
-      });
+      Scheduler.batched(Scheduler.batcher());
     #end
 
-  static public function schedule(f:Void->Void)
-    scheduler.schedule(JustOnce.call(f));
+  static public inline function schedule(f:Void->Void)
+    scheduler.run(f);
 
   static public var isUpdating(default, null):Bool = false;
 
@@ -162,10 +132,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
 }
 
-interface Schedulable {
-  function run():Void;
-}
-
 private class ConstObservable<T> implements ObservableObject<T> {
   final value:T;
   final revision = new Revision();
@@ -197,27 +163,6 @@ private class ConstObservable<T> implements ObservableObject<T> {
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return null;
-}
-
-private class JustOnce implements Schedulable {
-  var f:Void->Void;
-  function new() {}
-
-  public function run() {
-    var f = f;
-    this.f = null;
-    pool.push(this);
-    f();
-  }
-  static var pool = [];
-  static public function call(f) {
-    var ret = switch pool.pop() {
-      case null: new JustOnce();
-      case v: v;
-    }
-    ret.f = f;
-    return ret;
-  }
 }
 
 private class SimpleObservable<T> extends Invalidator implements ObservableObject<T> {
@@ -265,124 +210,12 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
   #end
 }
 
-private interface Scheduler {
-  function progress(maxSeconds:Float):Bool;
-  function schedule(s:Schedulable):Void;
-}
-
-private class Binding<T> implements Invalidatable implements Schedulable {
-  final data:ObservableObject<T>;
-  final cb:Callback<T>;
-  final scheduler:Scheduler;
-  final comparator:Comparator<T>;
-  var status = Valid;
-  var last:Null<T> = null;
-  final link:CallbackLink;
-
-  public function new(data, cb, ?scheduler, ?comparator) {
-    this.data = data;
-    this.cb = cb;
-    this.scheduler = switch scheduler {
-      case null: DirectScheduler.inst;
-      case v: v;
-    }
-    this.comparator = data.getComparator().or(comparator);
-    link = data.onInvalidate(this);
-    cb.invoke(this.last = data.getValue());
-  }
-
-  public function cancel() {
-    link.cancel();
-    status = Canceled;
-  }
-
-  public function invalidate()
-    if (status == Valid) {
-      status = Invalid;
-      scheduler.schedule(this);
-    }
-
-  public function run()
-    switch status {
-      case Canceled | Valid:
-      case Invalid:
-        status = Valid;
-        var prev = this.last,
-            next = this.last = data.getValue();
-
-        if (!comparator.eq(prev, next))
-          cb.invoke(next);
-    }
-}
-
-private enum abstract BindingStatus(Int) {
-  var Valid;
-  var Invalid;
-  var Canceled;
-}
-
-private class DirectScheduler implements Scheduler {
-  static public final inst = new DirectScheduler();
-
-  function new() {}
-
-  public function progress(_)
-    return false;
-
-  public function schedule(s:Schedulable)
-    @:privateAccess Observable.performUpdate(s.run);
-}
-
-private class BatchScheduler implements Scheduler {
-  var queue:Array<Schedulable> = [];
-  var scheduled = false;
-  final run:(s:BatchScheduler, isRerun:Bool)->Void;
-
-  public function new(run) {
-    this.run = run;
-  }
-
-  inline function measure()
-    return
-      #if java
-        Sys.cpuTime();
-      #else
-        haxe.Timer.stamp();
-      #end
-
-  public function progress(maxSeconds:Float)
-    return @:privateAccess Observable.performUpdate(() -> {
-      var end = measure() + maxSeconds;
-
-      do {
-        var old = queue;
-        queue = [];
-        for (o in old) o.run();
-      }
-      while (queue.length > 0 && measure() < end);
-
-      if (queue.length > 0) {
-        run(this, true);
-        true;
-      }
-      else scheduled = false;
-    });
-
-  public function schedule(s:Schedulable) {
-    queue.push(s);
-    if (!scheduled) {
-      scheduled = true;
-      run(this, false);
-    }
-  }
-}
-
 typedef BindingOptions<T> = {
   ?direct:Bool,
   ?comparator:T->T->Bool
 }
 
-abstract Transform<T, R>(T->R) {
+private abstract Transform<T, R>(T->R) {
   inline function new(f)
     this = f;
 
@@ -406,47 +239,6 @@ abstract Transform<T, R>(T->R) {
   @:from static function plain<T, R>(f:T->R):Transform<T, R>
     return new Transform(f);
 }
-
-// private class TransformObservable<In, Out> implements ObservableObject<Out> {
-
-//   var lastSeenRevision = -1;
-//   var last:Out = null;
-//   var transform:Transform<In, Out>;
-//   var source:ObservableObject<In>;
-
-//   public function new(source, transform) {
-//     this.source = source;
-//     this.transform = transform;
-//   }
-
-//   public function getRevision()
-//     return source.getRevision();
-
-//   public function isValid()
-//     return lastSeenRevision == source.getRevision();
-
-//   public function onInvalidate(i)
-//     return source.onInvalidate(i);
-
-//   #if tink_state.debug
-//   public function getObservers()
-//     return source.getObservers();
-//   public function getDependencies()
-//     return [(cast source:Observable<Any>)].iterator();
-//   #end
-
-//   public function getValue() {
-//     var rev = source.getRevision();
-//     if (rev > lastSeenRevision) {
-//       lastSeenRevision = rev;
-//       last = transform.apply(source.getValue());
-//     }
-//     return last;
-//   }
-
-//   public function getComparator()
-//     return null;
-// }
 
 @:access(tink.state.Observable)
 class ObservableTools {
