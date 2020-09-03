@@ -521,7 +521,7 @@ private class SubscriptionTo<T> {
   var link:CallbackLink;
   final owner:Invalidatable;
 
-  public var reused = false;
+  public var used = true;
 
   #if tink_state_test_subs
     static public var liveCount(default, null) = 0;
@@ -643,6 +643,7 @@ private class AutoObservable<T> extends Invalidator
   function heatup() {
     getValue();
     getRevision();
+    trace(subscriptions[0] == subscriptions[1]);
     if (subscriptions != null)
       for (s in subscriptions) s.connect();
     hot = true;
@@ -680,7 +681,7 @@ private class AutoObservable<T> extends Invalidator
     inline function doCompute() {
       status = Computed;
       if (subscriptions != null)
-        for (s in subscriptions) s.reused = false;
+        for (s in subscriptions) s.used = false;
       subscriptions = [];
       sync = true;
       last = computeFor(this, () -> compute(update));
@@ -707,7 +708,7 @@ private class AutoObservable<T> extends Invalidator
           doCompute();
           if (prevSubs != null) {
             for (s in prevSubs)
-              if (!s.reused) {
+              if (!s.used) {
                 if (hot) s.disconnect();
                 dependencies.remove(s.source);
               }
@@ -733,8 +734,8 @@ private class AutoObservable<T> extends Invalidator
         dependencies.set(source, sub);
         subscriptions.push(sub);
       case v:
-        if (!v.reused) {
-          v.reused = true;
+        if (!v.used) {
+          v.used = true;
           subscriptions.push(v);
         }
     }
