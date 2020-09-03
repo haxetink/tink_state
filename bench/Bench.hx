@@ -13,9 +13,9 @@ class Bench {
     }
     measure('create 10000 todos', () -> makeTodos(1000), 100);
 
+    var todos = makeTodos(1000);
     for (batched in [false, true])
-      measure('create 1000 todos, finish all [${batched ? 'batched' : 'direct'}]', () -> {
-        var todos = makeTodos(1000);
+      measure('toggle 1000 todos [${batched ? 'batched' : 'direct'}]', () -> {
 
         var unfinishedTodoCount = Observable.auto(() -> {
           var sum = 0;
@@ -24,13 +24,15 @@ class Bench {
           sum;
         });
 
-        unfinishedTodoCount.bind({ direct: !batched }, function (x) {});
+        var watch = unfinishedTodoCount.bind({ direct: !batched }, function (x) {});
 
         for (t in todos)
-          t.done.value = true;
+          t.done.value = !t.done.value;
 
         if (batched)
           Observable.updateAll();
+
+        watch.cancel();
 
       }, if (batched) 100 else 10);
   }
