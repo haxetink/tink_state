@@ -139,6 +139,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>>
     return Observable.auto(() -> p);
 
+  @:deprecated
   static public function create<T>(f, ?comparator):Observable<T>
     return new SimpleObservable(f, comparator);
 
