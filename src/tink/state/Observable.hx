@@ -526,7 +526,7 @@ private class SubscriptionTo<T> {
   #if tink_state_test_subs
     static public var liveCount(default, null) = 0;
   #end
-  var alive:Bool = false;
+  var connected:Bool = false;
 
   public function new<X>(source, cur, owner:AutoObservable<X>) {
     this.source = source;
@@ -534,7 +534,7 @@ private class SubscriptionTo<T> {
     this.lastRev = source.getRevision();
     this.owner = owner;
 
-    if (owner.hot) register();
+    if (owner.hot) connect();
   }
 
   public function isValid()
@@ -549,20 +549,20 @@ private class SubscriptionTo<T> {
     return !source.getComparator().eq(last, before);
   }
 
-  public function unregister():Void {
-    if (alive) {
+  public function disconnect():Void {
+    if (connected) {
       #if tink_state_test_subs
         liveCount--;
       #end
-      alive = false;
+      connected = false;
     }
     else throw 'what?';
     link.cancel();
   }
 
-  public function register():Void {
-    if (alive) return;
-    alive = true;
+  public function connect():Void {
+    if (connected) return;
+    connected = true;
     #if tink_state_test_subs
       liveCount++;
     #end
@@ -637,14 +637,14 @@ private class AutoObservable<T> extends Invalidator
     getValue();
     getRevision();
     if (subscriptions != null)
-      for (s in subscriptions) s.register();
+      for (s in subscriptions) s.connect();
     hot = true;
   }
 
   function cooldown() {
     hot = false;
     if (subscriptions != null)
-      for (s in subscriptions) s.unregister();
+      for (s in subscriptions) s.disconnect();
   }
 
   static public inline function computeFor<T>(o:Derived, fn:Void->T) {
@@ -701,7 +701,7 @@ private class AutoObservable<T> extends Invalidator
           if (prevSubs != null) {
             for (s in prevSubs)
               if (!s.reused) {
-                if (hot) s.unregister();
+                if (hot) s.disconnect();
                 dependencies.remove(s.source);
               }
           }
