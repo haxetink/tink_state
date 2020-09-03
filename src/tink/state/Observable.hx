@@ -76,7 +76,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   static var scheduler:Scheduler =
     #if macro
-      Scheduler.inst;
+      Scheduler.direct;
     #else
       Scheduler.batched(Scheduler.batcher());
     #end
