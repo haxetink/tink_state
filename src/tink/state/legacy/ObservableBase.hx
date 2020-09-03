@@ -13,7 +13,7 @@ class ObservableBase<Change> {
     this.changes = _changes;
   }
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return [].iterator();
   #end

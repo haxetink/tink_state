@@ -100,7 +100,7 @@ private class Derived<K, V> implements MapView<K, V> {
   public function getComparator()
     return neverEqual;
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return self().getObservers();
 
@@ -177,7 +177,7 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
     return f();
   }
 
-  #if debug_observables
+  #if tink_state.debug
   public function getDependencies()
     return [].iterator();
   #end

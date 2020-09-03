@@ -1,5 +1,5 @@
 tests.hxml
--D debug_observables
+-D tink_state.debug
 -D no-deprecation-warnings
 -lib tink_state
 -lib travix

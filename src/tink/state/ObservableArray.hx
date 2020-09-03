@@ -244,7 +244,7 @@ private class DerivedView<T> implements ArrayView<T> {
   inline function self()
     return (o:ObservableObject<Array<T>>);
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return self().getObservers();
 

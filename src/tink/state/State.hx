@@ -70,7 +70,7 @@ private class CompoundState<T> implements StateObject<T> {
   public function onInvalidate(i)
     return data.onInvalidate(i);
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return data.getObservers();//TODO: this is not very exact
 
@@ -156,7 +156,7 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
     return value;
   }
 
-  #if debug_observables
+  #if tink_state.debug
   public function getDependencies()
     return [].iterator();
   #end

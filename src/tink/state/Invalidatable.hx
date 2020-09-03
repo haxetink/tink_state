@@ -24,7 +24,7 @@ class Invalidator {
         list.add(i.invalidate) & observers.remove.bind(i);
       }
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return observers.keys();
   #end

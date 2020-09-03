@@ -29,7 +29,7 @@ private class ValueIterator<T> implements ObservableObject<Iterator<T>> {
   public function getComparator()
     return null;
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return [].iterator();
   #end

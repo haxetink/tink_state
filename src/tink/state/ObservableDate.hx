@@ -48,7 +48,7 @@ class ObservableDate implements ObservableObject<Bool> {
       }
   }
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return _observable.getObservers();
 

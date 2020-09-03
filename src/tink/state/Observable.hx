@@ -160,7 +160,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static inline function neq<T>(a:Observable<T>, b:Observable<T>):Bool
     return !eq(a, b);
 
-  #if tink_state_test_subs
+  #if tink_state.test_subscriptions
     static function subscriptionCount()
       return Subscription.liveCount;
   #end
@@ -211,7 +211,7 @@ private class SignalObservable<X, T> implements ObservableObject<T> {
         changed.handle(i.invalidate);
       }
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return observers.keys();
 
@@ -230,7 +230,7 @@ interface ObservableObject<T> {
   function isValid():Bool;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
-  #if debug_observables
+  #if tink_state.debug
   function getObservers():Iterator<Invalidatable>;
   function getDependencies():Iterator<Observable<Any>>;
   #end
@@ -259,7 +259,7 @@ private class ConstObservable<T> implements ObservableObject<T> {
   public function getComparator()
     return null;
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return EMPTY.iterator();
 
@@ -356,7 +356,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
   public function getValue()
     return poll().value;
 
-  #if debug_observables
+  #if tink_state.debug
   public function getDependencies()
     return [].iterator();
   #end
@@ -523,7 +523,7 @@ private class SubscriptionTo<T> {
 
   public var used = true;
 
-  #if tink_state_test_subs
+  #if tink_state.test_subscriptions
     static public var liveCount(default, null) = 0;
   #end
   var connected:Bool = false;
@@ -551,12 +551,12 @@ private class SubscriptionTo<T> {
 
   public function disconnect():Void {
     if (connected) {
-      #if tink_state_test_subs
+      #if tink_state.test_subscriptions
         liveCount--;
       #end
       connected = false;
     }
-    #if tink_state_test_subs
+    #if tink_state.test_subscriptions
       else throw 'what?';
     #end
     link.cancel();
@@ -564,13 +564,13 @@ private class SubscriptionTo<T> {
 
   public function connect():Void {
     if (connected)
-      #if tink_state_test_subs
+      #if tink_state.test_subscriptions
         throw 'what?';
       #else
         return;
       #end
     connected = true;
-    #if tink_state_test_subs
+    #if tink_state.test_subscriptions
       liveCount++;
     #end
     this.link = source.onInvalidate(owner);
@@ -745,7 +745,7 @@ private class AutoObservable<T> extends Invalidator
       fire();
     }
 
-  #if debug_observables
+  #if tink_state.debug
   public function getDependencies()
     return cast dependencies.keys();
   #end
@@ -802,7 +802,7 @@ abstract Transform<T, R>(T->R) {
 //   public function onInvalidate(i)
 //     return source.onInvalidate(i);
 
-//   #if debug_observables
+//   #if tink_state.debug
 //   public function getObservers()
 //     return source.getObservers();
 //   public function getDependencies()
