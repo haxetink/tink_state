@@ -243,10 +243,11 @@ private abstract Transform<T, R>(T->R) {
 @:access(tink.state.Observable)
 class ObservableTools {
 
-  static public function deliver<T>(o:Observable<Promised<T>>, initial:T):Observable<T>
+  static public function deliver<T>(o:Observable<Promised<T>>, initial:T, ?failed:Error->T->T):Observable<T>
     return Observable.lift(o).map(function (p) return switch p {
       case Done(v): initial = v;
-      default: initial;
+      case Loading: initial;
+      case Failed(e): if (failed != null) initial = failed(e, initial) else initial;
     });
 
   static public function flatten<T>(o:Observable<Observable<T>>)
