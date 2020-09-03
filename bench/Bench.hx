@@ -37,9 +37,10 @@ class Bench {
 
   static function measure(name, f:()->Void, ?repeat = 1) {
     f();
-    var start = Date.now().getTime();
     var old = haxe.Log.trace;
     haxe.Log.trace = function (_, ?_) {}
+    for (i in 0...repeat - 1) f();
+    var start = Date.now().getTime();
     for (i in 0...repeat) f();
     haxe.Log.trace = old;
     #if sys

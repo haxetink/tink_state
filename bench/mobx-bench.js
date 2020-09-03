@@ -12,7 +12,7 @@ function createTodos(count) {
 }
 
 function measure(name, task, repeat = 1) {
-  task();// warmup
+  for (let i = 0; i < repeat; i++) task();// warmup
   let start = Date.now();
   for (let i = 0; i < repeat; i++) task();
   console.log(`${name} took ${(Date.now() - start) / repeat}ms (avg. of ${repeat} runs)`);
