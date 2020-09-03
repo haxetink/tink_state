@@ -556,12 +556,19 @@ private class SubscriptionTo<T> {
       #end
       connected = false;
     }
-    else throw 'what?';
+    #if tink_state_test_subs
+      else throw 'what?';
+    #end
     link.cancel();
   }
 
   public function connect():Void {
-    if (connected) return;
+    if (connected)
+      #if tink_state_test_subs
+        throw 'what?';
+      #else
+        return;
+      #end
     connected = true;
     #if tink_state_test_subs
       liveCount++;
