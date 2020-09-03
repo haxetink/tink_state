@@ -59,4 +59,12 @@ class PromisedTools {
       }
     return Done(ret);
   }
+
+  static public function merge<A, B, C>(a:Promised<A>, b:Promised<B>, combine:A->B->C):Promised<C> {
+    return switch [a, b] {
+      case [Done(a), Done(b)]: Done(combine(a, b));
+      case [Failed(e), _] | [_, Failed(e)]: Failed(e);
+      case _: Loading;
+    }
+  }
 }
