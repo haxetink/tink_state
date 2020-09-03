@@ -76,20 +76,22 @@ private class SubscriptionTo<T> {
 
   public function disconnect():Void {
     #if tink_state.test_subscriptions
-    if (connected) {
-      @:privateAccess AutoObservable.subscriptionCount--;
-      connected = false;
-    }
-    else throw 'what?';
+      if (connected) {
+        @:privateAccess AutoObservable.subscriptionCount--;
+        connected = false;
+      }
+      else throw 'what?';
     #end
     link.cancel();
   }
 
   public function connect():Void {
     #if tink_state.test_subscriptions
-    if (connected) throw 'what?';
-    connected = true;
-    @:privateAccess AutoObservable.subscriptionCount++;
+      if (connected) throw 'what?';
+      else {
+        connected = true;
+        @:privateAccess AutoObservable.subscriptionCount++;
+      }
     #end
     this.link = source.onInvalidate(owner);
   }
