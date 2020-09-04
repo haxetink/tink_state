@@ -10,7 +10,7 @@ abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from S
       return param;
     }
 
-  public inline function new(value:T, ?comparator:Comparator<T>, ?guard:(raw:T)->T, ?onStatusChange:(isWatched:Bool)->Void, ?toString #if tink_state.debug , ?pos #end)
+  public function new(value:T, ?comparator:Comparator<T>, ?guard:(raw:T)->T, ?onStatusChange:(isWatched:Bool)->Void, ?toString #if tink_state.debug , ?pos #end)
     this = switch guard {
       case null: new SimpleState(value, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
       case f: new GuardedState(value, guard, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
