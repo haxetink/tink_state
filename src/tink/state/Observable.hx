@@ -36,8 +36,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return new Binding(this, cb, scheduler, comparator).cancel;
   }
 
-  public inline function new(get:Void->T, changed:Signal<Noise>)
-    this = new SignalObservable(get, changed);
+  public inline function new(get:Void->T, changed:Signal<Noise>, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end)
+    this = new SignalObservable(get, changed, toString #if tink_state.debug , pos #end);
 
   public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
     return Observable.auto(() -> f(value, that.value));
@@ -128,14 +128,14 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return Observable.auto(() -> p);
 
   @:deprecated
-  static public function create<T>(f, ?comparator):Observable<T>
-    return new SimpleObservable(f, comparator);
+  static public function create<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
+    return new SimpleObservable(f, comparator, toString #if tink_state.debug , pos #end);
 
-  static public function auto<T>(f, ?comparator):Observable<T>
-    return new AutoObservable<T>(f, comparator);
+  static public function auto<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
+    return new AutoObservable<T>(f, comparator, toString #if tink_state.debug , pos #end);
 
-  @:noUsing static public function const<T>(value:T):Observable<T>
-    return new ConstObservable(value);
+  @:noUsing static public function const<T>(value:T, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
+    return new ConstObservable(value, toString #if tink_state.debug , pos #end);
 
   @:op(a == b)
   static function eq<T>(a:Observable<T>, b:Observable<T>):Bool
@@ -163,8 +163,22 @@ private class ConstObservable<T> implements ObservableObject<T> {
   public function getRevision()
     return revision;
 
-  public function new(value)
+  public function new(value, ?toString:()->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
     this.value = value;
+    #if tink_state.debug
+    this._toString =
+      switch toString {
+        case null: () -> 'Constant[$value](${pos.fileName}:${pos.lineNumber}';
+        case v: v;
+      }
+    #end
+  }
+
+  #if tink_state.debug
+  final _toString:()->String;
+  public function toString()
+    return _toString();
+  #end
 
   public function getValue()
     return value;
@@ -195,7 +209,8 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
   var _cache:Measurement<T> = null;
   var comparator:Comparator<T>;
 
-  public function new(poll, ?comparator) {
+  public function new(poll, ?comparator, ?toString #if tink_state.debug , ?pos #end) {
+    super(toString #if tink_state.debug , pos #end);
     this._poll = poll;
     this.comparator = comparator;
   }

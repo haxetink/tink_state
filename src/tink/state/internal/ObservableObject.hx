@@ -9,5 +9,6 @@ interface ObservableObject<T> {
   #if tink_state.debug
   function getObservers():Iterator<Invalidatable>;
   function getDependencies():Iterator<Observable<Any>>;
+  @:keep function toString():String;
   #end
 }

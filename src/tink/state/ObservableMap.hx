@@ -104,6 +104,9 @@ private class Derived<K, V> implements MapView<K, V> {
 
   public function getDependencies()
     return self().getDependencies();
+
+  @:keep public function toString()
+    return 'ObservableMapView${o.value.toString()}';
   #end
 }
 
@@ -112,8 +115,10 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   var valid = false;
   var entries:Map<K, V>;
 
-  public function new(entries:Map<K, V>)
+  public function new(entries:Map<K, V>) {
+    super();
     this.entries = entries;
+  }
 
   public function observe():Observable<MapView<K, V>>
     return this;
@@ -148,8 +153,11 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   public function copy():IMap<K, V>
     return cast calc(() -> entries.copy());
 
+  #if tink_state.debug
+  @:keep override
+  #end
   public function toString():String
-    return calc(() -> entries.toString());
+    return 'ObservableMap' + calc(() -> entries.toString());
 
   public function clear():Void
     update(() -> { entries.clear(); null; });

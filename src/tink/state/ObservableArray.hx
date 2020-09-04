@@ -140,8 +140,10 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
     function get_length()
       return calc(() -> entries.length);
 
-  public function new(entries)
+  public function new(entries) {
+    super(#if tink_state.debug () -> 'ObservableArray${this.entries.toString()}' #end);
     this.entries = entries;
+  }
 
   public function replace(values:Array<T>)
     update(() -> { entries = values.copy(); });
@@ -248,6 +250,10 @@ private class DerivedView<T> implements ArrayView<T> {
 
   public function getDependencies()
     return [(cast o:Observable<Any>)].iterator();
+
+  @:keep public function toString()
+    return 'ObservableArrayView${o.value.toString()}';
+
   #end
 
   public function getValue():ArrayView<T>

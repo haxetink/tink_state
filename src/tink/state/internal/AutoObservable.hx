@@ -78,6 +78,7 @@ private class SubscriptionTo<T> {
     #if tink_state.test_subscriptions
       if (connected) {
         @:privateAccess AutoObservable.subscriptionCount--;
+        trace('rem ${Type.getClassName(Type.getClass(source))} ${Std.string(source.getValue())}');
         connected = false;
       }
       else throw 'what?';
@@ -90,6 +91,7 @@ private class SubscriptionTo<T> {
       if (connected) throw 'what?';
       else {
         connected = true;
+        trace('add ${Type.getClassName(Type.getClass(source))} ${Std.string(source.getValue())}');
         @:privateAccess AutoObservable.subscriptionCount++;
       }
     #end
@@ -156,7 +158,8 @@ class AutoObservable<T> extends Invalidator
   public function getComparator()
     return comparator;
 
-  public function new(compute, ?comparator) {
+  public function new(compute, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end) {
+    super(toString #if tink_state.debug , pos #end);
     this.compute = compute;
     this.comparator = comparator;
     this.list.onfill = heatup;

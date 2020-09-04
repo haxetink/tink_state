@@ -10,10 +10,10 @@ abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from S
       return param;
     }
 
-  public inline function new(value:T, ?comparator:Comparator<T>, ?guard:(raw:T)->T, ?onStatusChange:(isWatched:Bool)->Void)
+  public inline function new(value:T, ?comparator:Comparator<T>, ?guard:(raw:T)->T, ?onStatusChange:(isWatched:Bool)->Void, ?toString #if tink_state.debug , ?pos #end)
     this = switch guard {
-      case null: new SimpleState(value, comparator, onStatusChange);
-      case f: new GuardedState(value, guard, comparator, onStatusChange);
+      case null: new SimpleState(value, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
+      case f: new GuardedState(value, guard, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
     }
 
   public inline function observe():Observable<T>
@@ -71,6 +71,10 @@ private class CompoundState<T> implements StateObject<T> {
 
   public function getDependencies()
     return [(cast data:Observable<Any>)].iterator();
+
+  @:keep public function toString()
+    return 'CompoundState[${data.toString()}]';//TODO: perhaps this should be providable from outside
+
   #end
 
   public function set(value) {
@@ -86,8 +90,8 @@ private class GuardedState<T> extends SimpleState<T> {
   final guard:T->T;
   var guardApplied = false;
 
-  public function new(value, guard, ?comparator, ?onStatusChange) {
-    super(value, comparator, onStatusChange);
+  public function new(value, guard, ?comparator, ?onStatusChange, ?toString #if tink_state.debug , ?pos #end) {
+    super(value, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
     this.guard = guard;
   }
 
@@ -116,7 +120,8 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
   public function isValid()
     return true;
 
-  public function new(value, ?comparator, ?onStatusChange:Bool->Void) {
+  public function new(value, ?comparator, ?onStatusChange:Bool->Void, ?toString #if tink_state.debug , ?pos #end) {
+    super(toString #if tink_state.debug , pos #end);
     this.value = value;
     this.comparator = comparator;
     if (onStatusChange != null) {

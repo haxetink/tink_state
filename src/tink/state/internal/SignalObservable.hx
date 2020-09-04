@@ -13,14 +13,28 @@ class SignalObservable<X, T> implements ObservableObject<T> {
   final observers = new Map();
   final changed:Signal<Noise>;
 
-  public function new(get, changed:Signal<Noise>) {
+  public function new(get, changed:Signal<Noise>, ?toString:()->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
     this.get = get;
     this.changed = changed;
     this.changed.handle(function (_) if (valid) {
       revision = new Revision();
       valid = false;
     });
+    #if tink_state.debug
+      this._toString = switch toString {
+        case null: () -> 'SignalObservable#$id(${pos.fileName}:${pos.lineNumber})';
+        case v: v;
+      }
+    #end
   }
+
+  #if tink_state.debug
+  static var counter = 0;
+  var id = counter++;
+  final _toString:()->String;
+  @:keep public function toString()
+    return _toString();
+  #end
 
   public function getValue():T
     return

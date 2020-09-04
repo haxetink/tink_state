@@ -52,6 +52,10 @@ class ObservableDate implements ObservableObject<Bool> {
 
   public function getDependencies()
     return [].iterator();
+
+  @:keep public function toString()
+    return 'ObservableDate${date.toString()}';
+
   #end
 
   public function observe():Observable<Bool>
