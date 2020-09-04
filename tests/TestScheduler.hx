@@ -66,7 +66,7 @@ class TestScheduler {
   public function testAtomic() {
     var s = new State(0);
     var cur = 0;
-    s.observe().bind({ direct: true }, v -> cur = v);
+    s.observe().bind(v -> cur = v, Scheduler.direct);
 
     Scheduler.atomically(() -> {
       s.set(1);

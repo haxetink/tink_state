@@ -1,5 +1,6 @@
 package ;
 
+import tink.state.Scheduler.direct;
 import tink.state.*;
 
 using tink.CoreApi;
@@ -17,8 +18,8 @@ class TestMaps {
     function report(k:Int) return function (v:Int) a.push('$k:$v');
 
     var watch:CallbackLink = [
-      o.entry(5).bind({ direct: true }, report(5)),
-      o.entry(6).bind({ direct: true }, report(6)),
+      o.entry(5).bind(report(5), direct),
+      o.entry(6).bind(report(6), direct),
     ];
 
     o.set(5, 1);

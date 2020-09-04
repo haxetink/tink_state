@@ -22,8 +22,8 @@ abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from S
   public function transform<R>(rules:{ function read(v:T):R; function write(v:R):T; }):State<R>
     return new CompoundState(observe().map(rules.read), function (value) this.set(rules.write(value)));
 
-  public inline function bind(?options, cb:Callback<T>):CallbackLink
-    return observe().bind(options, cb);
+  public inline function bind(#if tink_state.legacy_binding_options ?options, #end cb:Callback<T>, ?comparator, ?scheduler):CallbackLink
+    return observe().bind(#if tink_state.legacy_binding_options options, #end cb, comparator, scheduler);
 
   @:impl static public function toggle(s:StateObject<Bool>) {
     s.set(!s.getValue());

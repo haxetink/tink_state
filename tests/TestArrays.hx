@@ -1,6 +1,7 @@
 package ;
 
 import tink.state.*;
+import tink.state.Scheduler.direct;
 
 using tink.CoreApi;
 using Lambda;
@@ -23,9 +24,9 @@ class TestArrays {
 
     function report(name:String) return function (v:Null<Int>) log.push('$name:$v');
 
-    Observable.auto(() -> a.length).bind({ direct: true }, report('l'));
+    Observable.auto(() -> a.length).bind(report('l'), direct);
 
-    a.entry(99).bind({ direct: true }, report('99'));
+    a.entry(99).bind(report('99'), direct);
 
     asserts.assert(getLog() == 'l:100,99:99');
     clear();
@@ -90,10 +91,10 @@ class TestArrays {
     }
 
     Observable.auto(function () return sum(a.iterator()))
-      .bind({ direct: true }, function () valuesChanges++);
+      .bind(function () valuesChanges++, direct);
 
     Observable.auto(function () return sum(a.keys()))
-      .bind({ direct: true }, function () keysChanges++);
+      .bind(function () keysChanges++, direct);
 
     Observable.auto(function () {
       var first = 0;
@@ -102,7 +103,7 @@ class TestArrays {
         break;
       }
       return first;
-    }).bind({ direct: true, comparator: (_, _) -> false }, function () iteratorChanges++);
+    }).bind(function () iteratorChanges++, (_, _) -> false, direct);
 
     asserts.assert(iteratorChanges * valuesChanges * keysChanges == 1);
 
@@ -132,8 +133,8 @@ class TestArrays {
 
     var log = '';
 
-    Observable.auto(() -> o.length).bind({ direct: true }, function(v) return log += 'len:$v');
-    for(i in 0...o.length) o.entry(i).bind({ direct: true }, function(v) return log += ',$i:$v');
+    Observable.auto(() -> o.length).bind(function(v) return log += 'len:$v', direct);
+    for(i in 0...o.length) o.entry(i).bind(function(v) return log += ',$i:$v', direct);
     o.clear();
 
     asserts.assert(log.replace('undefined', '-').replace('null', '-') == 'len:3,0:1,1:2,2:3len:0,0:-,1:-,2:-');

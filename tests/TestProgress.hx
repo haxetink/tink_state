@@ -1,5 +1,6 @@
 import tink.state.*;
 
+import tink.state.Scheduler.direct;
 
 using tink.CoreApi;
 
@@ -14,7 +15,7 @@ class TestProgress {
     var progress = state.asProgress();
 
     var p;
-    var watch = progress.bind({direct: true}, function(v) p = v);
+    var watch = progress.bind(v -> p = v, direct);
     state.progress(0.5, None);
     asserts.assert(p.match(InProgress({ value: 0.5, total: None })));
     state.finish('Done');
@@ -33,7 +34,7 @@ class TestProgress {
     var progress:Progress<String> = Future.sync(state.asProgress());
 
     var p;
-    var watch = progress.bind({direct: true}, function(v) p = v);
+    var watch = progress.bind(v -> p = v, direct);
     state.progress(0.5, None);
 
     asserts.assert(p.match(InProgress({ value: 0.5, total: None })));
@@ -53,7 +54,7 @@ class TestProgress {
     var progress:Progress<Outcome<String, Error>> = Promise.lift(state.asProgress());
 
     var p;
-    var watch = progress.bind({direct: true}, function(v) p = v);
+    var watch = progress.bind(v -> p = v, direct);
     state.progress(0.5, None);
     asserts.assert(p.match(InProgress({ value: 0.5, total: None })));
     state.finish('Done');

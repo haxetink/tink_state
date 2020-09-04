@@ -1,5 +1,6 @@
 package;
 
+import tink.state.Scheduler.direct;
 import tink.state.Promised;
 import tink.state.Observable;
 import tink.state.*;
@@ -47,7 +48,7 @@ class TestAuto {
 
     var sum = 0;
 
-    var watch = o.bind({ direct: true }, function (v) sum = v);
+    var watch = o.bind(function (v) sum = v, direct);
 
     asserts.assert(sum == s1.value + s2.value);
     asserts.assert(calls == 1);
@@ -146,7 +147,7 @@ class TestAuto {
       });
     }
 
-    var watch = o.bind({ direct: true }, function () {});
+    var watch = o.bind(function () {}, direct);
 
     asserts.assert(o.value == 1);
 
@@ -210,7 +211,7 @@ class TestAuto {
     var selectedCount = select.observe().map(a -> Lambda.count(a, x -> x));
 
     var result = 0;
-    var watch = Observable.auto(add).bind({ direct: true }, x -> result = x);
+    var watch = Observable.auto(add).bind(x -> result = x, direct);
 
     function check(?pos:haxe.PosInfos)
       asserts.assert(selectedCount.value + 1 + initial == count());

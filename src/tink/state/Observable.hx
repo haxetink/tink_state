@@ -1,5 +1,17 @@
 package tink.state;
 
+private typedef BindingOptions<T> = Deprecated<{
+  ?direct:Bool,
+  ?comparator:T->T->Bool,
+}>;
+
+@:forward
+abstract Deprecated<T>(T) {
+  @:deprecated
+  @:from static function of<X>(v:X):Deprecated<X>
+    return cast v;
+}
+
 @:using(tink.state.Observable.ObservableTools)
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   public var value(get, never):T;
@@ -9,8 +21,20 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public inline function untracked<T>(fn:Void->T)
     return AutoObservable.untracked(fn);
 
-  public function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink
-    return new Binding(this, cb, if (options != null && options.direct) null else scheduler, if (options == null) null else options.comparator).cancel;
+  public function bind(
+    #if tink_state.legacy_binding_options ?options:BindingOptions<T>, #end
+    cb:Callback<T>, ?comparator:Comparator<T>, ?scheduler
+  ):CallbackLink {
+    #if tink_state.legacy_binding_options
+      if (options != null) {
+        comparator = options.comparator;
+        if (options.direct) scheduler = Scheduler.direct;
+      }
+    #end
+    if (scheduler == null)
+      scheduler = Observable.scheduler;
+    return new Binding(this, cb, scheduler, comparator).cancel;
+  }
 
   public inline function new(get:Void->T, changed:Signal<Noise>)
     this = new SignalObservable(get, changed);
@@ -25,7 +49,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     var ret = Future.trigger(),
         waiting = options != null && options.butNotNow;
 
-    var link = bind({ direct: options != null && options.hires }, function (value) {
+    var link = bind(function (value) {
       var out = select(value);
       if (waiting)
         waiting = out != None;
@@ -33,7 +57,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         case Some(value): ret.trigger(value);
         case None:
       }
-    });
+    }, if (options != null && options.hires) Scheduler.direct else null);
 
     ret.handle(link.cancel);
 
@@ -208,11 +232,6 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
   public function getDependencies()
     return [].iterator();
   #end
-}
-
-typedef BindingOptions<T> = {
-  ?direct:Bool,
-  ?comparator:Comparator<T>,
 }
 
 private abstract Transform<T, R>(T->R) {

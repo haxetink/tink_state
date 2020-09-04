@@ -24,7 +24,7 @@ class Bench {
           sum;
         });
 
-        var watch = unfinishedTodoCount.bind({ direct: !batched }, function (x) {});
+        var watch = unfinishedTodoCount.bind(function (x) {}, if (batched) null else Scheduler.direct);
 
         for (t in todos)
           t.done.value = !t.done.value;

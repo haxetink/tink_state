@@ -1,6 +1,6 @@
 package;
 
-import tink.state.Observable;
+import tink.state.Scheduler.direct;
 import tink.state.*;
 
 using tink.CoreApi;
@@ -13,7 +13,7 @@ class TestBasic {
   public function donotFireEqual() {
     var s = new State(0),
         sLog = [];
-    var watch = s.observe().bind({ direct: true, comparator: function (_, _) return true }, sLog.push);
+    var watch = s.observe().bind(sLog.push, (_, _) -> true, direct);
 
     var o1Log = [],
         o1 = Observable.auto(function () {
@@ -23,8 +23,8 @@ class TestBasic {
         o2 = Observable.auto(function () {
           return s.value;
         });
-    watch &= o1.bind({ direct: true }, o1Log.push);
-    watch &= o2.bind({ direct: true }, o2Log.push);
+    watch &= o1.bind(o1Log.push, direct);
+    watch &= o2.bind(o2Log.push, direct);
 
     asserts.assert(sLog.join(',') == '0');
     asserts.assert(o1Log.join(',') == '0');
@@ -68,10 +68,10 @@ class TestBasic {
     });
 
     var log = [];
-    var watch = combined.bind({ direct: true }, function (x) switch x {
+    var watch = combined.bind(function (x) switch x {
       case Done(v): log.push(v);
       default:
-    });
+    }, direct);
 
     function expect(a:Array<String>, ?pos:haxe.PosInfos) {
       asserts.assert(a.join(' --- ') == log.join(' --- '), pos);
