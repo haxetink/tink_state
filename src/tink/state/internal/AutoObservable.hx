@@ -82,6 +82,9 @@ private class SubscriptionTo<T> {
       }
       else throw 'what?';
     #end
+    #if tink_state.debug
+      tink.state.debug.Logger.inst.disconnected(source, cast owner);
+    #end
     link.cancel();
   }
 
@@ -94,7 +97,7 @@ private class SubscriptionTo<T> {
       }
     #end
     #if tink_state.debug
-
+      tink.state.debug.Logger.inst.connected(source, cast owner);
     #end
     this.link = source.onInvalidate(owner);
   }
@@ -237,6 +240,9 @@ class AutoObservable<T> extends Invalidator
               if (!s.used) {
                 if (hot) s.disconnect();
                 dependencies.remove(s.source);
+                #if tink_state.debug
+                  tink.state.debug.Logger.inst.unsubscribed(s.source, this);
+                #end
               }
           }
         }
@@ -256,6 +262,9 @@ class AutoObservable<T> extends Invalidator
   public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
     switch dependencies.get(source) {
       case null:
+        #if tink_state.debug
+          tink.state.debug.Logger.inst.subscribed(source, this);
+        #end
         var sub:Subscription = cast new SubscriptionTo(source, cur, this);
         dependencies.set(source, sub);
         subscriptions.push(sub);
