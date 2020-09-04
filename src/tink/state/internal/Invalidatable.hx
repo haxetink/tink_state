@@ -11,15 +11,15 @@ class Invalidator {
   #if tink_state.debug
   static var counter = 0;
   final id = counter++;
-  final _toString:()->String;
+  final _toString:Int->String;
   @:keep public function toString()
-    return _toString();
+    return _toString(id);
   #end
   var used = 0;
-  function new(?toString:()->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
+  function new(?toString:(id:Int)->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
     #if tink_state.debug
       this._toString = switch toString {
-        case null: () -> Type.getClassName(Type.getClass(this)) + '#$id(${pos.fileName}:${pos.lineNumber})';
+        case null: id -> Type.getClassName(Type.getClass(this)) + '#$id(${pos.fileName}:${pos.lineNumber})';
         case v: v;
       }
     #end

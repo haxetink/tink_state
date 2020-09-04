@@ -141,7 +141,7 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
       return calc(() -> entries.length);
 
   public function new(entries) {
-    super(#if tink_state.debug () -> 'ObservableArray${this.entries.toString()}' #end);
+    super(#if tink_state.debug id -> 'ObservableArray#$id${this.entries.toString()}' #end);
     this.entries = entries;
   }
 

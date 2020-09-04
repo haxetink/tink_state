@@ -106,7 +106,7 @@ private class Derived<K, V> implements MapView<K, V> {
     return self().getDependencies();
 
   @:keep public function toString()
-    return 'ObservableMapView${o.value.toString()}';
+    return 'ObservableMapView#${o.value.toString()}';
   #end
 }
 
@@ -157,7 +157,7 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   @:keep override
   #end
   public function toString():String
-    return 'ObservableMap' + calc(() -> entries.toString());
+    return 'ObservableMap' #if tink_state.debug + '#$id' #end + calc(() -> entries.toString());
 
   public function clear():Void
     update(() -> { entries.clear(); null; });
