@@ -12,6 +12,9 @@ abstract Deprecated<T>(T) {
     return cast v;
 }
 
+#if tink_state.debug
+  @:forward(toString)
+#end
 @:using(tink.state.Observable.ObservableTools)
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   public var value(get, never):T;
