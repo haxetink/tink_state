@@ -23,7 +23,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   public function bind(
     #if tink_state.legacy_binding_options ?options:BindingOptions<T>, #end
-    cb:Callback<T>, ?comparator:Comparator<T>, ?scheduler
+    cb:Callback<T>, ?comparator:Comparator<T>, ?scheduler:Scheduler
   ):CallbackLink {
     #if tink_state.legacy_binding_options
       if (options != null) {
