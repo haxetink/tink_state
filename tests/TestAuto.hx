@@ -191,7 +191,7 @@ class TestAuto {
     return asserts.done();
   }
 
-  @:include public function testSubs() {
+  public function testSubs() {
     #if tink_state.test_subscriptions
     function count()
       return @:privateAccess Observable.subscriptionCount();
