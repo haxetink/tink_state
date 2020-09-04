@@ -21,6 +21,13 @@ class Binding<T> implements Invalidatable implements Scheduler.Schedulable {
     cb.invoke(this.last = data.getValue());
   }
 
+  #if tink_state.debug
+  static var counter = 0;
+  final id = counter++;
+  @:keep public function toString()
+    return 'Binding#$id[${data.toString()}]';//TODO: position might be helpful too
+  #end
+
   public function cancel() {
     link.cancel();
     status = Canceled;
