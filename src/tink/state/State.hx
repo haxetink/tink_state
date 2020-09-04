@@ -140,7 +140,7 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
 
   public function set(value) {
     #if !tink_state_ignore_binding_cascade_because_I_am_a_naughty_naughty_boy
-    if (Observable.isUpdating)
+    if (Observable.isUpdating && !Scheduler.direct.isAtomic)
       warn('Updating state in a binding');
     #end
 

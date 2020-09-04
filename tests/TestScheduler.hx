@@ -62,4 +62,25 @@ class TestScheduler {
 
     return asserts.done();
   }
+
+  public function testAtomic() {
+    var s = new State(0);
+    var cur = 0;
+    s.observe().bind({ direct: true }, v -> cur = v);
+
+    Scheduler.atomically(() -> {
+      s.set(1);
+      asserts.assert(s.value == 1);
+      asserts.assert(cur == 0);
+      Scheduler.atomically(() -> s.set(2));
+      asserts.assert(s.value == 1);
+      asserts.assert(cur == 0);
+      Scheduler.atomically(() -> s.set(3), true);
+      asserts.assert(s.value == 3);
+      asserts.assert(cur == 0);
+    });
+    asserts.assert(cur == 2);
+
+    return asserts.done();
+  }
 }

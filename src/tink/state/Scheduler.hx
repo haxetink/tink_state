@@ -7,6 +7,9 @@ abstract Scheduler(SchedulerObject) from SchedulerObject {
   public inline function run(f)
     this.schedule(JustOnce.call(f));
 
+  static public function atomically(f, ?forceNow)
+    direct.atomically(JustOnce.call(f), forceNow);
+
   static public function batched(run)
     return new BatchScheduler(run);
 
@@ -79,13 +82,43 @@ private interface SchedulerObject {
 
 private class DirectScheduler implements SchedulerObject {
 
+  var queue:Array<Schedulable> = null;
+  public var isAtomic(get, never):Bool;
+    inline function get_isAtomic()
+      return queue != null;
+
   public function new() {}
+
+  public function atomically(s:Schedulable, ?forceNow)
+    switch queue {
+      case null:
+        queue = [];
+        tink.core.Error.tryFinally(s.run, processQueue);
+      case q:
+        if (forceNow) s.run();
+        else q.push(s);
+    }
+
+  extern inline function run(s:Schedulable)
+    @:privateAccess Observable.performUpdate(s.run);
+
+  function processQueue() {
+    var error = null;
+    for (s in queue)
+      try run(s)
+      catch (e:haxe.Exception) error = e;
+    queue = null;
+    if (error != null)
+      throw error;
+  }
 
   public function progress(_)
     return false;
 
-  public function schedule(s:Schedulable)
-    @:privateAccess Observable.performUpdate(s.run);
+  public function schedule(s:Schedulable) {
+    if (queue != null) queue.push(s);
+    else @:privateAccess Observable.performUpdate(s.run);
+  }
 }
 
 private class BatchScheduler implements SchedulerObject {
