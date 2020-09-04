@@ -10,10 +10,10 @@ abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from S
       return param;
     }
 
-  public inline function new(value, ?comparator, ?guard)
+  public inline function new(value:T, ?comparator:Comparator<T>, ?guard:(raw:T)->T, ?onStatusChange:(isWatched:Bool)->Void)
     this = switch guard {
-      case null: new SimpleState(value, comparator);
-      case f: new GuardedState(value, guard, comparator);
+      case null: new SimpleState(value, comparator, onStatusChange);
+      case f: new GuardedState(value, guard, comparator, onStatusChange);
     }
 
   public inline function observe():Observable<T>
@@ -86,8 +86,8 @@ private class GuardedState<T> extends SimpleState<T> {
   final guard:T->T;
   var guardApplied = false;
 
-  public function new(value, guard, ?comparator) {
-    super(value, comparator);
+  public function new(value, guard, ?comparator, ?onStatusChange) {
+    super(value, comparator, onStatusChange);
     this.guard = guard;
   }
 
@@ -116,9 +116,13 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
   public function isValid()
     return true;
 
-  public function new(value, ?comparator) {
+  public function new(value, ?comparator, ?onStatusChange:Bool->Void) {
     this.value = value;
     this.comparator = comparator;
+    if (onStatusChange != null) {
+      list.ondrain = onStatusChange.bind(false);
+      list.onfill = onStatusChange.bind(true);
+    }
   }
 
   public function getValue()

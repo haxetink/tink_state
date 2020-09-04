@@ -191,14 +191,20 @@ class TestAuto {
     return asserts.done();
   }
 
-  #if tink_state_test_subs
-  public function testSubs() {
+  @:include public function testSubs() {
+    #if tink_state.test_subscriptions
     function count()
       return @:privateAccess Observable.subscriptionCount();
 
     var initial = count();//it's possible other tests leave behind subscriptions ... should probably warn in that case
+    #end
 
-    var states = [for (i in 0...10) new State(i)];
+    var liveCount = 0;
+    function watch(alive:Bool)
+      if (alive) liveCount++;
+      else liveCount--;
+
+    var states = [for (i in 0...10) new State(i, watch)];
     var select = new State([for (i in 0...states.length) i % 3 == 0]);
 
     function add() {
@@ -213,8 +219,12 @@ class TestAuto {
     var result = 0;
     var watch = Observable.auto(add).bind(x -> result = x, direct);
 
-    function check(?pos:haxe.PosInfos)
+    function check(?pos:haxe.PosInfos) {
+      #if tink_state.test_subscriptions
       asserts.assert(selectedCount.value + 1 + initial == count());
+      #end
+      asserts.assert(liveCount == selectedCount.value);
+    }
     asserts.assert(result == 18);
     check();
 
@@ -228,5 +238,4 @@ class TestAuto {
 
     return asserts.done();
   }
-  #end
 }
