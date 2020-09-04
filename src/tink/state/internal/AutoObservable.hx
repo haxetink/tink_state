@@ -78,7 +78,6 @@ private class SubscriptionTo<T> {
     #if tink_state.test_subscriptions
       if (connected) {
         @:privateAccess AutoObservable.subscriptionCount--;
-        trace('rem ${Type.getClassName(Type.getClass(source))} ${Std.string(source.getValue())}');
         connected = false;
       }
       else throw 'what?';
@@ -91,9 +90,11 @@ private class SubscriptionTo<T> {
       if (connected) throw 'what?';
       else {
         connected = true;
-        trace('add ${Type.getClassName(Type.getClass(source))} ${Std.string(source.getValue())}');
         @:privateAccess AutoObservable.subscriptionCount++;
       }
+    #end
+    #if tink_state.debug
+
     #end
     this.link = source.onInvalidate(owner);
   }
