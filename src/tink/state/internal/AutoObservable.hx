@@ -136,11 +136,10 @@ class AutoObservable<T> extends Invalidator
       return revision;
     if (subscriptions == null)
       getValue();
-    var max = Revision.ZERO;
+
     for (s in subscriptions)
-      max *= s.source.getRevision();
-    if (max > revision)
-      revision = new Revision();
+      if (s.source.getRevision() > revision)
+        return revision = new Revision();
 
     return revision;
   }
