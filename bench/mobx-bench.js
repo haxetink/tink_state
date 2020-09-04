@@ -58,6 +58,6 @@ measure('create 10000 todos', () => createTodos(1000), 100);
           item.done = !item.done;
       });
       dispose();
-    }, { atomic: 100, batched: 100, direct: 10 }[mode]);
+    }, { atomic: 1000, batched: 1000, direct: 10 }[mode]);
   });
 }
