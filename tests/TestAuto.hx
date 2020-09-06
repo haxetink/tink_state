@@ -1,5 +1,6 @@
 package;
 
+import tink.state.Scheduler.direct;
 import tink.state.Promised;
 import tink.state.Observable;
 import tink.state.*;
@@ -47,7 +48,7 @@ class TestAuto {
 
     var sum = 0;
 
-    o.bind({ direct: true }, function (v) sum = v);
+    var watch = o.bind(function (v) sum = v, direct);
 
     asserts.assert(sum == s1.value + s2.value);
     asserts.assert(calls == 1);
@@ -63,6 +64,8 @@ class TestAuto {
 
     asserts.assert(sum == s1.value + s2.value);
     asserts.assert(calls == 5);
+
+    watch.cancel();
 
     return asserts.done();
   }
@@ -144,7 +147,7 @@ class TestAuto {
       });
     }
 
-    o.bind({ direct: true }, function () {});
+    var watch = o.bind(function () {}, direct);
 
     asserts.assert(o.value == 1);
 
@@ -161,6 +164,8 @@ class TestAuto {
     asserts.assert(o.value == 2);
 
     asserts.assert('32,16,8,4,2' == a.join(','));
+
+    watch.cancel();
 
     return asserts.done();
   }
@@ -186,9 +191,20 @@ class TestAuto {
     return asserts.done();
   }
 
-  #if tink_state_test_subs
-  @:include public function testSubs() {
-    var states = [for (i in 0...10) new State(i)];
+  public function testSubs() {
+    #if tink_state.test_subscriptions
+    function count()
+      return @:privateAccess Observable.subscriptionCount();
+
+    var initial = count();//it's possible other tests leave behind subscriptions ... should probably warn in that case
+    #end
+
+    var liveCount = 0;
+    function watch(alive:Bool)
+      if (alive) liveCount++;
+      else liveCount--;
+
+    var states = [for (i in 0...10) new State(i, watch)];
     var select = new State([for (i in 0...states.length) i % 3 == 0]);
 
     function add() {
@@ -199,20 +215,27 @@ class TestAuto {
     }
 
     var selectedCount = select.observe().map(a -> Lambda.count(a, x -> x));
-    var selected = Observable.auto(add);
 
-    function check(?pos:haxe.PosInfos)
-      asserts.assert(selectedCount.value + 1 == @:privateAccess Observable.subscriptionCount());
-    asserts.assert(selected.value == 18);
+    var result = 0;
+    var watch = Observable.auto(add).bind(x -> result = x, direct);
+
+    function check(?pos:haxe.PosInfos) {
+      #if tink_state.test_subscriptions
+      asserts.assert(selectedCount.value + 1 + initial == count());
+      #end
+      asserts.assert(liveCount == selectedCount.value);
+    }
+    asserts.assert(result == 18);
     check();
 
     for (i in 0...10) {
       select.set([for (i in 0...states.length) Math.random() > .5]);
-      asserts.assert(selected.value == add());
+      asserts.assert(result == add());
       check();
     }
 
+    watch.cancel();
+
     return asserts.done();
   }
-  #end
 }

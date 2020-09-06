@@ -1,8 +1,6 @@
 package tink.state;
 
 import haxe.Constraints.IMap;
-import tink.state.Invalidatable;
-import tink.state.Observable;
 import haxe.iterators.*;
 
 @:forward
@@ -61,6 +59,9 @@ private class Derived<K, V> implements MapView<K, V> {
   public function new(o)
     this.o = o;
 
+  public function getRevision()
+    return self().getRevision();
+
   public function exists(key:K):Bool
     return o.value.exists(key);
 
@@ -96,6 +97,17 @@ private class Derived<K, V> implements MapView<K, V> {
 
   public function getComparator()
     return neverEqual;
+
+  #if tink_state.debug
+  public function getObservers()
+    return self().getObservers();
+
+  public function getDependencies()
+    return self().getDependencies();
+
+  @:keep public function toString()
+    return 'ObservableMapView#${o.value.toString()}';
+  #end
 }
 
 private class MapImpl<K, V> extends Invalidator implements MapView<K, V> implements IMap<K, V> {
@@ -103,8 +115,10 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   var valid = false;
   var entries:Map<K, V>;
 
-  public function new(entries:Map<K, V>)
+  public function new(entries:Map<K, V>) {
+    super();
     this.entries = entries;
+  }
 
   public function observe():Observable<MapView<K, V>>
     return this;
@@ -139,8 +153,11 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   public function copy():IMap<K, V>
     return cast calc(() -> entries.copy());
 
+  #if tink_state.debug
+  @:keep override
+  #end
   public function toString():String
-    return calc(() -> entries.toString());
+    return 'ObservableMap' #if tink_state.debug + '#$id' #end + calc(() -> entries.toString());
 
   public function clear():Void
     update(() -> { entries.clear(); null; });
@@ -165,4 +182,9 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
     observe().value;
     return f();
   }
+
+  #if tink_state.debug
+  public function getDependencies()
+    return [].iterator();
+  #end
 }

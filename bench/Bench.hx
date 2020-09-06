@@ -13,9 +13,9 @@ class Bench {
     }
     measure('create 10000 todos', () -> makeTodos(1000), 100);
 
-    for (batched in [false, true])
-      measure('create 1000 todos, finish all [${batched ? 'batched' : 'direct'}]', () -> {
-        var todos = makeTodos(1000);
+    var todos = makeTodos(1000);
+    for (mode in ['direct', 'batched', 'atomic'])
+      measure('toggle 1000 todos [$mode]', () -> {
 
         var unfinishedTodoCount = Observable.auto(() -> {
           var sum = 0;
@@ -24,22 +24,35 @@ class Bench {
           sum;
         });
 
-        unfinishedTodoCount.bind({ direct: !batched }, function (x) {});
+        var watch = unfinishedTodoCount.bind(function (x) {}, if (mode == 'batched') null else Scheduler.direct);
 
-        for (t in todos)
-          t.done.value = true;
+        function update()
+          for (t in todos)
+            t.done.value = !t.done.value;
 
-        if (batched)
+        if (mode == 'atomic')
+          Scheduler.atomically(update);
+        else
+          update();
+
+        if (mode == 'batched')
           Observable.updateAll();
 
-      }, if (batched) 100 else 10);
+        watch.cancel();
+
+      }, switch mode {
+        case 'atomic': 1000;
+        case 'batched': 1000;
+        default: 10;
+      });
   }
 
   static function measure(name, f:()->Void, ?repeat = 1) {
     f();
-    var start = Date.now().getTime();
     var old = haxe.Log.trace;
     haxe.Log.trace = function (_, ?_) {}
+    for (i in 0...repeat - 1) f();
+    var start = Date.now().getTime();
     for (i in 0...repeat) f();
     haxe.Log.trace = old;
     #if sys

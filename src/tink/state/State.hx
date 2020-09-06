@@ -1,10 +1,5 @@
 package tink.state;
 
-import tink.state.Observable;
-import tink.state.Invalidatable;
-
-using tink.CoreApi;
-
 @:forward(set)
 abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from StateObject<T> {
 
@@ -15,10 +10,10 @@ abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from S
       return param;
     }
 
-  public inline function new(value, ?comparator, ?guard)
+  public function new(value:T, ?comparator:Comparator<T>, ?guard:(raw:T)->T, ?onStatusChange:(isWatched:Bool)->Void, ?toString #if tink_state.debug , ?pos #end)
     this = switch guard {
-      case null: new SimpleState(value, comparator);
-      case f: new GuardedState(value, guard, comparator);
+      case null: new SimpleState(value, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
+      case f: new GuardedState(value, guard, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
     }
 
   public inline function observe():Observable<T>
@@ -27,8 +22,8 @@ abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from S
   public function transform<R>(rules:{ function read(v:T):R; function write(v:R):T; }):State<R>
     return new CompoundState(observe().map(rules.read), function (value) this.set(rules.write(value)));
 
-  public inline function bind(?options:BindingOptions<T>, cb:Callback<T>):CallbackLink
-    return observe().bind(options, cb);
+  public inline function bind(#if tink_state.legacy_binding_options ?options, #end cb:Callback<T>, ?comparator, ?scheduler):CallbackLink
+    return observe().bind(#if tink_state.legacy_binding_options options, #end cb, comparator, scheduler);
 
   @:impl static public function toggle(s:StateObject<Bool>) {
     s.set(!s.getValue());
@@ -58,6 +53,9 @@ private class CompoundState<T> implements StateObject<T> {
     this.comparator = comparator;
   }
 
+  public function getRevision()
+    return data.getRevision();
+
   public function isValid()
     return data.isValid();
 
@@ -67,9 +65,16 @@ private class CompoundState<T> implements StateObject<T> {
   public function onInvalidate(i)
     return data.onInvalidate(i);
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
-    return data.getObservers();
+    return data.getObservers();//TODO: this is not very exact
+
+  public function getDependencies()
+    return [(cast data:Observable<Any>)].iterator();
+
+  @:keep public function toString()
+    return 'CompoundState[${data.toString()}]';//TODO: perhaps this should be providable from outside
+
   #end
 
   public function set(value) {
@@ -85,8 +90,8 @@ private class GuardedState<T> extends SimpleState<T> {
   final guard:T->T;
   var guardApplied = false;
 
-  public function new(value, guard, ?comparator) {
-    super(value, comparator);
+  public function new(value, guard, ?comparator, ?onStatusChange, ?toString #if tink_state.debug , ?pos #end) {
+    super(value, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
     this.guard = guard;
   }
 
@@ -115,9 +120,14 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
   public function isValid()
     return true;
 
-  public function new(value, ?comparator) {
+  public function new(value, ?comparator, ?onStatusChange:Bool->Void, ?toString #if tink_state.debug , ?pos #end) {
+    super(toString #if tink_state.debug , pos #end);
     this.value = value;
     this.comparator = comparator;
+    if (onStatusChange != null) {
+      list.ondrain = onStatusChange.bind(false);
+      list.onfill = onStatusChange.bind(true);
+    }
   }
 
   public function getValue()
@@ -139,7 +149,7 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
 
   public function set(value) {
     #if !tink_state_ignore_binding_cascade_because_I_am_a_naughty_naughty_boy
-    if (Observable.isUpdating)
+    if (Observable.isUpdating && !Scheduler.direct.isAtomic)
       warn('Updating state in a binding');
     #end
 
@@ -149,4 +159,10 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
     }
     return value;
   }
+
+  #if tink_state.debug
+  public function getDependencies()
+    return [].iterator();
+  #end
+
 }

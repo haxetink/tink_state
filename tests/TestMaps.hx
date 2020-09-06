@@ -1,5 +1,6 @@
 package ;
 
+import tink.state.Scheduler.direct;
 import tink.state.*;
 
 using tink.CoreApi;
@@ -16,9 +17,9 @@ class TestMaps {
 
     function report(k:Int) return function (v:Int) a.push('$k:$v');
 
-    var unlink:CallbackLink = [
-      o.entry(5).bind({ direct: true }, report(5)),
-      o.entry(6).bind({ direct: true }, report(6)),
+    var watch:CallbackLink = [
+      o.entry(5).bind(report(5), direct),
+      o.entry(6).bind(report(6), direct),
     ];
 
     o.set(5, 1);
@@ -35,10 +36,12 @@ class TestMaps {
     asserts.assert('5:0,6:0,5:1,5:2,5:3,6:1,6:2' == a.join(','));
 
     a = [];
-    unlink.dissolve();
+    watch.cancel();
 
-    o.entry(5).bind(report(5));
-    o.entry(6).bind(report(6));
+    watch = [
+      o.entry(5).bind(report(5)),
+      o.entry(6).bind(report(6)),
+    ];
 
     o.set(5, 1);
     o.set(5, 2);
@@ -66,6 +69,7 @@ class TestMaps {
 
     asserts.assert('5:3,6:2,5:6,6:5' == a.join(','));
 
+    watch.cancel();
     return asserts.done();
   }
 
@@ -83,7 +87,7 @@ class TestMaps {
 
     var counts = [];
 
-    Observable.auto(function () {
+    var watch = Observable.auto(function () {
       var counter = 0;
       for (i in [map.keys(), map.iterator()])
         for (x in i) counter++;
@@ -102,6 +106,8 @@ class TestMaps {
 
     Observable.updateAll();
     asserts.assert(counts.join(',') == '2,4,6');
+
+    watch.cancel();
 
     return asserts.done();
   }

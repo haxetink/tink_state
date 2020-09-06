@@ -1,7 +1,5 @@
 package tink.state;
 
-import tink.state.Invalidatable;
-import tink.state.Observable;
 import haxe.iterators.*;
 
 @:forward
@@ -142,8 +140,10 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
     function get_length()
       return calc(() -> entries.length);
 
-  public function new(entries)
+  public function new(entries) {
+    super(#if tink_state.debug id -> 'ObservableArray#$id${this.entries.toString()}' #end);
     this.entries = entries;
+  }
 
   public function replace(values:Array<T>)
     update(() -> { entries = values.copy(); });
@@ -159,6 +159,9 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
 
   public function resize(size:Int)
     update(() -> { entries.resize(size); null; });
+
+  public function getDependencies()
+    return [].iterator();
 
   public inline function clear()
     resize(0);
@@ -229,6 +232,9 @@ private class DerivedView<T> implements ArrayView<T> {
 
   final o:Observable<Array<T>>;
 
+  public function getRevision()
+    return self().getRevision();
+
   public function new(o)
     this.o = o;
 
@@ -238,9 +244,16 @@ private class DerivedView<T> implements ArrayView<T> {
   inline function self()
     return (o:ObservableObject<Array<T>>);
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
     return self().getObservers();
+
+  public function getDependencies()
+    return [(cast o:Observable<Any>)].iterator();
+
+  @:keep public function toString()
+    return 'ObservableArrayView${o.value.toString()}';
+
   #end
 
   public function getValue():ArrayView<T>

@@ -40,8 +40,8 @@ abstract Progress<T>(Plain<T>) from Plain<T> to Plain<T> {
       default: new Observable(() -> this.status, this.changed.noise());
     }
 
-  public inline function bind(?options, cb)
-    return observe().bind(options, cb);
+  public inline function bind(#if tink_state.legacy_binding_options ?options, #end cb, ?comparator, ?scheduler)
+    return observe().bind(#if tink_state.legacy_binding_options options, #end cb, comparator, scheduler);
 }
 
 typedef ProgressValue = tink.core.Progress.ProgressValue;

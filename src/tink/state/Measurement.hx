@@ -2,8 +2,9 @@ package tink.state;
 
 using tink.CoreApi;
 
+@:deprecated
 abstract Measurement<T>(Pair<T, Future<Noise>>) {
-  
+
   public var value(get, never):T;
     inline function get_value() return this.a;
 

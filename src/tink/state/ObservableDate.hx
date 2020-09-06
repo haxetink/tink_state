@@ -1,7 +1,5 @@
 package tink.state;
 
-import tink.state.Observable;
-using tink.CoreApi;
 using DateTools;
 
 class ObservableDate implements ObservableObject<Bool> {
@@ -14,6 +12,9 @@ class ObservableDate implements ObservableObject<Bool> {
   public var passed(get, never):Bool;
     inline function get_passed():Bool
       return _observable.getValue();
+
+  public function getRevision()
+    return _observable.getRevision();
 
   public function isValid()
     return _observable.isValid();
@@ -45,9 +46,16 @@ class ObservableDate implements ObservableObject<Bool> {
       }
   }
 
-  #if debug_observables
+  #if tink_state.debug
   public function getObservers()
+    return _observable.getObservers();
+
+  public function getDependencies()
     return [].iterator();
+
+  @:keep public function toString()
+    return 'ObservableDate${date.toString()}';
+
   #end
 
   public function observe():Observable<Bool>
