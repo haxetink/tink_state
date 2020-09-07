@@ -38,15 +38,15 @@ class Invalidator {
         observers.set(i, true);
         list.add(
           #if tink_state.debug
-            (_) -> {
+            _ -> {
               if (Std.is(this, ObservableObject))
                 tink.state.debug.Logger.inst.triggered(cast this, i);
               i.invalidate();
             }
           #else
-            i.invalidate
+            _ -> i.invalidate()
           #end
-        ) & observers.remove.bind(i);
+        ) & () -> observers.remove(i);
       }
 
   #if tink_state.debug

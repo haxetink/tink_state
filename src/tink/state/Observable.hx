@@ -134,10 +134,10 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public function create<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
     return new SimpleObservable(f, comparator, toString #if tink_state.debug , pos #end);
 
-  static public function auto<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
+  @:noUsing static public inline function auto<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
     return new AutoObservable<T>(f, comparator, toString #if tink_state.debug , pos #end);
 
-  @:noUsing static public function const<T>(value:T, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
+  @:noUsing static public inline function const<T>(value:T, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
     return new ConstObservable(value, toString #if tink_state.debug , pos #end);
 
   @:op(a == b)

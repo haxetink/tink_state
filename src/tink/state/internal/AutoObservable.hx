@@ -165,8 +165,8 @@ class AutoObservable<T> extends Invalidator
     super(toString #if tink_state.debug , pos #end);
     this.compute = compute;
     this.comparator = comparator;
-    this.list.onfill = heatup;
-    this.list.ondrain = cooldown;
+    this.list.onfill = () -> inline heatup();
+    this.list.ondrain = () -> inline cooldown();
   }
 
   function heatup() {
@@ -206,13 +206,13 @@ class AutoObservable<T> extends Invalidator
 
   public function getValue():T {
 
-    inline function doCompute() {
+    function doCompute() {
       status = Computed;
       if (subscriptions != null)
         for (s in subscriptions) s.used = false;
       subscriptions = [];
       sync = true;
-      last = computeFor(this, () -> compute(update));
+      last = computeFor(this, () -> compute(v -> update(v)));
       sync = false;
     }
 
