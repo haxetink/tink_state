@@ -160,6 +160,9 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   public function resize(size:Int)
     update(() -> { entries.resize(size); null; });
 
+  public function splice(pos, len)
+    return update(() -> entries.splice(pos, len));
+
   public function getDependencies()
     return [].iterator();
 
