@@ -4,7 +4,9 @@ package tink.state;
 abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from StateObject<T> {
 
   public var value(get, set):T;
-    @:to function get_value() return observe().value;
+    @:to function get_value()
+      return AutoObservable.track(this);
+
     function set_value(param) {
       this.set(param);
       return param;
