@@ -1,6 +1,8 @@
 package tink.state.internal;
 
+#if tink_state.debug
 import tink.state.debug.Logger.inst as logger;
+#end
 
 @:callable
 private abstract Computation<T>((T->Void)->?Noise->T) {
@@ -220,7 +222,9 @@ class AutoObservable<T> extends Invalidator
       sync = true;
       last = computeFor(this, () -> compute(v -> update(v)));
       sync = false;
+      #if tink_state.debug
       logger.revalidated(this, false);
+      #end
     }
 
     var prevSubs = subscriptions,
