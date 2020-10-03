@@ -157,7 +157,43 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       return @:privateAccess AutoObservable.subscriptionCount;
   #end
 
+  #if tink_state.debug
+    public function dependencyTree():DependencyTree
+      return new DependencyTree(cast this);
+  #end
+
 }
+
+#if tink_state.debug
+  class DependencyTree {
+
+    public final source:Observable<Dynamic>;
+    public final dependencies:haxe.ds.ReadOnlyArray<DependencyTree>;
+
+    public function new(source:ObservableObject<Dynamic>) {
+      this.source = source;
+      this.dependencies = [for (dep in source.getDependencies()) dep.dependencyTree()];
+    }
+
+    function print(prefix:String, buf:StringBuf) {
+
+      buf.add(prefix);
+      buf.add(source.toString());
+
+      prefix += '  ';
+      for (d in dependencies) {
+        buf.add('\n');
+        print(prefix, buf);
+      }
+    }
+
+    public function toString() {
+      var buf = new StringBuf();
+      print('', buf);
+      return buf.toString();
+    }
+  }
+#end
 
 private class ConstObservable<T> implements ObservableObject<T> {
   final value:T;

@@ -1,5 +1,7 @@
 package tink.state.internal;
 
+import tink.state.debug.Logger.inst as logger;
+
 @:callable
 private abstract Computation<T>((T->Void)->?Noise->T) {
   inline function new(f) this = f;
@@ -75,7 +77,7 @@ private class SubscriptionTo<T> {
   }
 
   public inline function disconnect():Void {
-    #if tink_state.test_subscriptions
+    #if tink_state.test_subscriptions // TODO: this probably should be removed, and tested indirectly via State.onStatusChange
       if (connected) {
         @:privateAccess AutoObservable.subscriptionCount--;
         connected = false;
@@ -83,7 +85,7 @@ private class SubscriptionTo<T> {
       else throw 'what?';
     #end
     #if tink_state.debug
-      tink.state.debug.Logger.inst.disconnected(source, cast owner);
+      logger.disconnected(source, cast owner);
     #end
     link.cancel();
   }
@@ -97,10 +99,14 @@ private class SubscriptionTo<T> {
       }
     #end
     #if tink_state.debug
-      tink.state.debug.Logger.inst.connected(source, cast owner);
+      logger.connected(source, cast owner);
     #end
     this.link = source.onInvalidate(owner);
   }
+
+  #if tink_state.debug
+
+  #end
 }
 
 private enum abstract AutoObservableStatus(Int) {
@@ -214,12 +220,16 @@ class AutoObservable<T> extends Invalidator
       sync = true;
       last = computeFor(this, () -> compute(v -> update(v)));
       sync = false;
+      logger.revalidated(this, false);
     }
 
     var prevSubs = subscriptions,
         count = 0;
 
-    while (!isValid())
+    while (!isValid()) {
+      #if tink_state.debug
+      logger.revalidating(this);
+      #end
       if (++count == 100)
         throw 'no result after 100 attempts';
       else if (subscriptions != null) {
@@ -231,7 +241,12 @@ class AutoObservable<T> extends Invalidator
             break;
           }
 
-        if (valid) status = Computed;
+        if (valid) {
+          status = Computed;
+          #if tink_state.debug
+          logger.revalidated(this, true);
+          #end
+        }
         else {
           doCompute();
           if (prevSubs != null) {
@@ -240,14 +255,14 @@ class AutoObservable<T> extends Invalidator
                 if (hot) s.disconnect();
                 dependencies.remove(s.source);
                 #if tink_state.debug
-                  tink.state.debug.Logger.inst.unsubscribed(s.source, this);
+                  logger.unsubscribed(s.source, this);
                 #end
               }
           }
         }
       }
       else doCompute();
-
+    }
     return last;
   }
 
@@ -262,7 +277,7 @@ class AutoObservable<T> extends Invalidator
     switch dependencies.get(source) {
       case null:
         #if tink_state.debug
-          tink.state.debug.Logger.inst.subscribed(source, this);
+          logger.subscribed(source, this);
         #end
         var sub:Subscription = cast new SubscriptionTo(source, cur, this);
         dependencies.set(source, sub);
