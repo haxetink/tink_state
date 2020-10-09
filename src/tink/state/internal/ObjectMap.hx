@@ -1,6 +1,6 @@
 package tink.state.internal;
 
-@:forward(keys)
+@:forward(keys, exists)
 abstract ObjectMap<K:{}, V>(haxe.ds.ObjectMap<K, V>) {
   public inline function new()
     this = new haxe.ds.ObjectMap<K, V>();

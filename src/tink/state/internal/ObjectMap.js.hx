@@ -14,6 +14,9 @@ abstract ObjectMap<K:{}, V>(Map<K, V>) {
     return value;
   }
 
+  public inline function exists(key)
+    return this.has(key);
+
   public function keys():Iterator<K>
     return
       try new HaxeIterator(this.keys())
