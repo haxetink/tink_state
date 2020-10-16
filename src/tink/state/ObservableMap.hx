@@ -179,7 +179,7 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
 
   @:extern inline function calc<T>(f:Void->T) {
     valid = true;
-    observe().value;
+    AutoObservable.track(this);
     return f();
   }
 

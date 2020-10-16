@@ -222,7 +222,7 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
 
   @:extern inline function calc<T>(f:Void->T) {
     valid = true;
-    observe().value;
+    AutoObservable.track(this);
     return f();
   }
 }
