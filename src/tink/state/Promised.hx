@@ -1,7 +1,5 @@
 package tink.state;
 
-using tink.CoreApi;
-
 @:using(tink.state.Promised.PromisedTools)
 enum Promised<T> {
   Loading;

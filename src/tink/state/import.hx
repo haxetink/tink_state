@@ -1,5 +1,12 @@
-import tink.state.internal.Invalidatable;
-import tink.state.internal.*;
+import haxe.ds.Option;
+import tink.core.Callback;
+import tink.core.Error;
+import tink.core.Future;
+import tink.core.Noise;
+import tink.core.Outcome;
+import tink.core.Promise;
+import tink.core.Signal;
+import tink.core.Lazy;
 import tink.state.Promised;
-
-using tink.CoreApi;
+import tink.state.internal.*;
+import tink.state.internal.Invalidatable;
