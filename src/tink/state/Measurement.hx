@@ -1,6 +1,6 @@
 package tink.state;
 
-using tink.CoreApi;
+import tink.core.Pair;
 
 @:deprecated
 abstract Measurement<T>(Pair<T, Future<Noise>>) {

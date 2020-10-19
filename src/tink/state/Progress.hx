@@ -1,11 +1,9 @@
 package tink.state;
 
-import tink.state.Observable;
+import tink.core.Pair;
 import tink.core.Progress as Plain;
 import tink.core.Progress.ProgressTrigger as Trigger;
-import tink.core.Callback;
-
-using tink.CoreApi;
+import tink.state.Observable;
 
 @:require(tink_core >= 2)
 @:forward
