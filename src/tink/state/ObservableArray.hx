@@ -73,6 +73,7 @@ abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
     return new ArrayImpl(Lambda.array(i));
 }
 
+@:forward
 abstract ObservableArrayView<T>(ArrayView<T>) from ArrayView<T> {
   public function keys()
     return 0...this.length;
