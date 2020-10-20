@@ -163,6 +163,13 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
 
   public function splice(pos, len)
     return update(() -> entries.splice(pos, len));
+  
+  public function remove(value:T) {
+    return switch entries.indexOf(value) {
+      case -1: false;
+      case i: splice(i, 1); true;
+    }
+  }
 
   public function getDependencies()
     return [].iterator();
