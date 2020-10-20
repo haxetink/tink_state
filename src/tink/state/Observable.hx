@@ -183,7 +183,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       prefix += '  ';
       for (d in dependencies) {
         buf.add('\n');
-        print(prefix, buf);
+        d.print(prefix, buf);
       }
     }
 
