@@ -78,6 +78,11 @@ private class SubscriptionTo<T> {
     return !source.getComparator().eq(last, before);
   }
 
+  public inline function reuse(value:T) {
+    used = true;
+    last = value;
+  }
+
   public inline function disconnect():Void {
     #if tink_state.test_subscriptions // TODO: this probably should be removed, and tested indirectly via State.onStatusChange
       if (connected) {
@@ -288,7 +293,7 @@ class AutoObservable<T> extends Invalidator
         subscriptions.push(sub);
       case v:
         if (!v.used) {
-          v.used = true;
+          v.reuse(cur);
           subscriptions.push(v);
         }
     }
