@@ -52,6 +52,12 @@ class StringLogger extends Logger {
 
   override function triggered<X>(source:Observable<X>, watcher:Invalidatable)
     output('${watcher.toString()} triggered by ${source.toString()}');
+  
+  override function revalidating<X>(source:Observable<X>) 
+    output('${source.toString()} revalidating');
+  
+  override function revalidated<X>(source:Observable<X>, reused:Bool) 
+    output('${source.toString()} revalidated (reused=$reused)');
 }
 
 class LoggerGroup extends Logger {
