@@ -17,6 +17,8 @@ abstract Deprecated<T>(T) {
 #end
 @:using(tink.state.Observable.ObservableTools)
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
+  public static var MAX_ITERATIONS = 100;
+  
   public var value(get, never):T;
     @:to function get_value()
       return AutoObservable.track(this);
@@ -269,8 +271,8 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
     var count = 0;
 
     while (_cache == null)
-      if (++count == 100)
-        throw "polling did not conclude after 100 iterations";
+      if (++count == Observable.MAX_ITERATIONS)
+        throw 'polling did not conclude after ${Observable.MAX_ITERATIONS} iterations';
       else {
         _cache = _poll();
         _cache.becameInvalid.handle(reset);
