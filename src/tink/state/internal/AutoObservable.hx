@@ -239,8 +239,8 @@ class AutoObservable<T> extends Invalidator
       #if tink_state.debug
       logger.revalidating(this);
       #end
-      if (++count == 100)
-        throw 'no result after 100 attempts';
+      if (++count == Observable.MAX_ITERATIONS)
+        throw 'no result after ${Observable.MAX_ITERATIONS} attempts';
       else if (subscriptions != null) {
         var valid = true;
 
@@ -272,6 +272,7 @@ class AutoObservable<T> extends Invalidator
       }
       else doCompute();
     }
+    if(count > 0) trace('Revalidated in $count');
     return last;
   }
 
