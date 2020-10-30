@@ -272,7 +272,6 @@ class AutoObservable<T> extends Invalidator
       }
       else doCompute();
     }
-    if(count > 0) trace('Revalidated in $count');
     return last;
   }
 
