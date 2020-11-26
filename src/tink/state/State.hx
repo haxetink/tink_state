@@ -108,7 +108,7 @@ private class GuardedState<T> extends SimpleState<T> {
   }
 
   override function set(value:T):T {
-    if (guardApplied)
+    if (!guardApplied)
       applyGuard();
     return super.set(guard(value));
   }
