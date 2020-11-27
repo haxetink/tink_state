@@ -18,7 +18,7 @@ abstract Deprecated<T>(T) {
 @:using(tink.state.Observable.ObservableTools)
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   public static var MAX_ITERATIONS = 100;
-  
+
   public var value(get, never):T;
     @:to function get_value()
       return AutoObservable.track(this);
@@ -318,7 +318,7 @@ private abstract Transform<T, R>(T->R) {
 @:access(tink.state.Observable)
 class ObservableTools {
 
-  static public function deliver<T>(o:Observable<Promised<T>>, initial:T, ?failed:Error->T->T):Observable<T>
+  static public function deliver<T, E>(o:Observable<Promised.PromisedWith<T, E>>, initial:T, ?failed:Error->T->T):Observable<T>
     return Observable.lift(o).map(function (p) return switch p {
       case Done(v): initial = v;
       case Loading: initial;

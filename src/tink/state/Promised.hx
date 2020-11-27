@@ -1,10 +1,13 @@
 package tink.state;
 
+typedef Promised<T> = PromisedWith<T, Error>;
+typedef Predicted<T> = PromisedWith<T, Noise>;
+
 @:using(tink.state.Promised.PromisedTools)
-enum Promised<T> {
+enum PromisedWith<T, E> {
   Loading;
   Done(result:T);
-  Failed(error:Error);
+  Failed(error:Error):PromisedWith<T, Error>;
 }
 
 class PromisedTools {

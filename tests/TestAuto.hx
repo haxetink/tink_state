@@ -128,6 +128,23 @@ class TestAuto {
     return asserts.done();
   }
 
+  public function testSafeAsync() {
+    var s = new State(123);
+    var o = Observable.auto(() -> Future.sync(s.value));
+
+    var v = 0;
+    o.bind(p -> switch p {
+      case Loading:
+      case Done(result): v = result;
+    }, Scheduler.direct);
+
+    asserts.assert(v == 123);
+    s.value = 321;
+    asserts.assert(v == 321);
+
+    return asserts.done();
+  }
+
 
   public function donotFireEqualAuto() {
     var s = new State(1 << 5);
