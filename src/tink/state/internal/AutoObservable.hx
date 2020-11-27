@@ -23,9 +23,11 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
     });
   }
 
-
   @:from static function async<T>(f:Void->Promise<T>):Computation<Promised<T>>
     return asyncWithLast(_ -> f());
+
+  @:from static function safeAsync<T>(f:Void->Future<T>):Computation<Promised.Predicted<T>>
+    return cast asyncWithLast(_ -> f());
 
   @:from static inline function withLast<T>(f:Option<T>->T):Computation<T> {
     var last = None;
