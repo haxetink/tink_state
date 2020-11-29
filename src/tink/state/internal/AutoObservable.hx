@@ -5,14 +5,14 @@ import tink.state.debug.Logger.inst as logger;
 #end
 
 @:callable
-private abstract Computation<T>((T->Void)->?Noise->T) {
+private abstract Computation<T>((update:T->Void)->T) {
   inline function new(f) this = f;
 
   @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
     var link:CallbackLink = null,
         last = None,
         ret = Loading;
-    return new Computation((update, ?_) -> {
+    return new Computation(update -> {
       ret = Loading;
       link.cancel();
       link = f(last).handle(o -> update(ret = switch o {
@@ -23,23 +23,23 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
     });
   }
 
-  @:from static function async<T>(f:Void->Promise<T>):Computation<Promised<T>>
+  @:from static function async<T>(f:()->Promise<T>):Computation<Promised<T>>
     return asyncWithLast(_ -> f());
 
-  @:from static function safeAsync<T>(f:Void->Future<T>):Computation<Promised.Predicted<T>>
+  @:from static function safeAsync<T>(f:()->Future<T>):Computation<Promised.Predicted<T>>
     return cast asyncWithLast(_ -> f());
 
   @:from static inline function withLast<T>(f:Option<T>->T):Computation<T> {
     var last = None;
-    return new Computation((_, ?_) -> {
+    return new Computation(_ -> {
       var ret = f(last);
       last = Some(ret);
       return ret;
     });
   }
 
-  @:from static function sync<T>(f:Void->T) {
-    return new Computation((_, ?_) -> f());
+  @:from static function sync<T>(f:()->T) {
+    return new Computation(_ -> f());
   }
 }
 
@@ -198,7 +198,7 @@ class AutoObservable<T> extends Invalidator
       for (s in subscriptions) s.disconnect();
   }
 
-  static public inline function computeFor<T>(o:Derived, fn:Void->T) {
+  static public inline function computeFor<T>(o:Derived, fn:()->T) {
     var before = cur;
     cur = o;
     #if hotswap
@@ -209,7 +209,7 @@ class AutoObservable<T> extends Invalidator
     return ret;
   }
 
-  static public inline function untracked<T>(fn:Void->T)
+  static public inline function untracked<T>(fn:()->T)
     return computeFor(null, fn);
 
   static public inline function track<V>(o:ObservableObject<V>):V {
