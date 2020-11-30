@@ -1,6 +1,6 @@
 package tink.state.internal;
 
-class Binding<T> implements Invalidatable implements Scheduler.Schedulable {
+class Binding<T> implements Invalidatable implements Scheduler.Schedulable implements LinkObject {
   final data:ObservableObject<T>;
   final cb:Callback<T>;
   final scheduler:Scheduler;
