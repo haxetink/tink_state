@@ -5,7 +5,7 @@ import tink.state.debug.Logger.inst as logger;
 #end
 
 @:callable
-private abstract Computation<T>((T->Void)->?Noise->T) {
+private abstract Computation<T>(((T->Void),?Noise)->T) {
   inline function new(f) this = f;
 
   @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
@@ -23,11 +23,30 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
     });
   }
 
-  @:from static function async<T>(f:Void->Promise<T>):Computation<Promised<T>>
-    return asyncWithLast(_ -> f());
+  @:from static function async<T>(f:()->Promise<T>):Computation<Promised<T>> {
+    var link:CallbackLink = null,
+        ret = Loading;
+    return new Computation((update, ?_) -> {
+      ret = Loading;
+      link.cancel();
+      link = f().handle(o -> update(ret = switch o {
+        case Success(v): Done(v);
+        case Failure(e): Failed(e);
+      }));
+      return ret;
+    });
+  }
 
-  @:from static function safeAsync<T>(f:Void->Future<T>):Computation<Promised.Predicted<T>>
-    return cast asyncWithLast(_ -> f());
+  @:from static function safeAsync<T>(f:()->Future<T>):Computation<Promised.Predicted<T>> {
+    var link:CallbackLink = null,
+        ret = Loading;
+    return new Computation((update, ?_) -> {
+      ret = Loading;
+      link.cancel();
+      link = f().handle(v -> update(ret = Done(v)));
+      return ret;
+    });
+  }
 
   @:from static inline function withLast<T>(f:Option<T>->T):Computation<T> {
     var last = None;
@@ -38,7 +57,7 @@ private abstract Computation<T>((T->Void)->?Noise->T) {
     });
   }
 
-  @:from static function sync<T>(f:Void->T) {
+  @:from static function sync<T>(f:()->T) {
     return new Computation((_, ?_) -> f());
   }
 }
@@ -198,7 +217,7 @@ class AutoObservable<T> extends Invalidator
       for (s in subscriptions) s.disconnect();
   }
 
-  static public inline function computeFor<T>(o:Derived, fn:Void->T) {
+  static public inline function computeFor<T>(o:Derived, fn:()->T) {
     var before = cur;
     cur = o;
     #if hotswap
@@ -209,7 +228,7 @@ class AutoObservable<T> extends Invalidator
     return ret;
   }
 
-  static public inline function untracked<T>(fn:Void->T)
+  static public inline function untracked<T>(fn:()->T)
     return computeFor(null, fn);
 
   static public inline function track<V>(o:ObservableObject<V>):V {
