@@ -12,6 +12,12 @@ abstract Deprecated<T>(T) {
     return cast v;
 }
 
+/**
+  Common representation of a piece of observable state. It can be read using the `value` property
+  and bound to listen for changes using the `bind` method.
+
+  For the writable variant, see `State`.
+**/
 #if tink_state.debug
   @:forward(toString)
 #end
@@ -19,6 +25,13 @@ abstract Deprecated<T>(T) {
 abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to ObservableObject<T> {
   public static var MAX_ITERATIONS = 100;
 
+  /**
+    Current value of this Observable. Depending on the nature of an underlying object, accessing
+    this property may trigger recomputation of the value.
+
+    If accessed from within `Observable.auto` computation, this observable will be tracked for changes
+    by the interested auto-observable.
+  **/
   public var value(get, never):T;
     @:to function get_value()
       return AutoObservable.track(this);
@@ -26,9 +39,26 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public inline function untracked<T>(fn:Void->T)
     return AutoObservable.untracked(fn);
 
+  /**
+    Bind a given `callback` to listen for changes of this observable. Returned `CallbackLink`
+    object can be used to cancel the binding.
+
+    The `callback` will be directly invoked with the current value for the first time and then
+    will be invoked each time the binding is triggered by a value change.
+
+    Note that the subsequent invokations of callbacks are done in batches, meaning that changed
+    values are collected during an execution frame and are scheduled for processing at the end of
+    the frame (the exact scheduling mechanism depends the platform).
+
+    It is also doesn't matter how many times the value was changed before the callback is invoked,
+    it will only be called once per batch if the final value is different from the previous one.
+
+    You can customize this behaviour by passing a different `scheduler` and `comparator` instances
+    to this function.
+  **/
   public function bind(
     #if tink_state.legacy_binding_options ?options:BindingOptions<T>, #end
-    cb:Callback<T>, ?comparator:Comparator<T>, ?scheduler:Scheduler
+    callback:Callback<T>, ?comparator:Comparator<T>, ?scheduler:Scheduler
   ):CallbackLink {
     #if tink_state.legacy_binding_options
       if (options != null) {
@@ -38,7 +68,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     #end
     if (scheduler == null)
       scheduler = Observable.scheduler;
-    return new Binding(this, cb, scheduler, comparator);
+    return new Binding(this, callback, scheduler, comparator);
   }
 
   public inline function new(get:Void->T, changed:Signal<Noise>, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end)
@@ -136,9 +166,24 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public function create<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
     return new SimpleObservable(f, comparator, toString #if tink_state.debug , pos #end);
 
-  @:noUsing static public inline function auto<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
-    return new AutoObservable<T>(f, comparator, toString #if tink_state.debug , pos #end);
+  /**
+    Create a computed observable from a given `compute` function. The computation will be invoked when
+    the observable value is first read and its result will be cached for subsequent reads.
 
+    Accessing other Observable values within computation function will be automatically tracked and if any of
+    the tracked Observable values are changed, cached value will be invalided and bindings will be triggered.
+
+    Note that if a given computation function returns `tink.core.Promise` or `tink.core.Future`, special handling
+    will take place and the type of the observable value will become `tink.state.Promised` or `tink.State.Promised.Predicted`
+    respectively. The future/promise will be automatically handled to update the value of this Observable.
+  **/
+  @:noUsing static public inline function auto<T>(compute, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
+    return new AutoObservable<T>(compute, comparator, toString #if tink_state.debug , pos #end);
+
+  /**
+    Create a constant Observable object from a value. Const observables are lightweight objects
+    that will never invalidate and will always simply return the value passed to this constructor.
+  **/
   @:noUsing static public inline function const<T>(value:T, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
     return new ConstObservable(value, toString #if tink_state.debug , pos #end);
 
