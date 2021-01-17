@@ -7,6 +7,7 @@ class RunTests {
       new TestBasic(),
       new TestDate(),
       new TestAuto(),
+      new TestAutorun(),
       new TestMaps(),
       new TestArrays(),
       new TestScheduler(),

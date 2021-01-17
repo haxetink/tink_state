@@ -162,6 +162,15 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static public function ofPromise<T>(p:Promise<T>):Observable<Promised<T>>
     return Observable.auto(() -> p);
 
+  static function ignore(i:Int) {}
+  static public function autorun(f:()->Void, ?scheduler) {
+    var i = 0;
+    auto(() -> {
+      f();
+      i++;
+    }).bind(ignore, null, scheduler);
+  }
+
   @:deprecated
   static public function create<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
     return new SimpleObservable(f, comparator, toString #if tink_state.debug , pos #end);
