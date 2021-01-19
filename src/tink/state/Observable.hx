@@ -163,9 +163,9 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return Observable.auto(() -> p);
 
   static function ignore(i:Int) {}
-  static public function autorun(f:()->Void, ?scheduler) {
+  static public function autorun(f:()->Void, ?scheduler):CallbackLink {
     var i = 0;
-    auto(() -> {
+    return auto(() -> {
       f();
       i++;
     }).bind(ignore, null, scheduler);
