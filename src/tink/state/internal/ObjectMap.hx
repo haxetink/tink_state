@@ -19,4 +19,10 @@ abstract ObjectMap<K:{}, V>(haxe.ds.ObjectMap<K, V>) {
   public inline function forEach(f)
     for (k => v in this) f(v, k, (cast this:ObjectMap<K,V>));
 
+  public inline function count() {
+    var ret = 0;
+    for (_ in this) ret++;
+    return ret;
+  }
+
 }

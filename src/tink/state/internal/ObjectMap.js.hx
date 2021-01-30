@@ -32,4 +32,6 @@ abstract ObjectMap<K:{}, V>(Map<K, V>) {
   public inline function forEach(f:V->K->ObjectMap<K, V>->Void)
     this.forEach(cast f);
 
+  public inline function count()
+    return this.size;
 }
