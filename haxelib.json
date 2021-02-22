@@ -8,8 +8,8 @@
 	"contributors": [
 		"back2dos"
 	],
-	"version": "1.0.0-beta.1",
-	"releasenote": "Fix nodejs issue.",
+	"version": "1.0.0-beta.2",
+	"releasenote": "Add autorun. Various other improvements.",
 	"tags": [
 		"tink",
 		"cross",
