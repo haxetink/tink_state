@@ -14,11 +14,12 @@ private abstract Computation<T>(((T->Void),?Noise)->T) {
         ret = Loading;
     return new Computation((update, ?_) -> {
       ret = Loading;
-      link.cancel();
+      var prev = link;
       link = f(last).handle(o -> update(ret = switch o {
         case Success(v): last = Some(v); Done(v);
         case Failure(e): Failed(e);
       }));
+      prev.cancel();
       return ret;
     });
   }
@@ -28,11 +29,12 @@ private abstract Computation<T>(((T->Void),?Noise)->T) {
         ret = Loading;
     return new Computation((update, ?_) -> {
       ret = Loading;
-      link.cancel();
+      var prev = link;
       link = f().handle(o -> update(ret = switch o {
         case Success(v): Done(v);
         case Failure(e): Failed(e);
       }));
+      prev.cancel();
       return ret;
     });
   }
@@ -42,8 +44,9 @@ private abstract Computation<T>(((T->Void),?Noise)->T) {
         ret = Loading;
     return new Computation((update, ?_) -> {
       ret = Loading;
-      link.cancel();
+      var prev = link;
       link = f().handle(v -> update(ret = Done(v)));
+      prev.cancel();
       return ret;
     });
   }
