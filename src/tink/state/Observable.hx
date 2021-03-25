@@ -286,13 +286,11 @@ private class ConstObservable<T> implements ObservableObject<T> {
 
   #if tink_state.debug
   public function getObservers()
-    return EMPTY.iterator();
+    return EmptyIterator.OBSERVERS;
 
   public function getDependencies()
-    return [].iterator();
+    return EmptyIterator.DEPENDENCIES;
   #end
-
-  static final EMPTY = [];
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return null;
@@ -340,7 +338,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
 
   #if tink_state.debug
   public function getDependencies()
-    return [].iterator();
+    return EmptyIterator.DEPENDENCIES;
   #end
 }
 

@@ -164,7 +164,7 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
 
   #if tink_state.debug
   public function getDependencies()
-    return [].iterator();
+    return EmptyIterator.DEPENDENCIES;
   #end
 
 }

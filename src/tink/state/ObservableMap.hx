@@ -185,6 +185,6 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
 
   #if tink_state.debug
   public function getDependencies()
-    return [].iterator();
+    return EmptyIterator.DEPENDENCIES;
   #end
 }

@@ -63,6 +63,6 @@ class SignalObservable<X, T> implements ObservableObject<T> {
     return observers.keys();
 
   public function getDependencies()
-    return [].iterator();
+    return EmptyIterator.DEPENDENCIES;
   #end
 }

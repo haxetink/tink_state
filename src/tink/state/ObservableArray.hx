@@ -163,7 +163,7 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
 
   public function splice(pos, len)
     return update(() -> entries.splice(pos, len));
-  
+
   public function remove(value:T) {
     return switch entries.indexOf(value) {
       case -1: false;
@@ -171,8 +171,10 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
     }
   }
 
+  #if tink_state.debug
   public function getDependencies()
-    return [].iterator();
+    return EmptyIterator.DEPENDENCIES;
+  #end
 
   public inline function clear()
     resize(0);
