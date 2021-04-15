@@ -254,7 +254,6 @@ class AutoObservable<T> extends Invalidator
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
-      trace(subscriptions.length);
       if (subscriptions.length == 0) dispose();
     }
 
