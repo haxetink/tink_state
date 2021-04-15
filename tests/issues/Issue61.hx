@@ -19,6 +19,8 @@ class Issue61 {
       s.value;
     } else 42);
 
+    var o = Observable.auto(() -> o.value);
+
     function canFire()
       return (o:ObservableObject<Int>).canFire();
 
