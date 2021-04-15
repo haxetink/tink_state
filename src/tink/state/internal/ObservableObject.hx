@@ -6,6 +6,7 @@ interface ObservableObject<T> {
   function isValid():Bool;
   function getComparator():Comparator<T>;
   function onInvalidate(i:Invalidatable):CallbackLink;
+  function canFire():Bool;
   #if tink_state.debug
   function getObservers():Iterator<Invalidatable>;
   function getDependencies():Iterator<Observable<Any>>;

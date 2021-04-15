@@ -55,6 +55,9 @@ private class CompoundState<T> implements StateObject<T> {
     this.comparator = comparator;
   }
 
+  public function canFire()
+    return data.canFire();
+
   public function getRevision()
     return data.getRevision();
 

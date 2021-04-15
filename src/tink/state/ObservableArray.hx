@@ -248,6 +248,9 @@ private class DerivedView<T> implements ArrayView<T> {
   public function getRevision()
     return self().getRevision();
 
+  public function canFire()
+    return self().canFire();
+
   public function new(o)
     this.o = o;
 

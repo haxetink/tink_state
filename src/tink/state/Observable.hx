@@ -258,6 +258,9 @@ private class ConstObservable<T> implements ObservableObject<T> {
   public function getRevision()
     return revision;
 
+  public function canFire()
+    return true;
+
   public function new(value, ?toString:()->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
     this.value = value;
     #if tink_state.debug

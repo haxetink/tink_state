@@ -236,7 +236,7 @@ class AutoObservable<T> extends Invalidator
 
   static public inline function track<V>(o:ObservableObject<V>):V {
     var ret = o.getValue();
-    if (cur != null)
+    if (cur != null && !o.canFire())
       cur.subscribeTo(o, ret);
     return ret;
   }
@@ -254,6 +254,7 @@ class AutoObservable<T> extends Invalidator
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
+      if (subscriptions.length == 0) dispose();
     }
 
     var prevSubs = subscriptions,

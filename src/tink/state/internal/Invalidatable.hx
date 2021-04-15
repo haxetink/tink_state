@@ -1,5 +1,7 @@
 package tink.state.internal;
 
+import tink.core.Disposable.OwnedDisposable;
+
 interface Invalidatable {
   function invalidate():Void;
   #if tink_state.debug
@@ -7,7 +9,7 @@ interface Invalidatable {
   #end
 }
 
-class Invalidator {
+class Invalidator implements OwnedDisposable {
   var revision = new Revision();
   final observers = new ObjectMap<Invalidatable, Bool>();
   final list = new CallbackList();//TODO: get rid of the list ... currently primarily here to guarantee stable callback order
@@ -28,12 +30,28 @@ class Invalidator {
     #end
   }
 
+  public var disposed(get, never):Bool;
+    inline function get_disposed()
+      return list.disposed;
+
+  public function ondispose(d:()->Void)
+    list.ondispose(d);
+
+
+  public inline function dispose() {
+    list.dispose();
+    observers.clear();
+  }
+
+  public function canFire()
+    return !disposed;
+
   public function getRevision()
     return revision;
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return
-      if (observers.get(i)) null;
+      if (observers.get(i) || list.disposed) null;
       else {
         observers.set(i, true);
         list.add(

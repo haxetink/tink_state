@@ -2,6 +2,7 @@ package tink.state.internal;
 
 import js.lib.*;
 
+@:forward(clear)
 abstract ObjectMap<K:{}, V>(Map<K, V>) {
   public inline function new()
     this = new Map<K, V>();
