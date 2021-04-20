@@ -14,7 +14,7 @@ class SignalObservable<X, T> implements ObservableObject<T> {
   final changed:Signal<Noise>;
 
   public function canFire()
-    return #if (tink_core >= "2") changed.disposed #else true #end;
+    return #if (tink_core >= "2") !changed.disposed #else true #end;
 
   public function new(get, changed:Signal<Noise>, ?toString:(id:Int)->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
     this.get = get;
