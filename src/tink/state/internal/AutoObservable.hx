@@ -94,7 +94,7 @@ private class SubscriptionTo<T> {
     if (nextRev == lastRev) return false;
     lastRev = nextRev;
     var before = last;
-    last = Observable.untracked(source.getValue);// not sure this has to be untracked
+    last = source.getValue();
     return !source.getComparator().eq(last, before);
   }
 

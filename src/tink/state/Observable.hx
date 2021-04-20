@@ -68,7 +68,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     #end
     if (scheduler == null)
       scheduler = Observable.scheduler;
-    return new Binding(this, callback, scheduler, comparator);
+    return Binding.create(this, callback, scheduler, comparator);
   }
 
   public inline function new(get:Void->T, changed:Signal<Noise>, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end)

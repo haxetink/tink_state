@@ -1,15 +1,25 @@
 package tink.state.internal;
 
 class Binding<T> implements Invalidatable implements Scheduler.Schedulable implements LinkObject {
-  final data:ObservableObject<T>;
-  final cb:Callback<T>;
-  final scheduler:Scheduler;
-  final comparator:Comparator<T>;
+  var data:ObservableObject<T>;
+  var cb:Callback<T>;
+  var scheduler:Scheduler;
+  var comparator:Comparator<T>;
   var status = Valid;
   var last:Null<T> = null;
   final link:CallbackLink;
 
-  public function new(data, cb, ?scheduler, ?comparator) {
+  static public function create<T>(o:ObservableObject<T>, cb, ?scheduler, comparator):CallbackLink {
+    var value = Observable.untracked(() -> o.getValue());
+    return
+      if (o.canFire()) new Binding(o, value, cb, scheduler, comparator);
+      else {
+        cb.invoke(value);
+        null;
+      }
+  }
+
+  function new(data, value, cb, ?scheduler, ?comparator) {
     this.data = data;
     this.cb = cb;
     this.scheduler = switch scheduler {
@@ -18,7 +28,7 @@ class Binding<T> implements Invalidatable implements Scheduler.Schedulable imple
     }
     this.comparator = data.getComparator().or(comparator);
     link = data.onInvalidate(this);
-    cb.invoke(this.last = data.getValue());
+    cb.invoke(this.last = value);
   }
 
   #if tink_state.debug
@@ -47,8 +57,16 @@ class Binding<T> implements Invalidatable implements Scheduler.Schedulable imple
         var prev = this.last,
             next = this.last = data.getValue();
 
+        var canFire = data.canFire();
         if (!comparator.eq(prev, next))
           cb.invoke(next);
+
+        if (!canFire) {
+          cancel();
+          data = null;
+          cb = null;
+          comparator = null;
+        }
     }
 }
 
