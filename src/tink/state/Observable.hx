@@ -208,11 +208,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static inline function neq<T>(a:Observable<T>, b:Observable<T>):Bool
     return !eq(a, b);
 
-  #if tink_state.test_subscriptions
-    static function subscriptionCount()
-      return @:privateAccess AutoObservable.subscriptionCount;
-  #end
-
   #if tink_state.debug
     public function dependencyTree():DependencyTree
       return new DependencyTree(cast this);

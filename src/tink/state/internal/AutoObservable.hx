@@ -77,10 +77,6 @@ private class SubscriptionTo<T> {
 
   public var used = true;
 
-  #if tink_state.test_subscriptions
-    var connected:Bool = false;
-  #end
-
   public function new<X>(source, cur, owner:AutoObservable<X>) {
     this.source = source;
     this.last = cur;
@@ -108,13 +104,6 @@ private class SubscriptionTo<T> {
   }
 
   public inline function disconnect():Void {
-    #if tink_state.test_subscriptions // TODO: this probably should be removed, and tested indirectly via State.onStatusChange
-      if (connected) {
-        @:privateAccess AutoObservable.subscriptionCount--;
-        connected = false;
-      }
-      else throw 'what?';
-    #end
     #if tink_state.debug
       logger.disconnected(source, cast owner);
     #end
@@ -122,13 +111,6 @@ private class SubscriptionTo<T> {
   }
 
   public inline function connect():Void {
-    #if tink_state.test_subscriptions
-      if (connected) throw 'what?';
-      else {
-        connected = true;
-        @:privateAccess AutoObservable.subscriptionCount++;
-      }
-    #end
     #if tink_state.debug
       logger.connected(source, cast owner);
     #end
@@ -148,9 +130,6 @@ private enum abstract AutoObservableStatus(Int) {
 class AutoObservable<T> extends Invalidator
   implements Invalidatable implements Derived implements ObservableObject<T> {
 
-  #if tink_state.test_subscriptions
-    static var subscriptionCount = 0;
-  #end
   static var cur:Derived;
 
   var compute:Computation<T>;

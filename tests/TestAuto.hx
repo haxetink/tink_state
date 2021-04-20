@@ -209,12 +209,6 @@ class TestAuto {
   }
 
   public function testSubs() {
-    #if tink_state.test_subscriptions
-    function count()
-      return @:privateAccess Observable.subscriptionCount();
-
-    var initial = count();//it's possible other tests leave behind subscriptions ... should probably warn in that case
-    #end
 
     var liveCount = 0;
     function watch(alive:Bool)
@@ -236,12 +230,9 @@ class TestAuto {
     var result = 0;
     var watch = Observable.auto(add).bind(x -> result = x, direct);
 
-    function check(?pos:haxe.PosInfos) {
-      #if tink_state.test_subscriptions
-      asserts.assert(selectedCount.value + 1 + initial == count());
-      #end
+    function check(?pos:haxe.PosInfos)
       asserts.assert(liveCount == selectedCount.value);
-    }
+
     asserts.assert(result == 18);
     check();
 
