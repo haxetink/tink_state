@@ -5,17 +5,18 @@ import tink.state.debug.Logger.inst as logger;
 #end
 
 @:callable
-private abstract Computation<T>(((T->Void),?Noise)->T) {
+@:access(tink.state.internal.AutoObservable)
+private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
   inline function new(f) this = f;
 
   @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
     var link:CallbackLink = null,
         last = None,
         ret = Loading;
-    return new Computation((update, ?_) -> {
+    return new Computation((a, ?_) -> {
       ret = Loading;
       var prev = link;
-      link = f(last).handle(o -> update(ret = switch o {
+      link = f(last).handle(o -> a.update(ret = switch o {
         case Success(v): last = Some(v); Done(v);
         case Failure(e): Failed(e);
       }));
@@ -27,10 +28,10 @@ private abstract Computation<T>(((T->Void),?Noise)->T) {
   @:from static function async<T>(f:()->Promise<T>):Computation<Promised<T>> {
     var link:CallbackLink = null,
         ret = Loading;
-    return new Computation((update, ?_) -> {
+    return new Computation((a, ?_) -> {
       ret = Loading;
       var prev = link;
-      link = f().handle(o -> update(ret = switch o {
+      link = f().handle(o -> a.update(ret = switch o {
         case Success(v): Done(v);
         case Failure(e): Failed(e);
       }));
@@ -42,10 +43,10 @@ private abstract Computation<T>(((T->Void),?Noise)->T) {
   @:from static function safeAsync<T>(f:()->Future<T>):Computation<Promised.Predicted<T>> {
     var link:CallbackLink = null,
         ret = Loading;
-    return new Computation((update, ?_) -> {
+    return new Computation((a, ?_) -> {
       ret = Loading;
       var prev = link;
-      link = f().handle(v -> update(ret = Done(v)));
+      link = f().handle(v -> a.update(ret = Done(v)));
       prev.cancel();
       return ret;
     });
@@ -228,7 +229,7 @@ class AutoObservable<T> extends Invalidator
         for (s in subscriptions) s.used = false;
       subscriptions = [];
       sync = true;
-      last = computeFor(this, () -> compute(v -> update(v)));
+      last = computeFor(this, () -> compute(this));
       sync = false;
       #if tink_state.debug
       logger.revalidated(this, false);
