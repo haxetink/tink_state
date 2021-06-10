@@ -163,10 +163,19 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return Observable.auto(() -> p);
 
   static function ignore(i:Int) {}
-  static public function autorun(f:()->Void, ?scheduler):CallbackLink {
+
+  /**
+    Invoke the given `callback` and track all its observable value access in the same way `Observable.auto` does.
+
+    When any of the tracked values changes, the callback will be scheduled to run again, in same way as `bind`,
+    you can customize scheduling by passing a different `scheduler`.
+
+    Returned `CallbackLink` object can be used to cancel the binding.
+  **/
+  static public function autorun(callback:()->Void, ?scheduler):CallbackLink {
     var i = 0;
     return auto(() -> {
-      f();
+      callback();
       i++;
     }).bind(ignore, null, scheduler);
   }
