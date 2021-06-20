@@ -54,11 +54,22 @@ class SignalObservable<X, T> implements ObservableObject<T> {
     return null;
 
   public function onInvalidate(i:Invalidatable):CallbackLink
+    // TODO: this largely duplicates Invalidatable.onInvalidate
     return
       if (observers.get(i)) null;
       else {
         observers.set(i, true);
-        changed.handle(i.invalidate);
+        changed.handle(
+          #if tink_state.debug
+            _ -> {
+              if (Std.is(this, ObservableObject))
+                tink.state.debug.Logger.inst.triggered(cast this, i);
+              i.invalidate();
+            }
+          #else
+            _ -> i.invalidate()
+          #end
+        ) & () -> observers.remove(i);
       }
 
   #if tink_state.debug

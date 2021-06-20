@@ -14,6 +14,7 @@ class RunTests {
       new TestProgress(),
       new issues.Issue51(),
       new issues.Issue61(),
+      new issues.Issue63(),
     ]))
       .handle(function(result) {
         travix.Logger.exit(result.summary().failures.length);
