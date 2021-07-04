@@ -12,10 +12,10 @@ abstract State<T>(StateObject<T>) to Observable<T> to ObservableObject<T> from S
       return param;
     }
 
-  public function new(value:T, ?comparator:Comparator<T>, ?guard:(raw:T)->T, ?onStatusChange:(isWatched:Bool)->Void, ?toString #if tink_state.debug , ?pos #end)
+  public function new(value:T, ?comparator:Comparator<T>, ?guard:(raw:T)->T, ?onStatusChange:(isWatched:Bool)->Void #if tink_state.debug , ?toString, ?pos #end)
     this = switch guard {
-      case null: new SimpleState(value, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
-      case f: new GuardedState(value, guard, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
+      case null: new SimpleState(value, comparator, onStatusChange #if tink_state.debug , toString, pos #end);
+      case f: new GuardedState(value, guard, comparator, onStatusChange #if tink_state.debug , toString, pos #end);
     }
 
   public inline function observe():Observable<T>
@@ -95,8 +95,8 @@ private class GuardedState<T> extends SimpleState<T> {
   final guard:T->T;
   var guardApplied = false;
 
-  public function new(value, guard, ?comparator, ?onStatusChange, ?toString #if tink_state.debug , ?pos #end) {
-    super(value, comparator, onStatusChange, toString #if tink_state.debug , pos #end);
+  public function new(value, guard, ?comparator, ?onStatusChange #if tink_state.debug , ?toString, ?pos #end) {
+    super(value, comparator, onStatusChange #if tink_state.debug , toString, pos #end);
     this.guard = guard;
   }
 
@@ -125,8 +125,8 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
   public function isValid()
     return true;
 
-  public function new(value, ?comparator, ?onStatusChange:Bool->Void, ?toString #if tink_state.debug , ?pos #end) {
-    super(toString #if tink_state.debug , pos #end);
+  public function new(value, ?comparator, ?onStatusChange:Bool->Void #if tink_state.debug , ?toString, ?pos #end) {
+    super(#if tink_state.debug toString, pos #end);
     this.value = value;
     this.comparator = comparator;
     if (onStatusChange != null) {

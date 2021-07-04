@@ -181,8 +181,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   }
 
   @:deprecated
-  static public function create<T>(f, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
-    return new SimpleObservable(f, comparator, toString #if tink_state.debug , pos #end);
+  static public function create<T>(f, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<T>
+    return new SimpleObservable(f, comparator #if tink_state.debug , toString, pos #end);
 
   /**
     Create a computed observable from a given `compute` function. The computation will be invoked when
@@ -195,15 +195,15 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     will take place and the type of the observable value will become `tink.state.Promised` or `tink.State.Promised.Predicted`
     respectively. The future/promise will be automatically handled to update the value of this Observable.
   **/
-  @:noUsing static public inline function auto<T>(compute, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
-    return new AutoObservable<T>(compute, comparator, toString #if tink_state.debug , pos #end);
+  @:noUsing static public inline function auto<T>(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<T>
+    return new AutoObservable<T>(compute, comparator #if tink_state.debug , toString, pos #end);
 
   /**
     Create a constant Observable object from a value. Const observables are lightweight objects
     that will never invalidate and will always simply return the value passed to this constructor.
   **/
-  @:noUsing static public inline function const<T>(value:T, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end):Observable<T>
-    return new ConstObservable(value, toString #if tink_state.debug , pos #end);
+  @:noUsing static public inline function const<T>(value:T #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<T>
+    return new ConstObservable(value #if tink_state.debug , toString, pos #end);
 
   @:op(a == b)
   static function eq<T>(a:Observable<T>, b:Observable<T>):Bool
@@ -276,12 +276,6 @@ private class ConstObservable<T> implements ObservableObject<T> {
     #end
   }
 
-  #if tink_state.debug
-  final _toString:()->String;
-  public function toString()
-    return _toString();
-  #end
-
   public function getValue()
     return value;
 
@@ -292,6 +286,10 @@ private class ConstObservable<T> implements ObservableObject<T> {
     return null;
 
   #if tink_state.debug
+  final _toString:()->String;
+  public function toString()
+    return _toString();
+
   public function getObservers()
     return EmptyIterator.OBSERVERS;
 
@@ -309,8 +307,8 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
   var _cache:Measurement<T> = null;
   var comparator:Comparator<T>;
 
-  public function new(poll, ?comparator, ?toString #if tink_state.debug , ?pos #end) {
-    super(toString #if tink_state.debug , pos #end);
+  public function new(poll, ?comparator #if tink_state.debug , ?toString, ?pos #end) {
+    super(#if tink_state.debug toString, pos #end);
     this._poll = poll;
     this.comparator = comparator;
   }

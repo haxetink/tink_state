@@ -178,8 +178,8 @@ class AutoObservable<T> extends Invalidator
   public function getComparator()
     return comparator;
 
-  public function new(compute, ?comparator, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end) {
-    super(toString #if tink_state.debug , pos #end);
+  public function new(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end) {
+    super(#if tink_state.debug toString, pos #end);
     this.compute = compute;
     this.comparator = comparator;
     this.list.onfill = () -> inline heatup();

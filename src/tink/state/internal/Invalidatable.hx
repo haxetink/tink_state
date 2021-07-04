@@ -21,7 +21,7 @@ class Invalidator implements OwnedDisposable {
     return Observable.untracked(_toString);
   #end
   var used = 0;
-  function new(?toString:(id:Int)->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
+  function new(#if tink_state.debug ?toString:(id:Int)->String, ?pos:haxe.PosInfos #end) {
     #if tink_state.debug
       this._toString = switch toString {
         case null: () -> Type.getClassName(Type.getClass(this)) + '#$id(${pos.fileName}:${pos.lineNumber})';
