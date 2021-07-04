@@ -68,7 +68,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     #end
     if (scheduler == null)
       scheduler = Observable.scheduler;
-    return new Binding(this, callback, scheduler, comparator);
+    return Binding.create(this, callback, scheduler, comparator);
   }
 
   public inline function new(get:Void->T, changed:Signal<Noise>, ?toString #if tink_state.debug , ?pos:haxe.PosInfos #end)
@@ -217,11 +217,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   static inline function neq<T>(a:Observable<T>, b:Observable<T>):Bool
     return !eq(a, b);
 
-  #if tink_state.test_subscriptions
-    static function subscriptionCount()
-      return @:privateAccess AutoObservable.subscriptionCount;
-  #end
-
   #if tink_state.debug
     public function dependencyTree():DependencyTree
       return new DependencyTree(cast this);
@@ -266,6 +261,9 @@ private class ConstObservable<T> implements ObservableObject<T> {
 
   public function getRevision()
     return revision;
+
+  public function canFire()
+    return true;
 
   public function new(value, ?toString:()->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
     this.value = value;

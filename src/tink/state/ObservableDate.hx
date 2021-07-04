@@ -13,6 +13,9 @@ class ObservableDate implements ObservableObject<Bool> {
     inline function get_passed():Bool
       return _observable.getValue();
 
+  public function canFire()
+    return passed;
+
   public function getRevision()
     return _observable.getRevision();
 

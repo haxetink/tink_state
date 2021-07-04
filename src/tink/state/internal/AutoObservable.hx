@@ -5,17 +5,18 @@ import tink.state.debug.Logger.inst as logger;
 #end
 
 @:callable
-private abstract Computation<T>(((T->Void),?Noise)->T) {
+@:access(tink.state.internal.AutoObservable)
+private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
   inline function new(f) this = f;
 
   @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
     var link:CallbackLink = null,
         last = None,
         ret = Loading;
-    return new Computation((update, ?_) -> {
+    return new Computation((a, ?_) -> {
       ret = Loading;
       var prev = link;
-      link = f(last).handle(o -> update(ret = switch o {
+      link = f(last).handle(o -> a.update(ret = switch o {
         case Success(v): last = Some(v); Done(v);
         case Failure(e): Failed(e);
       }));
@@ -27,10 +28,10 @@ private abstract Computation<T>(((T->Void),?Noise)->T) {
   @:from static function async<T>(f:()->Promise<T>):Computation<Promised<T>> {
     var link:CallbackLink = null,
         ret = Loading;
-    return new Computation((update, ?_) -> {
+    return new Computation((a, ?_) -> {
       ret = Loading;
       var prev = link;
-      link = f().handle(o -> update(ret = switch o {
+      link = f().handle(o -> a.update(ret = switch o {
         case Success(v): Done(v);
         case Failure(e): Failed(e);
       }));
@@ -42,10 +43,10 @@ private abstract Computation<T>(((T->Void),?Noise)->T) {
   @:from static function safeAsync<T>(f:()->Future<T>):Computation<Promised.Predicted<T>> {
     var link:CallbackLink = null,
         ret = Loading;
-    return new Computation((update, ?_) -> {
+    return new Computation((a, ?_) -> {
       ret = Loading;
       var prev = link;
-      link = f().handle(v -> update(ret = Done(v)));
+      link = f().handle(v -> a.update(ret = Done(v)));
       prev.cancel();
       return ret;
     });
@@ -77,10 +78,6 @@ private class SubscriptionTo<T> {
 
   public var used = true;
 
-  #if tink_state.test_subscriptions
-    var connected:Bool = false;
-  #end
-
   public function new<X>(source, cur, owner:AutoObservable<X>) {
     this.source = source;
     this.last = cur;
@@ -98,7 +95,7 @@ private class SubscriptionTo<T> {
     if (nextRev == lastRev) return false;
     lastRev = nextRev;
     var before = last;
-    last = Observable.untracked(source.getValue);// not sure this has to be untracked
+    last = source.getValue();
     return !source.getComparator().eq(last, before);
   }
 
@@ -108,13 +105,6 @@ private class SubscriptionTo<T> {
   }
 
   public inline function disconnect():Void {
-    #if tink_state.test_subscriptions // TODO: this probably should be removed, and tested indirectly via State.onStatusChange
-      if (connected) {
-        @:privateAccess AutoObservable.subscriptionCount--;
-        connected = false;
-      }
-      else throw 'what?';
-    #end
     #if tink_state.debug
       logger.disconnected(source, cast owner);
     #end
@@ -122,13 +112,6 @@ private class SubscriptionTo<T> {
   }
 
   public inline function connect():Void {
-    #if tink_state.test_subscriptions
-      if (connected) throw 'what?';
-      else {
-        connected = true;
-        @:privateAccess AutoObservable.subscriptionCount++;
-      }
-    #end
     #if tink_state.debug
       logger.connected(source, cast owner);
     #end
@@ -148,9 +131,6 @@ private enum abstract AutoObservableStatus(Int) {
 class AutoObservable<T> extends Invalidator
   implements Invalidatable implements Derived implements ObservableObject<T> {
 
-  #if tink_state.test_subscriptions
-    static var subscriptionCount = 0;
-  #end
   static var cur:Derived;
 
   var compute:Computation<T>;
@@ -236,7 +216,7 @@ class AutoObservable<T> extends Invalidator
 
   static public inline function track<V>(o:ObservableObject<V>):V {
     var ret = o.getValue();
-    if (cur != null)
+    if (cur != null && o.canFire())
       cur.subscribeTo(o, ret);
     return ret;
   }
@@ -249,11 +229,12 @@ class AutoObservable<T> extends Invalidator
         for (s in subscriptions) s.used = false;
       subscriptions = [];
       sync = true;
-      last = computeFor(this, () -> compute(v -> update(v)));
+      last = computeFor(this, () -> compute(this));
       sync = false;
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
+      if (subscriptions.length == 0) dispose();
     }
 
     var prevSubs = subscriptions,

@@ -1,5 +1,5 @@
 -cp tests
--D tink_state.test_subscriptions
+-D no-deprecation-warnings
 -lib tink_unittest
 -main RunTests
 

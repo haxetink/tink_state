@@ -19,7 +19,6 @@ install:
   - lix download
 
 script:
-  - haxe -lib tink_state tink.state.Observable # this is merely to ensure things compile without -D tink_state.test_subscriptions
   - lix run travix interp
   - lix run travix python
   - lix run travix node

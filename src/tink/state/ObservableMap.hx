@@ -59,6 +59,9 @@ private class Derived<K, V> implements MapView<K, V> {
   public function new(o)
     this.o = o;
 
+  public function canFire()
+    return self().canFire();
+
   public function getRevision()
     return self().getRevision();
 
