@@ -16,7 +16,7 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
     this.transform = transform;
     this.comparator = comparator;
     #if tink_state.debug
-    this._toString = toString();
+    this._toString = toString;
     #end
   }
 
