@@ -2,14 +2,22 @@ package tink.state.internal;
 
 class TransformObservable<In, Out> implements ObservableObject<Out> {
 
-  var lastSeenRevision = -1;
+  var lastSeenRevision:Revision = cast -1.0;
   var last:Out = null;
-  var transform:Transform<In, Out>;
-  var source:ObservableObject<In>;
+  final transform:Transform<In, Out>;
+  final source:ObservableObject<In>;
+  final comparator:Comparator<Out>;
+  #if tink_state.debug
+  final _toString:()->String;
+  #end
 
-  public function new(source, transform) {
+  public function new(source, transform, ?comparator #if tink_state.debug , toString #end) {
     this.source = source;
     this.transform = transform;
+    this.comparator = comparator;
+    #if tink_state.debug
+    this._toString = toString();
+    #end
   }
 
   public function getRevision()
@@ -24,8 +32,12 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
   #if tink_state.debug
   public function getObservers()
     return source.getObservers();
+
   public function getDependencies()
-    return [(cast source:Observable<Any>)].iterator();
+    return [source].iterator();
+
+  public function toString():String
+    return _toString();
   #end
 
   public function getValue() {
@@ -38,5 +50,8 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
   }
 
   public function getComparator()
-    return null;
+    return comparator;
+
+  public function canFire():Bool
+    return source.canFire();
 }
