@@ -117,10 +117,6 @@ private class SubscriptionTo<T> {
     #end
     this.link = source.onInvalidate(owner);
   }
-
-  #if tink_state.debug
-
-  #end
 }
 
 private enum abstract AutoObservableStatus(Int) {
