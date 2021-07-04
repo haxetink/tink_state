@@ -34,7 +34,7 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
     return source.getObservers();
 
   public function getDependencies()
-    return [source].iterator();
+    return [cast source].iterator();
 
   public function toString():String
     return _toString();
