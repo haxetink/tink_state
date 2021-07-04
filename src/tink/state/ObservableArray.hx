@@ -2,16 +2,15 @@ package tink.state;
 
 import haxe.iterators.*;
 
-@:forward
-abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> {
+@:forward(
+  observableLength, length, iterator, keyValueIterator, push, pop, shift, unshift, sort, reduce, clear,
+  replace, prepend, append, sort, resize, splice, remove
+)
+abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> to Observable<ArrayView<T>> to Iterable<T> {
 
-  @:deprecated public var observableValues(get, never):Observable<ArrayView<T>>;
+  public var observableValues(get, never):Observable<ArrayView<T>>;
     function get_observableValues()
       return this;
-
-  @:deprecated public var observableLength(get, never):Observable<Int>;
-    function get_observableLength()
-      return Observable.auto(() -> this.length);
 
   public var view(get, never):ObservableArrayView<T>;
     inline function get_view()
@@ -136,6 +135,7 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
 
   var valid = false;
   var entries:Array<T>;
+  final observableLength:Observable<Int>;
 
   public var length(get, never):Int;
     function get_length()
@@ -144,6 +144,7 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   public function new(entries) {
     super(#if tink_state.debug id -> 'ObservableArray#$id${this.entries.toString()}' #end);
     this.entries = entries;
+    this.observableLength = new TransformObservable(this, _ -> this.entries.length, null #if tink_state.debug , () -> 'length of ${toString()}' #end);
   }
 
   public function replace(values:Array<T>)
