@@ -78,19 +78,17 @@ private class SubscriptionTo<T> {
 
   public var used = true;
 
-  public function new<X>(source, cur, owner:AutoObservable<X>) {
+  public function new(source, cur, owner) {
     this.source = source;
     this.last = cur;
     this.lastRev = source.getRevision();
     this.owner = owner;
-
-    if (owner.hot) connect();
   }
 
   public inline function isValid()
     return source.getRevision() == lastRev;
 
-  public inline function hasChanged():Bool {
+  public function hasChanged():Bool {
     var nextRev = source.getRevision();
     if (nextRev == lastRev) return false;
     lastRev = nextRev;
@@ -290,6 +288,7 @@ class AutoObservable<T> extends Invalidator
           logger.subscribed(source, this);
         #end
         var sub:Subscription = cast new SubscriptionTo(source, cur, this);
+        if (hot) sub.connect();
         dependencies.set(source, sub);
         subscriptions.push(sub);
       case v:
