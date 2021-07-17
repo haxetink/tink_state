@@ -1,6 +1,6 @@
 package tink.state.internal;
 
-class SignalObservable<X, T> implements ObservableObject<T> {
+class SignalObservable<T> implements ObservableObject<T> {
   var valid = false;
   var value:Null<T>;
   var revision = new Revision();
