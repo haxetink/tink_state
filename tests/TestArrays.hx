@@ -133,8 +133,8 @@ class TestArrays {
 
     var log = '';
 
-    Observable.auto(() -> o.length).bind(function(v) return log += 'len:$v', direct);
-    for(i in 0...o.length) o.entry(i).bind(function(v) return log += ',$i:$v', direct);
+    Observable.auto(() -> o.length).bind(v -> log += 'len:$v', direct);
+    for(i in 0...o.length) o.entry(i).bind(v -> log += ',$i:$v', direct);
     o.clear();
 
     asserts.assert(log.replace('undefined', '-').replace('null', '-') == 'len:3,0:1,1:2,2:3len:0,0:-,1:-,2:-');
