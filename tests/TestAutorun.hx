@@ -5,8 +5,8 @@ import tink.state.*;
 class TestAutorun {
   public function new() {}
   public function test() {
-    var s = new State(0);
-    var log = [];
+    final s = new State(0);
+    final log = [];
     Observable.autorun(() -> {
       log.push('before ${s.value}');
       if (s.value < 2)

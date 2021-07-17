@@ -11,11 +11,11 @@ class TestMaps {
   public function new() {}
 
   public function testEntries() {
-    var o = new ObservableMap([5 => 0, 6 => 0]);
+    final o = new ObservableMap([5 => 0, 6 => 0]);
 
     var a = [];
 
-    function report(k:Int) return function (v:Int) a.push('$k:$v');
+    function report(k:Int) return (v:Int) -> a.push('$k:$v');
 
     var watch:CallbackLink = [
       o.entry(5).bind(report(5), direct),
@@ -74,7 +74,7 @@ class TestMaps {
   }
 
   public function testIterators() {
-    var map = new ObservableMap<String, String>(new Map());
+    final map = new ObservableMap<String, String>(new Map());
     map.set('key', 'value');
 
     var count = 0;
@@ -85,9 +85,9 @@ class TestMaps {
 
     asserts.assert(count == 4);
 
-    var counts = [];
+    final counts = [];
 
-    var watch = Observable.auto(function () {
+    final watch = Observable.auto(() -> {
       var counter = 0;
       for (i in [map.keys(), map.iterator()])
         for (x in i) counter++;

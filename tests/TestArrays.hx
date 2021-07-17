@@ -13,7 +13,7 @@ class TestArrays {
   public function new() {}
 
   public function basics() {
-    var a = new ObservableArray<Null<Int>>([for (i in 0...100) i]);
+    final a = new ObservableArray<Null<Int>>([for (i in 0...100) i]);
     var log = [];
 
     function clear()
@@ -22,7 +22,7 @@ class TestArrays {
     function getLog()
       return log.join(',').replace('undefined', '-').replace('null', '-');
 
-    function report(name:String) return function (v:Null<Int>) log.push('$name:$v');
+    function report(name:String) return (v:Null<Int>) -> log.push('$name:$v');
 
     Observable.auto(() -> a.length).bind(report('l'), direct);
 
@@ -55,7 +55,7 @@ class TestArrays {
   }
 
   public function issue27() {
-    var arr = new ObservableArray<Bool>();
+    final arr = new ObservableArray<Bool>();
     asserts.assert(arr.length == 0);
     arr.set(0, true);
     asserts.assert(arr.length == 1);
@@ -76,7 +76,7 @@ class TestArrays {
 
     asserts.assert(counter == a.length);
 
-    var evenCount = a.fold(function (v, count) return count + 1 - v % 2, 0);
+    final evenCount = a.fold((v, count) -> count + 1 - v % 2, 0);
     asserts.assert(evenCount == 5);
 
     var keysChanges = 0,
@@ -90,20 +90,20 @@ class TestArrays {
       return ret;
     }
 
-    Observable.auto(function () return sum(a.iterator()))
-      .bind(function () valuesChanges++, direct);
+    Observable.auto(() -> sum(a.iterator()))
+      .bind(() -> valuesChanges++, direct);
 
-    Observable.auto(function () return sum(a.keys()))
-      .bind(function () keysChanges++, direct);
+    Observable.auto(() -> sum(a.keys()))
+      .bind(() -> keysChanges++, direct);
 
-    Observable.auto(function () {
-      var first = 0;
+    Observable.auto(() -> {
+      final first = 0;
       for (v in a) {
         first += v;
         break;
       }
       return first;
-    }).bind(function () iteratorChanges++, (_, _) -> false, direct);
+    }).bind(() -> iteratorChanges++, (_, _) -> false, direct);
 
     asserts.assert(iteratorChanges * valuesChanges * keysChanges == 1);
 
@@ -129,9 +129,9 @@ class TestArrays {
   }
 
   public function clear() {
-    var o = new ObservableArray<Null<Int>>([1,2,3]);
+    final o = new ObservableArray<Null<Int>>([1,2,3]);
 
-    var log = '';
+    final log = '';
 
     Observable.auto(() -> o.length).bind(v -> log += 'len:$v', direct);
     for(i in 0...o.length) o.entry(i).bind(v -> log += ',$i:$v', direct);
@@ -143,8 +143,8 @@ class TestArrays {
   }
 
   public function views() {
-    var a = new ObservableArray<{ final foo:Int; final bar:Int; }>([for (i in 0...100) { foo: i, bar: i % 10 }]);
-    var v = a.filter(o -> o.bar == 0).sorted((o1, o2) -> o2.foo - o1.foo).reduce('', (a, b) -> '${a.foo}:$b');
+    final a = new ObservableArray<{ final foo:Int; final bar:Int; }>([for (i in 0...100) { foo: i, bar: i % 10 }]);
+    final v = a.filter(o -> o.bar == 0).sorted((o1, o2) -> o2.foo - o1.foo).reduce('', (a, b) -> '${a.foo}:$b');
     asserts.assert(v.value == '0:10:20:30:40:50:60:70:80:90:');
     a.set(11, { foo: 123, bar: 0 });
     asserts.assert(v.value == '0:10:20:30:40:50:60:70:80:90:123:');

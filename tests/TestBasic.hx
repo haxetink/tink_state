@@ -11,16 +11,16 @@ class TestBasic {
   public function new() {}
 
   public function donotFireEqual() {
-    var s = new State(0),
+    final s = new State(0),
         sLog = [];
-    var watch = s.observe().bind(sLog.push, (_, _) -> true, direct);
+    final watch = s.observe().bind(sLog.push, (_, _) -> true, direct);
 
-    var o1Log = [],
-        o1 = Observable.auto(function () {
+    final o1Log = [],
+        o1 = Observable.auto(() -> {
           return s.value >> 8;
         });
-    var o2Log = [],
-        o2 = Observable.auto(function () {
+    final o2Log = [],
+        o2 = Observable.auto(() -> {
           return s.value;
         });
     watch &= o1.bind(o1Log.push, direct);
@@ -44,7 +44,7 @@ class TestBasic {
   }
 
   public function test() {
-    var ta = Signal.trigger(),
+    final ta = Signal.trigger(),
         tb = Signal.trigger(),
         sa = new State(5),
         sb = new State('foo');
@@ -52,7 +52,7 @@ class TestBasic {
     ta.asSignal().handle(sa);
     tb.asSignal().handle(sb);
 
-    var queue = [];
+    final queue = [];
 
     function next()
       switch queue.shift() {
@@ -61,14 +61,10 @@ class TestBasic {
           v();
       }
 
-    var combined = sa.observe().combineAsync(sb, function (a, b):Promise<String> {
-      return Future.irreversible(function (cb) {
-        queue.push(cb.bind('$a $b'));
-      });
-    });
+    final combined = sa.observe().combineAsync(sb, (a, b) -> Promise.irreversible((resolve, reject) -> queue.push(resolve.bind('$a $b'))));
 
     var log = [];
-    var watch = combined.bind(function (x) switch x {
+    final watch = combined.bind(x -> switch x {
       case Done(v): log.push(v);
       default:
     }, direct);
@@ -96,22 +92,22 @@ class TestBasic {
   }
 
   public function testNextTime() {
-    var s = new State(5);
-    var o = s.observe();
+    final s = new State(5);
+    final o = s.observe();
 
     var fired = 0;
     function await(f:Future<Int>)
-      f.handle(function () fired++);
+      f.handle(() -> fired++);
 
     function set(value:Int) {
       s.set(value);
       Observable.updateAll();
     }
 
-    await(o.nextTime({ hires: true, butNotNow: true }, function (x) return x == 5));
-    await(o.nextTime({ hires: true, }, function (x) return x == 5));
-    await(o.nextTime({ hires: true, butNotNow: true }, function (x) return x == 4));
-    await(o.nextTime({ hires: true, }, function (x) return x == 4));
+    await(o.nextTime({ hires: true, butNotNow: true }, x -> x == 5));
+    await(o.nextTime({ hires: true, }, x -> x == 5));
+    await(o.nextTime({ hires: true, butNotNow: true }, x -> x == 4));
+    await(o.nextTime({ hires: true, }, x -> x == 4));
 
     Observable.updateAll();
 
@@ -135,14 +131,14 @@ class TestBasic {
 
   var nil:Observable<Int>;
   public function eqConst() {
-    var value = 'foobar';
-    var o:Observable<String> = Observable.const(value);
+    final value = 'foobar';
+    final o:Observable<String> = Observable.const(value);
 
     asserts.assert(value == o);
 
     asserts.assert(nil == null);
 
-    var o1 = Observable.const("foo"),
+    final o1 = Observable.const("foo"),
         o2 = Observable.const("foo");
 
     asserts.assert(o1 == o1, 'are equal');

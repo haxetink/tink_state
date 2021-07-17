@@ -10,9 +10,9 @@ class Issue63 {
 
   public function test() {
     var value = 1;
-    var changed = Signal.trigger();
-    var signalObservable = new Observable(() -> value, changed);
-    var derivedObservable = Observable.auto(() -> signalObservable.value);
+    final changed = Signal.trigger();
+    final signalObservable = new Observable(() -> value, changed);
+    final derivedObservable = Observable.auto(() -> signalObservable.value);
 
     function change(newValue) {
       value = newValue;
@@ -25,7 +25,7 @@ class Issue63 {
       return derivedObservable.bind(v -> observed = v, Scheduler.direct);
     }
 
-    var link = observe();
+    final link = observe();
     asserts.assert(observed == 1);
 
     change(2);

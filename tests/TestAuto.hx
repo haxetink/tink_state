@@ -12,11 +12,11 @@ class TestAuto {
   public function new() {}
 
   public function test() {
-    var s1 = new State(4),
+    final s1 = new State(4),
         s2 = new State(5);
 
     var calls = 0;
-    var o = Observable.auto(function () return {
+    final o = Observable.auto(() -> {
       calls++;
       s1.value + s2.value;
     });
@@ -30,7 +30,7 @@ class TestAuto {
     s2.set(2);
     s2.set(3);
     asserts.assert(4 == o.value);
-    var old = calls;
+    final old = calls;
     asserts.assert(4 == o.value);
     asserts.assert(old == calls);
     return asserts.done();
@@ -38,17 +38,17 @@ class TestAuto {
 
   public function testDirect() {
     var calls = 0;
-    var s1 = new State(4),
+    final s1 = new State(4),
         s2 = new State(5);
 
-    var o = Observable.auto(function () {
+    final o = Observable.auto(() -> {
       calls++;
       return s1.value + s2.value;
     });
 
     var sum = 0;
 
-    var watch = o.bind(function (v) sum = v, direct);
+    final watch = o.bind(v -> sum = v, direct);
 
     asserts.assert(sum == s1.value + s2.value);
     asserts.assert(calls == 1);
@@ -71,7 +71,7 @@ class TestAuto {
   }
 
   public function testAsync() {
-    var triggers = new Array<FutureTrigger<Outcome<Int, Error>>>();
+    final triggers = new Array<FutureTrigger<Outcome<Int, Error>>>();
 
     function trigger(value, ?pos) {
       asserts.assert(triggers.length > 0, null, pos);
@@ -85,14 +85,14 @@ class TestAuto {
     function fail(?pos)
       trigger(Failure(new Error('failure')), pos);
 
-    var counter = new State(0);
+    final counter = new State(0);
     function inc()
       counter.set(counter.value + 1);
 
     var last = None;
 
-    var o = Observable.auto(l -> {
-      var t = new FutureTrigger();
+    final o = Observable.auto(l -> {
+      final t = new FutureTrigger();
       last = l;
       triggers.push(t);
       Promise.lift(counter.value)
@@ -129,8 +129,8 @@ class TestAuto {
   }
 
   public function testSafeAsync() {
-    var s = new State(123);
-    var o = Observable.auto(() -> Future.sync(s.value));
+    final s = new State(123);
+    final o = Observable.auto(() -> Future.sync(s.value));
 
     var v = 0;
     o.bind(p -> switch p {
@@ -147,24 +147,24 @@ class TestAuto {
 
 
   public function donotFireEqualAuto() {
-    var s = new State(1 << 5);
+    final s = new State(1 << 5);
 
     function inc()
       s.set(s.value + 1);
 
     var o = s.observe();
-    var a = [];
+    final a = [];
 
     for (i in 0...5) {
       a[i] = -1;
-      var cur = o;
-      o = Observable.auto(function () {
+      final cur = o;
+      o = Observable.auto(() -> {
         a[i]++;
         return cur.value >> 1;
       });
     }
 
-    var watch = o.bind(function () {}, direct);
+    final watch = o.bind(() -> {}, direct);
 
     asserts.assert(o.value == 1);
 
@@ -188,10 +188,10 @@ class TestAuto {
   }
 
   public function selfInvalidating() {
-    var s1 = new State(0),
+    final s1 = new State(0),
         s2 = new State(0);
 
-    var o = Observable.auto(() -> {
+    final o = Observable.auto(() -> {
       if (s1.value < 10) s1.value += 1;
       if (s2.value < 10) s2.value += 1;
       s1.value + s2.value;
@@ -215,20 +215,20 @@ class TestAuto {
       if (alive) liveCount++;
       else liveCount--;
 
-    var states = [for (i in 0...10) new State(i, watch)];
-    var select = new State([for (i in 0...states.length) i % 3 == 0]);
+    final states = [for (i in 0...10) new State(i, watch)];
+    final select = new State([for (i in 0...states.length) i % 3 == 0]);
 
     function add() {
-      var ret = 0;
+      final ret = 0;
       for (i => s in select.value)
         if (s) ret += states[i].value;
       return ret;
     }
 
-    var selectedCount = select.observe().map(a -> Lambda.count(a, x -> x));
+    final selectedCount = select.observe().map(a -> Lambda.count(a, x -> x));
 
     var result = 0;
-    var watch = Observable.auto(add).bind(x -> result = x, direct);
+    final watch = Observable.auto(add).bind(x -> result = x, direct);
 
     function check(?pos:haxe.PosInfos)
       asserts.assert(liveCount == selectedCount.value);

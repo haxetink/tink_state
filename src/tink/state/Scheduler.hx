@@ -20,8 +20,7 @@ abstract Scheduler(SchedulerObject) from SchedulerObject {
       var later =
         try
           if (js.Browser.window.requestAnimationFrame != null)
-            function (fn:Void->Void)
-              js.Browser.window.requestAnimationFrame(cast fn);
+            (fn:Void->Void) -> js.Browser.window.requestAnimationFrame(cast fn);
           else
             later
         catch (e:Dynamic)
@@ -34,15 +33,13 @@ abstract Scheduler(SchedulerObject) from SchedulerObject {
       var asap =
         try {
           var p = js.lib.Promise.resolve(42);
-          function (fn:Void->Void) p.then(cast fn);
+          (fn:Void->Void) -> p.then(cast fn);
         }
         catch (e:Dynamic)
           asap;
     #end
 
-    return function (b:BatchScheduler, isRerun:Bool) {
-      (if (isRerun) later else asap)(b.progress.bind(.01));
-    }
+    return (b:BatchScheduler, isRerun:Bool) -> (if (isRerun) later else asap)(b.progress.bind(.01));
   }
 }
 

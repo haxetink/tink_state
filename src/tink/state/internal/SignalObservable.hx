@@ -19,7 +19,7 @@ class SignalObservable<T> implements ObservableObject<T> {
   public function new(get, changed:Signal<Noise>, ?toString:(id:Int)->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
     this.get = get;
     this.changed = changed;
-    this.changed.handle(function (_) if (valid) {
+    this.changed.handle(_ -> if (valid) {
       revision = new Revision();
       valid = false;
     });

@@ -12,18 +12,19 @@
         "$haxe-error",
         "$haxe-trace"
       ],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      }
+      "group": "build",
+      "label": "haxe: dev.hxml"
     },
     {
       "type": "npm",
       "script": "test",
       "group": {
-        "kind": "test",
+        "kind": "build",
         "isDefault": true
-      }
+      },
+      "problemMatcher": [],
+      "label": "npm: test",
+      "detail": "lix run travix node"
     }
   ]
 }

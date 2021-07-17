@@ -78,13 +78,13 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return Observable.auto(() -> f(value, that.value));
 
   public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, check:T->Bool):Future<T>
-    return getNext(options, function (v) return if (check(v)) Some(v) else None);
+    return getNext(options, v -> if (check(v)) Some(v) else None);
 
   public function getNext<R>(?options:{ ?butNotNow: Bool, ?hires:Bool }, select:T->Option<R>):Future<R> {
     var ret = Future.trigger(),
         waiting = options != null && options.butNotNow;
 
-    var link = bind(function (value) {
+    var link = bind(value -> {
       var out = select(value);
       if (waiting)
         waiting = out != None;
@@ -101,7 +101,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   public function join(that:Observable<T>) {
     var lastA = null;
-    return combine(that, function (a, b) {
+    return combine(that, (a, b) -> {
       var ret =
         if (lastA == a) b;
         else a;
@@ -351,7 +351,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
 class ObservableTools {
 
   static public function deliver<T, E>(o:Observable<Promised.PromisedWith<T, E>>, initial:T, ?failed:Error->T->T):Observable<T>
-    return Observable.lift(o).map(function (p) return switch p {
+    return Observable.lift(o).map(p -> switch p {
       case Done(v): initial = v;
       case Loading: initial;
       case Failed(e): if (failed != null) initial = failed(e, initial) else initial;
