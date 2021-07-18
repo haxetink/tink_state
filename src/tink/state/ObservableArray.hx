@@ -145,7 +145,11 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   public function new(entries) {
     super(#if tink_state.debug id -> 'ObservableArray#$id${this.entries.toString()}' #end);
     this.entries = entries;
-    this.observableLength = new TransformObservable(this, _ -> this.entries.length, null, null #if tink_state.debug , () -> 'length of ${toString()}' #end);
+    this.observableLength = transform(() -> this.entries.length #if tink_state.debug , 'length' #end);
+  }
+
+  function transform<X>(f:()->X, ?dispose #if tink_state.debug , name:String #end) {
+    return new TransformObservable(this, _ -> { this.valid = true; f(); }, null, dispose #if tink_state.debug , () -> '$name of ${toString()}' #end);
   }
 
   public function replace(values:Array<T>)
@@ -198,12 +202,10 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
       if (AutoObservable.needsTracking(this)) {
         var wrapper = switch observableEntries[index] {
           case null:
-            observableEntries[index] = new TransformObservable(
-              this,
-              _ -> entries[index],
-              null,
+            observableEntries[index] = transform(
+              () -> entries[index],
               () -> observableEntries.remove(index)
-              #if tink_state.debug , () -> 'Entry $index of ${this.toString()}' #end
+              #if tink_state.debug , 'Entry $index of ${this.toString()}' #end
             );
           case v: v;
         }

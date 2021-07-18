@@ -64,38 +64,33 @@ class TestArrays {
     return asserts.done();
   }
 
-  @:include public function issue49() {
-    tink.state.debug.Logger.printTo(Sys.println);
+  public function issue49() {
     final arr = new ObservableArray([for (i in 0...10) i]);
 
-    var o = Observable.auto(() -> arr[2]);
-    asserts.assert(2 == o.value);
-    arr[2] = 5;
-    asserts.assert(5 == o.value);
-    // var computations = 0;
+    var computations = 0;
 
-    // final sum = Observable.auto(() -> {
-    //   computations++;
-    //   arr[2] + arr[5];
-    // });
+    final sum = Observable.auto(() -> {
+      computations++;
+      arr[2] + arr[5];
+    });
 
-    // function checkSum(?pos:haxe.PosInfos)
-    //   asserts.assert(sum.value == arr[2] + arr[5], null, pos);
+    function checkSum(?pos:haxe.PosInfos)
+      asserts.assert(sum.value == arr[2] + arr[5], null, pos);
 
-    // checkSum();
-    // asserts.assert(computations == 1);
+    checkSum();
+    asserts.assert(computations == 1);
 
-    // checkSum();
-    // asserts.assert(computations == 1);
+    checkSum();
+    asserts.assert(computations == 1);
 
-    // arr[1] = 0;
-    // checkSum();
-    // asserts.assert(computations == 1);
-    // asserts.assert(arr[1] == 0);
+    arr[1] = 0;
+    checkSum();
+    asserts.assert(computations == 1);
+    asserts.assert(arr[1] == 0);
 
-    // arr[2] = 123;
-    // checkSum();
-    // asserts.assert(computations == 2);
+    arr[2] = 123;
+    checkSum();
+    asserts.assert(computations == 2);
 
 
     return asserts.done();
