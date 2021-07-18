@@ -11,7 +11,7 @@ interface Invalidatable {
 
 class Invalidator implements OwnedDisposable {
   var revision = new Revision();
-  final observers = new ObjectMap<Invalidatable, Bool>();
+  final observers = new ObjectMap<Invalidatable, Invalidatable>();
   final list = new CallbackList();//TODO: get rid of the list ... currently primarily here to guarantee stable callback order
   #if tink_state.debug
   static var counter = 0;
@@ -53,9 +53,9 @@ class Invalidator implements OwnedDisposable {
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return
-      if (observers.get(i) || list.disposed) null;
+      if (observers.exists(i) || list.disposed) null;
       else {
-        observers.set(i, true);
+        observers[i] = i;
         list.add(
           #if tink_state.debug
             _ -> {
@@ -71,7 +71,7 @@ class Invalidator implements OwnedDisposable {
 
   #if tink_state.debug
   public function getObservers()
-    return observers.keys();
+    return observers.iterator();
   #end
 
   function fire() {

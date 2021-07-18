@@ -67,19 +67,28 @@ private class CompoundState<T> implements StateObject<T> {
   public function getValue()
     return data.getValue();
 
-  public function onInvalidate(i)
-    return data.onInvalidate(i);
-
   #if tink_state.debug
-  public function getObservers()
-    return data.getObservers();//TODO: this is incorrect
+    final observers = new ObjectMap<Invalidatable, Invalidatable>();
 
-  public function getDependencies()
-    return [(cast data:Observable<Any>)].iterator();
+    public function onInvalidate(i)
+      return switch observers[i] {
+        case null:
+          observers[i] = i;
+          data.onInvalidate(i) & () -> observers.remove(i);
+        default: null;
+      }
 
-  @:keep public function toString()
-    return 'CompoundState[${data.toString()}]';//TODO: perhaps this should be providable from outside
+    public function getObservers()
+      return observers.iterator();
 
+    public function getDependencies()
+      return [(cast data:Observable<Any>)].iterator();
+
+    @:keep public function toString()
+      return 'CompoundState[${data.toString()}]';//TODO: perhaps this should be providable from outside
+  #else
+    public function onInvalidate(i)
+      return data.onInvalidate(i);
   #end
 
   public function set(value) {
