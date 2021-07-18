@@ -135,7 +135,6 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
 
   var valid = false;
   var entries:Array<T>;
-  final observableEntries = new Map<Int, Observable<T>>();
   final observableLength:Observable<Int>;
 
   public var length(get, never):Int;
@@ -200,16 +199,13 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   public function get(index:Int)
     return
       if (AutoObservable.needsTracking(this)) {
-        var wrapper = switch observableEntries[index] {
-          case null:
-            observableEntries[index] = transform(
-              () -> entries[index],
-              () -> observableEntries.remove(index)
-              #if tink_state.debug , 'Entry $index of ${this.toString()}' #end
-            );
-          case v: v;
-        }
-        wrapper.value;
+        var wrappers = AutoObservable.currentAnnex().get(Wrappers).forSource(this);
+
+        wrappers.get(index, () -> transform(
+          () -> entries[index],
+          () -> wrappers.remove(index)
+          #if tink_state.debug , 'Entry $index of ${this.toString()}' #end
+        )).value;
       }
       else entries[index];
 
@@ -253,6 +249,39 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
     valid = true;
     AutoObservable.track(this);
     return f();
+  }
+}
+
+private class Wrappers {
+  final bySource = new Map<{}, SourceWrappers<Dynamic>>();
+
+  public function new(target:{}) {}
+
+  public function forSource<T>(source:ArrayImpl<T>):SourceWrappers<T>
+    return cast switch bySource[source] {
+      case null: bySource[source] = new SourceWrappers<T>(() -> bySource.remove(source));
+      case v: v;
+    }
+}
+
+private class SourceWrappers<T> {
+  final dispose:()->Void;
+  var count = 0;
+  final observables = new Map<Int, Observable<T>>();
+
+  public function new(dispose)
+    this.dispose = dispose;
+
+  public function get(index, create:() -> Observable<T>):Observable<T>
+    return switch observables[index] {
+      case null:
+        count++;
+        observables[index] = create();
+      case v: v;
+    }
+
+  public function remove(index:Int) {
+    if (observables.remove(index) && (--count == 0)) dispose();
   }
 }
 

@@ -3,6 +3,7 @@ package tink.state.internal;
 #if tink_state.debug
 import tink.state.debug.Logger.inst as logger;
 #end
+import tink.core.Annex;
 
 @:callable
 @:access(tink.state.internal.AutoObservable)
@@ -135,6 +136,7 @@ class AutoObservable<T> extends Invalidator
     }
   #end
   public var hot(default, null) = false;
+  final annex:Annex<{}>;
   var status = Dirty;
   var last:T = null;
   var subscriptions:Array<Subscription>;
@@ -154,6 +156,9 @@ class AutoObservable<T> extends Invalidator
 
     return revision;
   }
+
+  public function getAnnex()
+    return annex;
 
   function subsValid() {
     if (subscriptions == null)
@@ -178,6 +183,7 @@ class AutoObservable<T> extends Invalidator
     this.comparator = comparator;
     this.list.onfill = () -> inline heatup();
     this.list.ondrain = () -> inline cooldown();
+    this.annex = new Annex<{}>(this);
   }
 
   function heatup() {
@@ -213,6 +219,12 @@ class AutoObservable<T> extends Invalidator
     return switch cur {
       case null: false;
       case v: !v.isSubscribedTo(o);
+    }
+
+  static public function currentAnnex()
+    return switch cur {
+      case null: null;
+      case v: v.getAnnex();
     }
 
   static public inline function track<V>(o:ObservableObject<V>):V {
@@ -326,6 +338,7 @@ class AutoObservable<T> extends Invalidator
 }
 
 private interface Derived {
+  function getAnnex():Annex<{}>;
   function isSubscribedTo<R>(source:ObservableObject<R>):Bool;
   function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
 }
