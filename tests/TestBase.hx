@@ -11,16 +11,14 @@ class TestBase {
   }
   static macro function build():Array<Field> {
     function hasDescribe(m:Metadata) {
-      return Lambda.exists(m, function (m) return m.name == ':describe');
+      return Lambda.exists(m, m -> m.name == ':describe');
     }
     return [for (f in haxe.macro.Context.getBuildFields())
       switch f {
         case { kind: FFun(fun), meta: hasDescribe(_) => true }: 
           fun.expr = macro {
-            var assertions = new tink.streams.Accumulator<tink.testrunner.Assertion>();
-            function done() {
-              assertions.yield(End);
-            }
+            final assertions = new tink.streams.Accumulator<tink.testrunner.Assertion>();
+            function done() assertions.yield(End);
             ${fun.expr};
             return assertions;
           };

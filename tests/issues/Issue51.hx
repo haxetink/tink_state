@@ -9,7 +9,7 @@ class Issue51 {
   public function new() {}
 
   public function testNested() {
-    var baseMap = new ObservableMap<Int, Entity>([]);
+    final baseMap = new ObservableMap<Int, Entity>([]);
 
     function query(key:String) {
       final entityQueries = {

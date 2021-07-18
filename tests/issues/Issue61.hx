@@ -11,20 +11,20 @@ class Issue61 {
   public function new() {}
 
   public function test() {
-    var first = true,
-        s = new State(7);
+    var first = true;
+    final s = new State(7);
 
-    var o = Observable.auto(() -> if (first) {
+    final o = Observable.auto(() -> if (first) {
       first = false;
       s.value;
     } else 42);
 
-    var o = Observable.auto(() -> o.value);
+    final o = Observable.auto(() -> o.value);
 
     function canFire()
       return (o:ObservableObject<Int>).canFire();
 
-    var log = [];
+    final log = [];
     o.bind(v -> log.push(v), Scheduler.direct);
     asserts.assert(canFire());
     asserts.assert(canFire());

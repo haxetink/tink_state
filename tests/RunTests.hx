@@ -1,9 +1,12 @@
 package ;
 
+import tink.testrunner.*;
+import tink.unit.*;
+
 class RunTests {
 
   static function main() {
-    tink.testrunner.Runner.run(tink.unit.TestBatch.make([
+    Runner.run(TestBatch.make([
       new TestBasic(),
       new TestDate(),
       new TestAuto(),
@@ -15,9 +18,6 @@ class RunTests {
       new issues.Issue51(),
       new issues.Issue61(),
       new issues.Issue63(),
-    ]))
-      .handle(function(result) {
-        travix.Logger.exit(result.summary().failures.length);
-      });
+    ])).handle(Runner.exit);
   }
 }

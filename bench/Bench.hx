@@ -24,7 +24,7 @@ class Bench {
           sum;
         });
 
-        var watch = unfinishedTodoCount.bind(function (x) {}, if (mode == 'batched') null else Scheduler.direct);
+        var watch = unfinishedTodoCount.bind(_ -> {}, if (mode == 'batched') null else Scheduler.direct);
 
         function update()
           for (t in todos)
@@ -50,7 +50,7 @@ class Bench {
   static function measure(name, f:()->Void, ?repeat = 1) {
     f();
     var old = haxe.Log.trace;
-    haxe.Log.trace = function (_, ?_) {}
+    haxe.Log.trace = (_, ?_) -> {}
     for (i in 0...repeat - 1) f();
     var start = Date.now().getTime();
     for (i in 0...repeat) f();
