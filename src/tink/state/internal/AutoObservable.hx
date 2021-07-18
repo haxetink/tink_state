@@ -208,6 +208,13 @@ class AutoObservable<T> extends Invalidator
   static public inline function untracked<T>(fn:()->T)
     return computeFor(null, fn);
 
+
+  static public inline function needsTracking<V>(o:ObservableObject<V>):Bool
+    return switch cur {
+      case null: false;
+      case v: !v.isSubscribedTo(o);
+    }
+
   static public inline function track<V>(o:ObservableObject<V>):V {
     var ret = o.getValue();
     if (cur != null && o.canFire())
@@ -298,6 +305,12 @@ class AutoObservable<T> extends Invalidator
         }
     }
 
+  public function isSubscribedTo<R>(source:ObservableObject<R>)
+    return switch dependencies.get(source) {
+      case null: false;
+      case s: s.used;
+    }
+
   public function invalidate()
     if (status == Computed) {
       status = Dirty;
@@ -311,5 +324,6 @@ class AutoObservable<T> extends Invalidator
 }
 
 private interface Derived {
+  function isSubscribedTo<R>(source:ObservableObject<R>):Bool;
   function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
 }
