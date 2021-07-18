@@ -54,68 +54,6 @@ private interface MapView<K, V> extends ObservableObject<MapView<K, V>> {
   function keyValueIterator():KeyValueIterator<K, V>;
 }
 
-private class Derived<K, V> implements MapView<K, V> {
-  final o:Observable<Map<K, V>>;
-  public function new(o)
-    this.o = o;
-
-  public function canFire()
-    return self().canFire();
-
-  public function getRevision()
-    return self().getRevision();
-
-  public function exists(key:K):Bool
-    return o.value.exists(key);
-
-  public function get(key:K):Null<V>
-    return o.value.get(key);
-
-  public function iterator():Iterator<V>
-    return o.value.iterator();
-
-  public function keys():Iterator<K>
-    return o.value.keys();
-
-  public function keyValueIterator():KeyValueIterator<K, V>
-    return o.value.keyValueIterator();
-
-  public function copy():IMap<K, V>
-    return cast o.value.copy();
-
-  inline function self()
-    return (o:ObservableObject<Map<K, V>>);
-
-  public function getValue()
-    return this;
-
-  public function isValid()
-    return self().isValid();
-
-  public function onInvalidate(i)
-    return self().onInvalidate(i);
-
-  function neverEqual(a, b)
-    return false;
-
-  public function getComparator()
-    return neverEqual;
-
-  function retain() {}
-  function release() {}
-
-  #if tink_state.debug
-  public function getObservers()
-    return self().getObservers();
-
-  public function getDependencies()
-    return self().getDependencies();
-
-  @:keep public function toString()
-    return 'ObservableMapView#${o.value.toString()}';
-  #end
-}
-
 private class MapImpl<K, V> extends Invalidator implements MapView<K, V> implements IMap<K, V> {
 
   var valid = false;
