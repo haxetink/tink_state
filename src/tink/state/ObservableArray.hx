@@ -23,7 +23,7 @@ abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> to Observable<ArrayV
     });
 
   public function entry(index)
-    return Observable.auto(() -> this.get(index));
+    return Observable.auto(() -> get(index));
 
   @:deprecated('use iterator instead')
   public function values()
@@ -33,7 +33,7 @@ abstract ObservableArray<T>(ArrayImpl<T>) from ArrayImpl<T> to Observable<ArrayV
     return 0...this.length;
 
   @:op([]) public inline function get(index)
-    return this.get(index);
+    return view[index];
 
   @:op([]) public inline function set(index, value)
     return this.set(index, value);
@@ -77,8 +77,21 @@ abstract ObservableArrayView<T>(ArrayView<T>) from ArrayView<T> {
   public function keys()
     return 0...this.length;
 
-  @:op([]) public inline function get(index)
-    return this.get(index);
+  @:op([]) public function get(index) {
+    return
+      if (AutoObservable.needsTracking(this)) {
+        var wrappers = AutoObservable.currentAnnex().get(Wrappers).forSource(this);
+
+        wrappers.get(index, () -> new TransformObservable(
+          this,
+          _ -> this.get(index),
+          null,
+          () -> wrappers.remove(index)
+          #if tink_state.debug , () -> 'Entry $index of ${this.toString()}' #end
+        )).value;
+      }
+      else this.get(index);
+  }
 
   public function toArray():Array<T>
     return this.copy();
@@ -144,11 +157,16 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   public function new(entries) {
     super(#if tink_state.debug id -> 'ObservableArray#$id[${this.entries.toString()}]' #end);
     this.entries = entries;
-    this.observableLength = transform(() -> this.entries.length #if tink_state.debug , 'length' #end);
-  }
-
-  function transform<X>(f:()->X, ?dispose #if tink_state.debug , name:String #end) {
-    return new TransformObservable(this, _ -> { this.valid = true; f(); }, null, dispose #if tink_state.debug , () -> '$name of ${toString()}' #end);
+    this.observableLength = new TransformObservable(
+      this,
+      _ -> {
+        valid = true;
+        this.entries.length;
+      },
+      null,
+      null
+      #if tink_state.debug , () -> 'length of ${this.toString()}' #end
+    );
   }
 
   public function replace(values:Array<T>)
@@ -196,18 +214,10 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   public function shift()
     return update(() -> entries.shift());
 
-  public function get(index:Int)
-    return
-      if (AutoObservable.needsTracking(this)) {
-        var wrappers = AutoObservable.currentAnnex().get(Wrappers).forSource(this);
-
-        wrappers.get(index, () -> transform(
-          () -> entries[index],
-          () -> wrappers.remove(index)
-          #if tink_state.debug , 'Entry $index of ${this.toString()}' #end
-        )).value;
-      }
-      else entries[index];
+  public function get(index:Int) {
+    valid = true;
+    return entries[index];
+  }
 
   public function set(index:Int, value:T)
     return update(() -> entries[index] = value);
@@ -257,7 +267,7 @@ private class Wrappers {
 
   public function new(target:{}) {}
 
-  public function forSource<T>(source:ArrayImpl<T>):SourceWrappers<T>
+  public function forSource<T>(source:ArrayView<T>):SourceWrappers<T>
     return cast switch bySource[source] {
       case null: bySource[source] = new SourceWrappers<T>(() -> bySource.remove(source));
       case v: v;
@@ -287,9 +297,11 @@ private class SourceWrappers<T> {
 
 private class DerivedView<T> implements ArrayView<T> {
 
+  final observableLength:Observable<Int>;
+
   public var length(get, never):Int;
     function get_length()
-      return o.value.length;
+      return observableLength.value;
 
   final o:Observable<Array<T>>;
 
@@ -299,11 +311,19 @@ private class DerivedView<T> implements ArrayView<T> {
   public function canFire()
     return self().canFire();
 
-  public function new(o)
+  public function new(o) {
     this.o = o;
+    this.observableLength = new TransformObservable(
+      o,
+      a -> a.length,
+      null,
+      null
+      #if tink_state.debug , () -> 'length of ${toString()}' #end
+    );
+  }
 
   public function get(index:Int)
-    return o.value[index];
+    return self().getValue()[index];
 
   inline function self()
     return (o:ObservableObject<Array<T>>);
