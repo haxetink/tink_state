@@ -74,4 +74,7 @@ class ObservableDate implements ObservableObject<Bool> {
 
   public function getComparator()
     return null;
+
+  function retain() {}
+  function release() {}
 }

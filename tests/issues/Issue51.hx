@@ -9,7 +9,7 @@ class Issue51 {
   public function new() {}
 
   public function testNested() {
-    final baseMap = new ObservableMap<Int, Entity>([]);
+    final baseMap = new ObservableMap<Int, Entity>();
 
     function query(key:String) {
       final entityQueries = {
@@ -75,7 +75,7 @@ class Issue51 {
 
 private class Entity {
   public final id:Int;
-  public final subMap:ObservableMap<String, Entity> = new ObservableMap([]);
+  public final subMap:ObservableMap<String, Entity> = new ObservableMap();
 
   public function new(id) {
     this.id = id;
@@ -85,4 +85,3 @@ private class Entity {
     return '$id';
   }
 }
-  

@@ -22,9 +22,18 @@ abstract ObjectMap<K:{}, V>(Map<K, V>) {
     return
       try new HaxeIterator(this.keys())
       catch (e:Dynamic) {// because IE11
-        var keys = [];
-        forEach((_, k, _) -> keys.push(k));
-        keys.iterator();
+        var ret = [];
+        forEach((_, k, _) -> ret.push(k));
+        ret.iterator();
+      }
+
+  public function iterator():Iterator<V>
+    return
+      try new HaxeIterator(this.values())
+      catch (e:Dynamic) {// because IE11
+        var ret = [];
+        forEach((v, _, _) -> ret.push(v));
+        ret.iterator();
       }
 
   public inline function remove(key)

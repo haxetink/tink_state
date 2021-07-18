@@ -276,6 +276,9 @@ private class ConstObservable<T> implements ObservableObject<T> {
     #end
   }
 
+  function retain() {}
+  function release() {}
+
   public function getValue()
     return value;
 

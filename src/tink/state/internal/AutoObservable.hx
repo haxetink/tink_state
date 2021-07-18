@@ -3,6 +3,7 @@ package tink.state.internal;
 #if tink_state.debug
 import tink.state.debug.Logger.inst as logger;
 #end
+import tink.core.Annex;
 
 @:callable
 @:access(tink.state.internal.AutoObservable)
@@ -78,19 +79,17 @@ private class SubscriptionTo<T> {
 
   public var used = true;
 
-  public function new<X>(source, cur, owner:AutoObservable<X>) {
+  public function new(source, cur, owner) {
     this.source = source;
     this.last = cur;
     this.lastRev = source.getRevision();
     this.owner = owner;
-
-    if (owner.hot) connect();
   }
 
   public inline function isValid()
     return source.getRevision() == lastRev;
 
-  public inline function hasChanged():Bool {
+  public function hasChanged():Bool {
     var nextRev = source.getRevision();
     if (nextRev == lastRev) return false;
     lastRev = nextRev;
@@ -137,6 +136,7 @@ class AutoObservable<T> extends Invalidator
     }
   #end
   public var hot(default, null) = false;
+  final annex:Annex<{}>;
   var status = Dirty;
   var last:T = null;
   var subscriptions:Array<Subscription>;
@@ -156,6 +156,9 @@ class AutoObservable<T> extends Invalidator
 
     return revision;
   }
+
+  public function getAnnex()
+    return annex;
 
   function subsValid() {
     if (subscriptions == null)
@@ -180,6 +183,7 @@ class AutoObservable<T> extends Invalidator
     this.comparator = comparator;
     this.list.onfill = () -> inline heatup();
     this.list.ondrain = () -> inline cooldown();
+    this.annex = new Annex<{}>(this);
   }
 
   function heatup() {
@@ -209,6 +213,19 @@ class AutoObservable<T> extends Invalidator
 
   static public inline function untracked<T>(fn:()->T)
     return computeFor(null, fn);
+
+
+  static public inline function needsTracking<V>(o:ObservableObject<V>):Bool
+    return switch cur {
+      case null: false;
+      case v: !v.isSubscribedTo(o);
+    }
+
+  static public function currentAnnex()
+    return switch cur {
+      case null: null;
+      case v: v.getAnnex();
+    }
 
   static public inline function track<V>(o:ObservableObject<V>):V {
     var ret = o.getValue();
@@ -264,6 +281,7 @@ class AutoObservable<T> extends Invalidator
               if (!s.used) {
                 if (hot) s.disconnect();
                 dependencies.remove(s.source);
+                s.source.release();
                 #if tink_state.debug
                   logger.unsubscribed(s.source, this);
                 #end
@@ -290,6 +308,8 @@ class AutoObservable<T> extends Invalidator
           logger.subscribed(source, this);
         #end
         var sub:Subscription = cast new SubscriptionTo(source, cur, this);
+        source.retain();
+        if (hot) sub.connect();
         dependencies.set(source, sub);
         subscriptions.push(sub);
       case v:
@@ -297,6 +317,12 @@ class AutoObservable<T> extends Invalidator
           v.reuse(cur);
           subscriptions.push(v);
         }
+    }
+
+  public function isSubscribedTo<R>(source:ObservableObject<R>)
+    return switch dependencies.get(source) {
+      case null: false;
+      case s: s.used;
     }
 
   public function invalidate()
@@ -312,5 +338,7 @@ class AutoObservable<T> extends Invalidator
 }
 
 private interface Derived {
+  function getAnnex():Annex<{}>;
+  function isSubscribedTo<R>(source:ObservableObject<R>):Bool;
   function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
 }
