@@ -4,13 +4,13 @@ import haxe.Constraints.IMap;
 import haxe.iterators.*;
 
 @:forward
-abstract ObservableMap<K, V>(MapImpl<K, V>) from MapImpl<K, V> to IMap<K, V> {
+@:multiType(@:followWithAbstracts K)
+abstract ObservableMap<K, V>(MapImpl<K, V>) {
 
   public var view(get, never):ObservableMapView<K, V>;
     inline function get_view() return this;
 
-  public function new(init:Map<K, V>)
-    this = new MapImpl(init.copy());
+  public function new();
 
   @:op([]) public inline function get(index)
     return this.get(index);
@@ -23,11 +23,24 @@ abstract ObservableMap<K, V>(MapImpl<K, V>) from MapImpl<K, V> to IMap<K, V> {
   public function toMap():Map<K, V>
     return view.toMap();
 
-  public function copy():ObservableMap<K, V>
-    return view.copy();
+  // public function copy():ObservableMap<K, V>
+  //   return view.copy();
 
   public function entry(key:K)
     return Observable.auto(this.get.bind(key));
+
+  @:to static function toIntMap<K:Int, V>(dict:MapImpl<K, V>):MapImpl<Int, V>
+    return new MapImpl<Int, V>(new Map(), new Map(), new Map());
+
+  @:to static function toStringMap<K:String, V>(dict:MapImpl<K, V>):MapImpl<String, V>
+    return new MapImpl<String, V>(new Map(), new Map(), new Map());
+
+  @:to static function toObjectMap<K:{}, V>(dict:MapImpl<K, V>):MapImpl<{}, V>
+    return new MapImpl<{}, V>(new Map(), new Map(), new Map());
+
+  extern static public inline function of<K, V>(m:Map<K, V>):ObservableMap<K, V>
+    return cast new MapImpl<K, V>(m.copy(), new Map(), new Map());
+
 }
 
 @:forward
@@ -38,8 +51,8 @@ abstract ObservableMapView<K, V>(MapView<K, V>) from MapView<K, V> {
   public function toMap():Map<K, V>
     return cast this.copy();
 
-  public function copy():ObservableMap<K, V>
-    return new MapImpl(cast this.copy());
+  // public function copy():ObservableMap<K, V>
+  //   return new MapImpl(cast this.copy(), null);
 
   public function entry(key:K)
     return Observable.auto(this.get.bind(key));
@@ -57,11 +70,15 @@ private interface MapView<K, V> extends ObservableObject<MapView<K, V>> {
 private class MapImpl<K, V> extends Invalidator implements MapView<K, V> implements IMap<K, V> {
 
   var valid = false;
-  var entries:Map<K, V>;
+  final entries:Map<K, V>;
+  final observableEntries:Map<K, Observable<V>>;
+  final observableExistences:Map<K, Observable<Bool>>;
 
-  public function new(entries:Map<K, V>) {
+  public function new(entries, observableEntries, observableExistences) {
     super();
     this.entries = entries;
+    this.observableEntries = observableEntries;
+    this.observableExistences = observableExistences;
   }
 
   public function observe():Observable<MapView<K, V>>
@@ -73,14 +90,35 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   public function getValue():MapView<K, V>
     return this;
 
+  function transformed<X>(cache:Map<K, Observable<X>>, key:K, f:()->X #if tink_state.debug , name:String #end)
+    return
+      if (AutoObservable.needsTracking(this)) {
+        var wrapper = switch cache[key] {
+          case null:
+            cache[key] = new TransformObservable(
+              this,
+              _ -> {
+                valid = true;
+                f();
+              },
+              null,
+              () -> cache.remove(key)
+              #if tink_state.debug , () -> '$name ${this.toString()}' #end
+            );
+          case v: v;
+        }
+        wrapper.value;
+      }
+      else f();
+
   public function get(k:K):Null<V>
-    return calc(() -> entries.get(k));
+    return transformed(observableEntries, k, () -> entries.get(k) #if tink_state.debug , 'Entry for $k in' #end);
 
   public function set(k:K, v:V):Void
     update(() -> { entries.set(k, v); null; });
 
   public function exists(k:K):Bool
-    return calc(() -> entries.exists(k));
+    return transformed(observableExistences, k, () -> entries.exists(k) #if tink_state.debug , 'Existance of $k in' #end);
 
   public function remove(k:K):Bool
     return update(() -> entries.remove(k));

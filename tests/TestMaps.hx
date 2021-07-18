@@ -11,7 +11,7 @@ class TestMaps {
   public function new() {}
 
   public function testEntries() {
-    final o = new ObservableMap([5 => 0, 6 => 0]);
+    final o = ObservableMap.of([5 => 0, 6 => 0]);
 
     var a = [];
 
@@ -74,7 +74,7 @@ class TestMaps {
   }
 
   public function testIterators() {
-    final map = new ObservableMap<String, String>(new Map());
+    final map = new ObservableMap<String, String>();
     map.set('key', 'value');
 
     var count = 0;
