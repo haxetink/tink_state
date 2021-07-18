@@ -22,7 +22,7 @@ class TestArrays {
     function getLog()
       return log.join(',').replace('undefined', '-').replace('null', '-');
 
-    function report(name:String) return (v:Null<Int>) -> log.push('$name:$v');
+    function report(name:String) { return (v:Null<Int>) -> log.push('$name:$v'); }
 
     Observable.auto(() -> a.length).bind(report('l'), direct);
 
