@@ -135,16 +135,17 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
 
   var valid = false;
   var entries:Array<T>;
+  final observableEntries = new Map<Int, Observable<T>>();
   final observableLength:Observable<Int>;
 
   public var length(get, never):Int;
     function get_length()
-      return calc(() -> entries.length);
+      return observableLength.value;
 
   public function new(entries) {
     super(#if tink_state.debug id -> 'ObservableArray#$id${this.entries.toString()}' #end);
     this.entries = entries;
-    this.observableLength = new TransformObservable(this, _ -> this.entries.length, null #if tink_state.debug , () -> 'length of ${toString()}' #end);
+    this.observableLength = new TransformObservable(this, _ -> this.entries.length, null, null #if tink_state.debug , () -> 'length of ${toString()}' #end);
   }
 
   public function replace(values:Array<T>)
@@ -193,7 +194,22 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
     return update(() -> entries.shift());
 
   public function get(index:Int)
-    return calc(() -> entries[index]);
+    return
+      if (AutoObservable.needsTracking(this)) {
+        var wrapper = switch observableEntries[index] {
+          case null:
+            observableEntries[index] = new TransformObservable(
+              this,
+              _ -> entries[index],
+              null,
+              () -> observableEntries.remove(index)
+              #if tink_state.debug , () -> 'Entry $index of ${this.toString()}' #end
+            );
+          case v: v;
+        }
+        wrapper.value;
+      }
+      else entries[index];
 
   public function set(index:Int, value:T)
     return update(() -> entries[index] = value);
