@@ -1,6 +1,9 @@
 package tink.state.internal;
 
+@:allow(tink.state.internal)
 interface ObservableObject<T> {
+  private function retain():Void;
+  private function release():Void;
   function getValue():T;
   function getRevision():Revision;
   function isValid():Bool;

@@ -53,6 +53,9 @@ class SignalObservable<X, T> implements ObservableObject<T> {
   public function getComparator():Comparator<T>
     return null;
 
+  function retain() {}
+  function release() {}
+
   public function onInvalidate(i:Invalidatable):CallbackLink
     // TODO: this largely duplicates Invalidatable.onInvalidate
     return

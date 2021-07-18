@@ -31,7 +31,7 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
 
   #if tink_state.debug
   public function getObservers()
-    return source.getObservers();
+    return source.getObservers();// TODO: this is incorrect
 
   public function getDependencies()
     return [cast source].iterator();
@@ -54,4 +54,7 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
 
   public function canFire():Bool
     return source.canFire();
+
+  function retain() {}
+  function release() {}
 }

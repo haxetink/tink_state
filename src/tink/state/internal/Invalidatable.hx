@@ -37,6 +37,8 @@ class Invalidator implements OwnedDisposable {
   public function ondispose(d:()->Void)
     list.ondispose(d);
 
+  function retain() {}
+  function release() {}
 
   public inline function dispose() {
     list.dispose();

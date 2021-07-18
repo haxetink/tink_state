@@ -72,7 +72,7 @@ private class CompoundState<T> implements StateObject<T> {
 
   #if tink_state.debug
   public function getObservers()
-    return data.getObservers();//TODO: this is not very exact
+    return data.getObservers();//TODO: this is incorrect
 
   public function getDependencies()
     return [(cast data:Observable<Any>)].iterator();
@@ -89,6 +89,9 @@ private class CompoundState<T> implements StateObject<T> {
 
   public function getComparator()
     return this.comparator;
+
+  function retain() {}
+  function release() {}
 }
 
 private class GuardedState<T> extends SimpleState<T> {

@@ -269,6 +269,7 @@ class AutoObservable<T> extends Invalidator
               if (!s.used) {
                 if (hot) s.disconnect();
                 dependencies.remove(s.source);
+                s.source.release();
                 #if tink_state.debug
                   logger.unsubscribed(s.source, this);
                 #end
@@ -295,6 +296,7 @@ class AutoObservable<T> extends Invalidator
           logger.subscribed(source, this);
         #end
         var sub:Subscription = cast new SubscriptionTo(source, cur, this);
+        source.retain();
         if (hot) sub.connect();
         dependencies.set(source, sub);
         subscriptions.push(sub);

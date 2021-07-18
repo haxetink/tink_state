@@ -297,4 +297,7 @@ private class DerivedView<T> implements ArrayView<T> {
   public function keyValueIterator()
     return o.value.keyValueIterator();
 
+  function retain() {}
+  function release() {}
+
 }

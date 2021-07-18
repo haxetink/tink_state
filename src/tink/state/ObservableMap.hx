@@ -101,6 +101,9 @@ private class Derived<K, V> implements MapView<K, V> {
   public function getComparator()
     return neverEqual;
 
+  function retain() {}
+  function release() {}
+
   #if tink_state.debug
   public function getObservers()
     return self().getObservers();
