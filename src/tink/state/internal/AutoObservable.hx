@@ -67,12 +67,61 @@ private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
   }
 }
 
+private typedef Subscription = SubscriptionTo<Any>;
+
+private class SubscriptionTo<T> {
+
+  public final source:ObservableObject<T>;
+  var last:T;
+  var lastRev:Revision;
+  final owner:Observer;
+
+  public var used = true;
+
+  public function new(source, cur, owner) {
+    this.source = source;
+    this.last = cur;
+    this.lastRev = source.getRevision();
+    this.owner = owner;
+  }
+
+  public inline function isValid()
+    return source.getRevision() == lastRev;
+
+  public function hasChanged():Bool {
+    var nextRev = source.getRevision();
+    if (nextRev == lastRev) return false;
+    lastRev = nextRev;
+    var before = last;
+    last = source.getValue();
+    return !source.getComparator().eq(last, before);
+  }
+
+  public inline function reuse(value:T) {
+    used = true;
+    last = value;
+  }
+
+  public inline function disconnect():Void {
+    #if tink_state.debug
+      logger.disconnected(source, cast owner);
+    #end
+    source.unsubscribe(owner);
+  }
+
+  public inline function connect():Void {
+    #if tink_state.debug
+      logger.connected(source, cast owner);
+    #end
+    source.subscribe(owner);
+  }
+}
+
 private enum abstract AutoObservableStatus(Int) {
   var Dirty;
   var Computed;
 }
 
-private typedef Source = ObservableObject<Dynamic>;
 class AutoObservable<T> extends Dispatcher
   implements Observer implements Derived implements ObservableObject<T> {
 
@@ -89,20 +138,19 @@ class AutoObservable<T> extends Dispatcher
   final annex:Annex<{}>;
   var status = Dirty;
   var last:T = null;
-  var sources:Array<Source>;
-  var lastValues = new ObjectMap<Source, Dynamic>();
-  var lastRevisions = new ObjectMap<Source, Revision>();
+  var subscriptions:Array<Subscription>;
+  var dependencies = new ObjectMap<ObservableObject<Dynamic>, Subscription>();
 
   var comparator:Comparator<T>;
 
   override function getRevision() {
     if (hot)
       return revision;
-    if (sources == null)
+    if (subscriptions == null)
       getValue();
 
-    for (s in sources)
-      if (s.getRevision() > lastRevisions[s])
+    for (s in subscriptions)
+      if (s.source.getRevision() > revision)
         return revision = new Revision();
 
     return revision;
@@ -112,11 +160,11 @@ class AutoObservable<T> extends Dispatcher
     return annex;
 
   function subsValid() {
-    if (sources == null)
+    if (subscriptions == null)
       return false;
 
-    for (s in sources)
-      if (s.getRevision() != lastRevisions[s])
+    for (s in subscriptions)
+      if (!s.isValid())
         return false;
 
     return true;
@@ -135,33 +183,18 @@ class AutoObservable<T> extends Dispatcher
     this.annex = new Annex<{}>(this);
   }
 
-  inline function connect(s:Source) {
-    #if tink_state.debug
-      logger.connected(s, this);
-    #end
-    s.subscribe(this);
-  }
-
-  inline function disconnect(s:Source):Void {
-    #if tink_state.debug
-      logger.disconnected(s, this);
-    #end
-    s.unsubscribe(this);
-  }
-
   function wakeup() {
     getValue();
     getRevision();
-    if (sources != null)
-      for (s in sources) connect(s);
+    if (subscriptions != null)
+      for (s in subscriptions) s.connect();
     hot = true;
   }
 
-
   function sleep() {
     hot = false;
-    if (sources != null)
-      for (s in sources) disconnect(s);
+    if (subscriptions != null)
+      for (s in subscriptions) s.disconnect();
   }
 
   static public inline function computeFor<T>(o:Derived, fn:()->T) {
@@ -202,19 +235,19 @@ class AutoObservable<T> extends Dispatcher
 
     function doCompute() {
       status = Computed;
-      if (sources != null)
-        lastValues.clear();// TODO: this might actually cause some churn ... who knows
-      sources = [];
+      if (subscriptions != null)
+        for (s in subscriptions) s.used = false;
+      subscriptions = [];
       sync = true;
       last = computeFor(this, () -> compute(this));
       sync = false;
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
-      if (sources.length == 0) dispose();
+      if (subscriptions.length == 0) dispose();
     }
 
-    var prevSources = sources,
+    var prevSubs = subscriptions,
         count = 0;
 
     while (!isValid()) {
@@ -223,11 +256,11 @@ class AutoObservable<T> extends Dispatcher
       #end
       if (++count == Observable.MAX_ITERATIONS)
         throw 'no result after ${Observable.MAX_ITERATIONS} attempts';
-      else if (sources != null) {
+      else if (subscriptions != null) {
         var valid = true;
 
-        for (s in sources)
-          if (hasChanged(s)) {
+        for (s in subscriptions)
+          if (s.hasChanged()) {
             valid = false;
             break;
           }
@@ -240,14 +273,14 @@ class AutoObservable<T> extends Dispatcher
         }
         else {
           doCompute();
-          if (prevSources != null) {
-            for (s in prevSources)
-              if (!isUsed(s)) {
-                if (hot) disconnect(s);
-                lastRevisions.remove(s);
-                s.release();
+          if (prevSubs != null) {
+            for (s in prevSubs)
+              if (!s.used) {
+                if (hot) s.disconnect();
+                dependencies.remove(s.source);
+                s.source.release();
                 #if tink_state.debug
-                  logger.unsubscribed(s, this);
+                  logger.unsubscribed(s.source, this);
                 #end
               }
           }
@@ -258,16 +291,6 @@ class AutoObservable<T> extends Dispatcher
     return last;
   }
 
-  public function hasChanged<R>(s:ObservableObject<R>):Bool {
-    var nextRev = s.getRevision();
-    if (nextRev == lastRevisions[s]) return false;
-    lastRevisions[s] = nextRev;
-    var before:R = lastValues[s];
-    var last = s.getValue();
-    lastValues[s] = last;
-    return !s.getComparator().eq(last, before);
-  }
-
   var sync = true;
 
   function update(value) if (!sync) {
@@ -275,29 +298,29 @@ class AutoObservable<T> extends Dispatcher
     fire(this);
   }
 
-  inline function isUsed(s:Source)
-    return lastValues.exists(s);
-
   public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
-    switch lastRevisions[source] {
+    switch dependencies.get(source) {
       case null:
         #if tink_state.debug
           logger.subscribed(source, this);
         #end
-        lastRevisions[source] = source.getRevision();
-        lastValues[source] = cur;
+        var sub:Subscription = cast new SubscriptionTo(source, cur, this);
         source.retain();
-        if (hot) connect(source);
-        sources.push(source);
+        if (hot) sub.connect();
+        dependencies.set(source, sub);
+        subscriptions.push(sub);
       case v:
-        if (!isUsed(source)) {
-          lastValues[source] = cur;
-          sources.push(source);
+        if (!v.used) {
+          v.reuse(cur);
+          subscriptions.push(v);
         }
     }
 
   public function isSubscribedTo<R>(source:ObservableObject<R>)
-    return isUsed(source);
+    return switch dependencies.get(source) {
+      case null: false;
+      case s: s.used;
+    }
 
   public function notify(from)
     if (status == Computed) {
@@ -307,7 +330,7 @@ class AutoObservable<T> extends Dispatcher
 
   #if tink_state.debug
   public function getDependencies()
-    return sources.iterator();
+    return cast dependencies.keys();
   #end
 }
 
