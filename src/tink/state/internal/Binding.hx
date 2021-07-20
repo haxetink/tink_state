@@ -37,7 +37,7 @@ class Binding<T> implements Observer implements Scheduler.Schedulable implements
     return 'Binding#$id[${data.toString()}]';//TODO: position might be helpful too
   #end
 
-  public function cancel() {
+  public function cancel() if (status != Canceled) {
     data.unsubscribe(this);
     status = Canceled;
   }
