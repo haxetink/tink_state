@@ -34,13 +34,16 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
   #if tink_state.debug
     final observers = new ObjectMap<Invalidatable, Invalidatable>();
 
-    public function onInvalidate(i)
-      return switch observers[i] {
-        case null:
-          observers[i] = i;
-          source.onInvalidate(i) & () -> observers.remove(i);
-        default: null;
-      }
+    public function subscribe(i) {
+      observers[i] = i;
+      source.subscribe(i);
+    }
+
+    public function unsubscribe(i) {
+      if (observers.remove(i))
+        source.unsubscribe(i);
+    }
+
 
     public function getObservers()
       return observers.iterator();
@@ -51,8 +54,11 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
     public function toString():String
       return _toString();
   #else
-    public function onInvalidate(i)
-      return source.onInvalidate(i);
+    public function subscribe(i)
+      source.subscribe(i);
+
+    public function unsubscribe(i)
+      source.unsubscribe(i);
   #end
 
   public function getValue() {

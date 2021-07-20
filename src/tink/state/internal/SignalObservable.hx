@@ -20,6 +20,10 @@ class SignalObservable<T> implements ObservableObject<T> {
     this.get = get;
     this.changed = changed;
     this.changed.handle(_ -> if (valid) {
+      #if tink_state.debug
+      for (i in observers.keys())
+        tink.state.debug.Logger.inst.triggered(this, i);
+      #end
       revision = new Revision();
       valid = false;
     });
@@ -56,24 +60,15 @@ class SignalObservable<T> implements ObservableObject<T> {
   function retain() {}
   function release() {}
 
-  public function onInvalidate(i:Invalidatable):CallbackLink
-    // TODO: this largely duplicates Invalidatable.onInvalidate
-    return
-      if (observers.get(i)) null;
-      else {
-        observers.set(i, true);
-        changed.handle(
-          #if tink_state.debug
-            _ -> {
-              if (Std.is(this, ObservableObject))
-                tink.state.debug.Logger.inst.triggered(cast this, i);
-              i.invalidate();
-            }
-          #else
-            _ -> i.invalidate()
-          #end
-        ) & () -> observers.remove(i);
-      }
+  public function subscribe(i:Invalidatable)
+    if (!observers.exists(i)) observers[i] = changed.handle(i.invalidate);
+
+  public function unsubscribe(i:Invalidatable) {
+    switch observers[i] {
+      case null:
+      case v:
+    }
+  }
 
   #if tink_state.debug
   public function getObservers()

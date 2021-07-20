@@ -346,8 +346,11 @@ private class DerivedView<T> implements ArrayView<T> {
   public function isValid()
     return self().isValid();
 
-  public function onInvalidate(i)
-    return self().onInvalidate(i);
+  public function subscribe(i)
+    self().subscribe(i);
+
+  public function unsubscribe(i)
+    self().unsubscribe(i);
 
   public function copy()
     return o.value.copy();

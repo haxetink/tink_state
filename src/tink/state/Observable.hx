@@ -300,8 +300,8 @@ private class ConstObservable<T> implements ObservableObject<T> {
     return EmptyIterator.DEPENDENCIES;
   #end
 
-  public function onInvalidate(i:Invalidatable):CallbackLink
-    return null;
+  public function subscribe(i:Invalidatable) {}
+  public function unsubscribe(i:Invalidatable) {}
 }
 
 private class SimpleObservable<T> extends Invalidator implements ObservableObject<T> {
@@ -311,7 +311,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
   var comparator:Comparator<T>;
 
   public function new(poll, ?comparator #if tink_state.debug , ?toString, ?pos #end) {
-    super(#if tink_state.debug toString, pos #end);
+    super(null #if tink_state.debug , toString, pos #end);
     this._poll = poll;
     this.comparator = comparator;
   }

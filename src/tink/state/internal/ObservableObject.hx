@@ -8,7 +8,8 @@ interface ObservableObject<T> {
   function getRevision():Revision;
   function isValid():Bool;
   function getComparator():Comparator<T>;
-  function onInvalidate(i:Invalidatable):CallbackLink;
+  function subscribe(i:Invalidatable):Void;
+  function unsubscribe(i:Invalidatable):Void;
   function canFire():Bool;
   #if tink_state.debug
   function getObservers():Iterator<Invalidatable>;

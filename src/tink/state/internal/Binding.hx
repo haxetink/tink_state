@@ -7,7 +7,6 @@ class Binding<T> implements Invalidatable implements Scheduler.Schedulable imple
   var comparator:Comparator<T>;
   var status = Valid;
   var last:Null<T> = null;
-  final link:CallbackLink;
 
   static public function create<T>(o:ObservableObject<T>, cb, ?scheduler, comparator):CallbackLink {
     var value = Observable.untracked(() -> o.getValue());
@@ -27,7 +26,7 @@ class Binding<T> implements Invalidatable implements Scheduler.Schedulable imple
       case v: v;
     }
     this.comparator = data.getComparator().or(comparator);
-    link = data.onInvalidate(this);
+    data.subscribe(this);
     cb.invoke(this.last = value);
   }
 
@@ -39,7 +38,7 @@ class Binding<T> implements Invalidatable implements Scheduler.Schedulable imple
   #end
 
   public function cancel() {
-    link.cancel();
+    data.unsubscribe(this);
     status = Canceled;
   }
 

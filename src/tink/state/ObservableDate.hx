@@ -25,8 +25,11 @@ class ObservableDate implements ObservableObject<Bool> {
   public function getValue()
     return _observable.getValue();
 
-  public function onInvalidate(i)
-    return _observable.onInvalidate(i);
+  public function subscribe(i)
+    _observable.subscribe(i);
+
+  public function unsubscribe(i)
+    _observable.unsubscribe(i);
 
   public function new(?date:Date) {
 

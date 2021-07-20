@@ -70,13 +70,15 @@ private class CompoundState<T> implements StateObject<T> {
   #if tink_state.debug
     final observers = new ObjectMap<Invalidatable, Invalidatable>();
 
-    public function onInvalidate(i)
-      return switch observers[i] {
-        case null:
-          observers[i] = i;
-          data.onInvalidate(i) & () -> observers.remove(i);
-        default: null;
-      }
+    public function subscribe(i) {
+      observers[i] = i;
+      data.subscribe(i);
+    }
+
+    public function unsubscribe(i) {
+      if (observers.remove(i))
+        data.unsubscribe(i);
+    }
 
     public function getObservers()
       return observers.iterator();
@@ -87,8 +89,11 @@ private class CompoundState<T> implements StateObject<T> {
     @:keep public function toString()
       return 'CompoundState[${data.toString()}]';//TODO: perhaps this should be providable from outside
   #else
-    public function onInvalidate(i)
-      return data.onInvalidate(i);
+    public function subscribe(i)
+      data.subscribe(i);
+    public function unsubscribe(i)
+      data.unsubscribe(i);
+
   #end
 
   public function set(value) {
@@ -137,14 +142,10 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
   public function isValid()
     return true;
 
-  public function new(value, ?comparator, ?onStatusChange:Bool->Void #if tink_state.debug , ?toString, ?pos #end) {
-    super(#if tink_state.debug toString, pos #end);
+  public function new(value, ?comparator, ?onStatusChange #if tink_state.debug , ?toString, ?pos #end) {
+    super(onStatusChange #if tink_state.debug , toString, pos #end);
     this.value = value;
     this.comparator = comparator;
-    if (onStatusChange != null) {
-      list.ondrain = onStatusChange.bind(false);
-      list.onfill = onStatusChange.bind(true);
-    }
   }
 
   public function getValue()

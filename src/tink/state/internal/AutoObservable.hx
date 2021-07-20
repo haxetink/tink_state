@@ -74,7 +74,6 @@ private class SubscriptionTo<T> {
   public final source:ObservableObject<T>;
   var last:T;
   var lastRev:Revision;
-  var link:CallbackLink;
   final owner:Invalidatable;
 
   public var used = true;
@@ -107,14 +106,14 @@ private class SubscriptionTo<T> {
     #if tink_state.debug
       logger.disconnected(source, cast owner);
     #end
-    link.cancel();
+    source.unsubscribe(owner);
   }
 
   public inline function connect():Void {
     #if tink_state.debug
       logger.connected(source, cast owner);
     #end
-    this.link = source.onInvalidate(owner);
+    source.subscribe(owner);
   }
 }
 
@@ -178,15 +177,13 @@ class AutoObservable<T> extends Invalidator
     return comparator;
 
   public function new(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end) {
-    super(#if tink_state.debug toString, pos #end);
+    super(active -> if (active) wakeup() else sleep() #if tink_state.debug , toString, pos #end);
     this.compute = compute;
     this.comparator = comparator;
-    this.list.onfill = () -> inline heatup();
-    this.list.ondrain = () -> inline cooldown();
     this.annex = new Annex<{}>(this);
   }
 
-  function heatup() {
+  function wakeup() {
     getValue();
     getRevision();
     if (subscriptions != null)
@@ -194,7 +191,7 @@ class AutoObservable<T> extends Invalidator
     hot = true;
   }
 
-  function cooldown() {
+  function sleep() {
     hot = false;
     if (subscriptions != null)
       for (s in subscriptions) s.disconnect();
