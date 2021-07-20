@@ -82,7 +82,7 @@ private interface MapView<K, V> extends ObservableObject<MapView<K, V>> {
   function keyValueIterator():KeyValueIterator<K, V>;
 }
 
-private class MapImpl<K, V> extends Invalidator implements MapView<K, V> implements IMap<K, V> {
+private class MapImpl<K, V> extends Dispatcher implements MapView<K, V> implements IMap<K, V> {
 
   var valid = false;
   final entries:Map<K, V>;

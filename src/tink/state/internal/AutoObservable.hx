@@ -73,7 +73,7 @@ private enum abstract AutoObservableStatus(Int) {
 }
 
 private typedef Source = ObservableObject<Dynamic>;
-class AutoObservable<T> extends Invalidator
+class AutoObservable<T> extends Dispatcher
   implements Invalidatable implements Derived implements ObservableObject<T> {
 
   static var cur:Derived;

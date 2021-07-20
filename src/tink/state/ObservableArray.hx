@@ -144,7 +144,7 @@ private interface ArrayView<T> extends ObservableObject<ArrayView<T>> {
   function keyValueIterator():ArrayKeyValueIterator<T>;
 }
 
-private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
+private class ArrayImpl<T> extends Dispatcher implements ArrayView<T> {
 
   var valid = false;
   var entries:Array<T>;

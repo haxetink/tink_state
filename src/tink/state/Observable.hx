@@ -304,7 +304,7 @@ private class ConstObservable<T> implements ObservableObject<T> {
   public function unsubscribe(i:Invalidatable) {}
 }
 
-private class SimpleObservable<T> extends Invalidator implements ObservableObject<T> {
+private class SimpleObservable<T> extends Dispatcher implements ObservableObject<T> {
 
   var _poll:Void->Measurement<T>;
   var _cache:Measurement<T> = null;

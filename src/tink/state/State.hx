@@ -134,7 +134,7 @@ private class GuardedState<T> extends SimpleState<T> {
   }
 }
 
-private class SimpleState<T> extends Invalidator implements StateObject<T> {
+private class SimpleState<T> extends Dispatcher implements StateObject<T> {
 
   final comparator:Comparator<T>;
   var value:T;
