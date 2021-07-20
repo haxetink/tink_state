@@ -153,7 +153,7 @@ private class MapImpl<K, V> extends Dispatcher implements MapView<K, V> implemen
     var ret = fn();
     if (valid) {
       valid = false;
-      fire();
+      fire(this);
     }
     return ret;
   }

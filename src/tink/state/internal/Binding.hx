@@ -1,6 +1,6 @@
 package tink.state.internal;
 
-class Binding<T> implements Invalidatable implements Scheduler.Schedulable implements LinkObject {
+class Binding<T> implements Observer implements Scheduler.Schedulable implements LinkObject {
   var data:ObservableObject<T>;
   var cb:Callback<T>;
   var scheduler:Scheduler;
@@ -42,7 +42,7 @@ class Binding<T> implements Invalidatable implements Scheduler.Schedulable imple
     status = Canceled;
   }
 
-  public function invalidate()
+  public function notify(_)
     if (status == Valid) {
       status = Invalid;
       scheduler.schedule(this);

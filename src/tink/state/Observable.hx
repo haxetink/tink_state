@@ -300,8 +300,8 @@ private class ConstObservable<T> implements ObservableObject<T> {
     return EmptyIterator.DEPENDENCIES;
   #end
 
-  public function subscribe(i:Invalidatable) {}
-  public function unsubscribe(i:Invalidatable) {}
+  public function subscribe(i:Observer) {}
+  public function unsubscribe(i:Observer) {}
 }
 
 private class SimpleObservable<T> extends Dispatcher implements ObservableObject<T> {
@@ -324,7 +324,7 @@ private class SimpleObservable<T> extends Dispatcher implements ObservableObject
 
   function reset(_) {
     _cache = null;
-    fire();
+    fire(this);
   }
 
   function poll() {

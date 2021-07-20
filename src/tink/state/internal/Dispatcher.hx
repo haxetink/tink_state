@@ -4,7 +4,7 @@ import tink.core.Disposable;
 
 class Dispatcher extends SimpleDisposable {
   var revision = new Revision();
-  final observers = new OrderedObjectMap<Invalidatable, Invalidatable>();
+  final observers = new OrderedObjectMap<Observer, Observer>();
   final onStatusChange:(watched:Bool)->Void;
   static function noop(_) {}
   #if tink_state.debug
@@ -38,14 +38,14 @@ class Dispatcher extends SimpleDisposable {
   public function getRevision()
     return revision;
 
-  public function subscribe(i:Invalidatable) {
+  public function subscribe(i:Observer) {
     if (observers.exists(i) || disposed) null;
     var wasEmpty = observers.size == 0;
     observers[i] = i;
     if (wasEmpty) onStatusChange(true);
   }
 
-  public function unsubscribe(i:Invalidatable) {
+  public function unsubscribe(i:Observer) {
     observers.remove(i);
     if (observers.size == 0) onStatusChange(false);
   }
@@ -55,22 +55,13 @@ class Dispatcher extends SimpleDisposable {
     return observers.iterator();
   #end
 
-  function fire() {
-    #if tink_state.debug
-      var report =
-        if (Std.is(this, ObservableObject)) {
-          var o = cast this;
-          v -> tink.state.debug.Logger.inst.triggered(o, v);
-        }
-        else _ -> {};
-    #end
-
+  function fire<R>(from:ObservableObject<R>) {
     revision = new Revision();
     for (v in observers) {
       #if tink_state.debug
-        report(v);
+      tink.state.debug.Logger.inst.triggered(from, v);
       #end
-      v.invalidate();
+      v.notify(from);
     }
   }
 }

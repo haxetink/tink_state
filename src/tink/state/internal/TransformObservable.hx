@@ -32,7 +32,7 @@ class TransformObservable<In, Out> implements ObservableObject<Out> {
     return lastSeenRevision == source.getRevision();
 
   #if tink_state.debug
-    final observers = new ObjectMap<Invalidatable, Invalidatable>();
+    final observers = new ObjectMap<Observer, Observer>();
 
     public function subscribe(i) {
       observers[i] = i;

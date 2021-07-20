@@ -74,7 +74,7 @@ private enum abstract AutoObservableStatus(Int) {
 
 private typedef Source = ObservableObject<Dynamic>;
 class AutoObservable<T> extends Dispatcher
-  implements Invalidatable implements Derived implements ObservableObject<T> {
+  implements Observer implements Derived implements ObservableObject<T> {
 
   static var cur:Derived;
 
@@ -272,7 +272,7 @@ class AutoObservable<T> extends Dispatcher
 
   function update(value) if (!sync) {
     last = value;
-    fire();
+    fire(this);
   }
 
   inline function isUsed(s:Source)
@@ -299,10 +299,10 @@ class AutoObservable<T> extends Dispatcher
   public function isSubscribedTo<R>(source:ObservableObject<R>)
     return isUsed(source);
 
-  public function invalidate()
+  public function notify(from)
     if (status == Computed) {
       status = Dirty;
-      fire();
+      fire(this);
     }
 
   #if tink_state.debug

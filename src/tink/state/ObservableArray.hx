@@ -250,7 +250,7 @@ private class ArrayImpl<T> extends Dispatcher implements ArrayView<T> {
     var ret = fn();
     if (valid) {
       valid = false;
-      fire();
+      fire(this);
     }
     return ret;
   }

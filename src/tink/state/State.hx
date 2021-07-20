@@ -68,7 +68,7 @@ private class CompoundState<T> implements StateObject<T> {
     return data.getValue();
 
   #if tink_state.debug
-    final observers = new ObjectMap<Invalidatable, Invalidatable>();
+    final observers = new ObjectMap<Observer, Observer>();
 
     public function subscribe(i) {
       observers[i] = i;
@@ -173,7 +173,7 @@ private class SimpleState<T> extends Dispatcher implements StateObject<T> {
 
     if (!comparator.eq(value, this.value)) {
       this.value = value;
-      fire();
+      fire(this);
     }
     return value;
   }

@@ -60,10 +60,10 @@ class SignalObservable<T> implements ObservableObject<T> {
   function retain() {}
   function release() {}
 
-  public function subscribe(i:Invalidatable)
-    if (!observers.exists(i)) observers[i] = changed.handle(i.invalidate);
+  public function subscribe(i:Observer)
+    if (!observers.exists(i)) observers[i] = changed.handle(() -> i.notify(this));
 
-  public function unsubscribe(i:Invalidatable) {
+  public function unsubscribe(i:Observer) {
     switch observers[i] {
       case null:
       case v:
