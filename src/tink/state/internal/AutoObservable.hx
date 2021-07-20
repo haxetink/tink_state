@@ -67,12 +67,10 @@ private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
   }
 }
 
-private typedef Subscription = SubscriptionTo<Any>;
+private class Subscription {
 
-private class SubscriptionTo<T> {
-
-  public final source:ObservableObject<T>;
-  var last:T;
+  public final source:ObservableObject<Dynamic>;
+  var last:Any;
   var lastRev:Revision;
   final owner:Observer;
 
@@ -97,7 +95,7 @@ private class SubscriptionTo<T> {
     return !source.getComparator().eq(last, before);
   }
 
-  public inline function reuse(value:T) {
+  public inline function reuse(value:Any) {
     used = true;
     last = value;
   }
@@ -114,6 +112,10 @@ private class SubscriptionTo<T> {
       logger.connected(source, cast owner);
     #end
     source.subscribe(owner);
+  }
+
+  public inline function release() {
+    source.release();
   }
 }
 
@@ -276,12 +278,12 @@ class AutoObservable<T> extends Dispatcher
           if (prevSubs != null) {
             for (s in prevSubs)
               if (!s.used) {
-                if (hot) s.disconnect();
-                dependencies.remove(s.source);
-                s.source.release();
                 #if tink_state.debug
                   logger.unsubscribed(s.source, this);
                 #end
+                dependencies.remove(s.source);
+                if (hot) s.disconnect();
+                s.release();
               }
           }
         }
@@ -304,7 +306,7 @@ class AutoObservable<T> extends Dispatcher
         #if tink_state.debug
           logger.subscribed(source, this);
         #end
-        var sub:Subscription = cast new SubscriptionTo(source, cur, this);
+        var sub:Subscription = new Subscription(source, cur, this);
         source.retain();
         if (hot) sub.connect();
         dependencies.set(source, sub);
