@@ -276,6 +276,9 @@ private class ConstObservable<T> implements ObservableObject<T> {
     #end
   }
 
+  function retain() {}
+  function release() {}
+
   public function getValue()
     return value;
 
@@ -297,18 +300,18 @@ private class ConstObservable<T> implements ObservableObject<T> {
     return EmptyIterator.DEPENDENCIES;
   #end
 
-  public function onInvalidate(i:Invalidatable):CallbackLink
-    return null;
+  public function subscribe(i:Observer) {}
+  public function unsubscribe(i:Observer) {}
 }
 
-private class SimpleObservable<T> extends Invalidator implements ObservableObject<T> {
+private class SimpleObservable<T> extends Dispatcher implements ObservableObject<T> {
 
   var _poll:Void->Measurement<T>;
   var _cache:Measurement<T> = null;
   var comparator:Comparator<T>;
 
   public function new(poll, ?comparator #if tink_state.debug , ?toString, ?pos #end) {
-    super(#if tink_state.debug toString, pos #end);
+    super(null #if tink_state.debug , toString, pos #end);
     this._poll = poll;
     this.comparator = comparator;
   }
@@ -321,7 +324,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
 
   function reset(_) {
     _cache = null;
-    fire();
+    fire(this);
   }
 
   function poll() {

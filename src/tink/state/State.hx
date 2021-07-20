@@ -67,18 +67,32 @@ private class CompoundState<T> implements StateObject<T> {
   public function getValue()
     return data.getValue();
 
-  public function onInvalidate(i)
-    return data.onInvalidate(i);
-
   #if tink_state.debug
-  public function getObservers()
-    return data.getObservers();//TODO: this is not very exact
+    final observers = new ObjectMap<Observer, Observer>();
 
-  public function getDependencies()
-    return [(cast data:Observable<Any>)].iterator();
+    public function subscribe(i) {
+      observers[i] = i;
+      data.subscribe(i);
+    }
 
-  @:keep public function toString()
-    return 'CompoundState[${data.toString()}]';//TODO: perhaps this should be providable from outside
+    public function unsubscribe(i) {
+      if (observers.remove(i))
+        data.unsubscribe(i);
+    }
+
+    public function getObservers()
+      return observers.iterator();
+
+    public function getDependencies()
+      return [(cast data:Observable<Any>)].iterator();
+
+    @:keep public function toString()
+      return 'CompoundState[${data.toString()}]';//TODO: perhaps this should be providable from outside
+  #else
+    public function subscribe(i)
+      data.subscribe(i);
+    public function unsubscribe(i)
+      data.unsubscribe(i);
 
   #end
 
@@ -89,6 +103,9 @@ private class CompoundState<T> implements StateObject<T> {
 
   public function getComparator()
     return this.comparator;
+
+  function retain() {}
+  function release() {}
 }
 
 private class GuardedState<T> extends SimpleState<T> {
@@ -117,7 +134,7 @@ private class GuardedState<T> extends SimpleState<T> {
   }
 }
 
-private class SimpleState<T> extends Invalidator implements StateObject<T> {
+private class SimpleState<T> extends Dispatcher implements StateObject<T> {
 
   final comparator:Comparator<T>;
   var value:T;
@@ -125,14 +142,10 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
   public function isValid()
     return true;
 
-  public function new(value, ?comparator, ?onStatusChange:Bool->Void #if tink_state.debug , ?toString, ?pos #end) {
-    super(#if tink_state.debug toString, pos #end);
+  public function new(value, ?comparator, ?onStatusChange #if tink_state.debug , ?toString, ?pos #end) {
+    super(onStatusChange #if tink_state.debug , toString, pos #end);
     this.value = value;
     this.comparator = comparator;
-    if (onStatusChange != null) {
-      list.ondrain = onStatusChange.bind(false);
-      list.onfill = onStatusChange.bind(true);
-    }
   }
 
   public function getValue()
@@ -160,7 +173,7 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
 
     if (!comparator.eq(value, this.value)) {
       this.value = value;
-      fire();
+      fire(this);
     }
     return value;
   }

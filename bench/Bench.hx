@@ -11,20 +11,21 @@ class Bench {
         });
       return todos;
     }
-    measure('create 10000 todos', () -> makeTodos(1000), 100);
+    var count = 1000;
+    measure('creating ${count} todos', () -> makeTodos(count), 100);
 
-    var todos = makeTodos(1000);
-    for (mode in ['direct', 'batched', 'atomic'])
-      measure('toggle 1000 todos [$mode]', () -> {
+    var todos = makeTodos(count);
+    for (mode in ['direct', 'batched', 'atomic']) {
+      var unfinishedTodoCount = Observable.auto(() -> {
+        var sum = 0;
+        for (t in todos)
+          if (!t.done.value) sum++;
+        sum;
+      });
 
-        var unfinishedTodoCount = Observable.auto(() -> {
-          var sum = 0;
-          for (t in todos)
-            if (!t.done.value) sum++;
-          sum;
-        });
+      var watch = unfinishedTodoCount.bind(_ -> {}, if (mode == 'batched') null else Scheduler.direct);
 
-        var watch = unfinishedTodoCount.bind(_ -> {}, if (mode == 'batched') null else Scheduler.direct);
+      measure('toggling ${todos.length} todos [$mode]', () -> {
 
         function update()
           for (t in todos)
@@ -38,13 +39,15 @@ class Bench {
         if (mode == 'batched')
           Observable.updateAll();
 
-        watch.cancel();
 
       }, switch mode {
         case 'atomic': 1000;
         case 'batched': 1000;
         default: 10;
       });
+
+      watch.cancel();
+    }
   }
 
   static function measure(name, f:()->Void, ?repeat = 1) {

@@ -7,7 +7,7 @@ class Logger {
   public function unsubscribed<X, Y>(source:Observable<X>, derived:Observable<Y>) {}
   public function connected<X, Y>(source:Observable<X>, derived:Observable<Y>) {}
   public function disconnected<X, Y>(source:Observable<X>, derived:Observable<Y>) {}
-  public function triggered<X>(source:Observable<X>, watcher:Invalidatable) {}
+  public function triggered<X>(source:Observable<X>, watcher:Observer) {}
   public function revalidating<X>(source:Observable<X>) {}
   public function revalidated<X>(source:Observable<X>, reused:Bool) {}
   public function filter(match)
@@ -50,13 +50,13 @@ class StringLogger extends Logger {
   override function disconnected<X, Y>(source:Observable<X>, derived:Observable<Y>)
     output('${derived.toString()} disconnected from ${source.toString()}');
 
-  override function triggered<X>(source:Observable<X>, watcher:Invalidatable)
+  override function triggered<X>(source:Observable<X>, watcher:Observer)
     output('${watcher.toString()} triggered by ${source.toString()}');
-  
-  override function revalidating<X>(source:Observable<X>) 
+
+  override function revalidating<X>(source:Observable<X>)
     output('${source.toString()} revalidating');
-  
-  override function revalidated<X>(source:Observable<X>, reused:Bool) 
+
+  override function revalidated<X>(source:Observable<X>, reused:Bool)
     output('${source.toString()} revalidated (reused=$reused)');
 }
 
@@ -78,7 +78,7 @@ class LoggerGroup extends Logger {
   override public function disconnected<X, Y>(source:Observable<X>, derived:Observable<Y>)
     for (l in loggers)
       l.disconnected(source, derived);
-  override public function triggered<X>(source:Observable<X>, watcher:Invalidatable)
+  override public function triggered<X>(source:Observable<X>, watcher:Observer)
     for (l in loggers)
       l.triggered(source, watcher);
   override public function revalidating<X>(source:Observable<X>)
@@ -105,7 +105,7 @@ class Filter extends Logger {
     if (match(source)) logger.connected(source, derived);
   override public function disconnected<X, Y>(source:Observable<X>, derived:Observable<Y>)
     if (match(source)) logger.disconnected(source, derived);
-  override public function triggered<X>(source:Observable<X>, watcher:Invalidatable)
+  override public function triggered<X>(source:Observable<X>, watcher:Observer)
     if (match(source)) logger.triggered(source, watcher);
   override public function revalidating<X>(source:Observable<X>)
     if (match(source)) logger.revalidating(source);

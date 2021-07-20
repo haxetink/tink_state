@@ -3,6 +3,7 @@ package tink.state.internal;
 #if tink_state.debug
 import tink.state.debug.Logger.inst as logger;
 #end
+import tink.core.Annex;
 
 @:callable
 @:access(tink.state.internal.AutoObservable)
@@ -66,31 +67,26 @@ private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
   }
 }
 
-private typedef Subscription = SubscriptionTo<Any>;
+private class Subscription {
 
-private class SubscriptionTo<T> {
-
-  public final source:ObservableObject<T>;
-  var last:T;
+  public final source:ObservableObject<Dynamic>;
+  var last:Any;
   var lastRev:Revision;
-  var link:CallbackLink;
-  final owner:Invalidatable;
+  final owner:Observer;
 
   public var used = true;
 
-  public function new<X>(source, cur, owner:AutoObservable<X>) {
+  public function new(source, cur, owner) {
     this.source = source;
     this.last = cur;
     this.lastRev = source.getRevision();
     this.owner = owner;
-
-    if (owner.hot) connect();
   }
 
   public inline function isValid()
     return source.getRevision() == lastRev;
 
-  public inline function hasChanged():Bool {
+  public function hasChanged():Bool {
     var nextRev = source.getRevision();
     if (nextRev == lastRev) return false;
     lastRev = nextRev;
@@ -99,7 +95,7 @@ private class SubscriptionTo<T> {
     return !source.getComparator().eq(last, before);
   }
 
-  public inline function reuse(value:T) {
+  public inline function reuse(value:Any) {
     used = true;
     last = value;
   }
@@ -108,14 +104,18 @@ private class SubscriptionTo<T> {
     #if tink_state.debug
       logger.disconnected(source, cast owner);
     #end
-    link.cancel();
+    source.unsubscribe(owner);
   }
 
   public inline function connect():Void {
     #if tink_state.debug
       logger.connected(source, cast owner);
     #end
-    this.link = source.onInvalidate(owner);
+    source.subscribe(owner);
+  }
+
+  public inline function release() {
+    source.release();
   }
 }
 
@@ -124,8 +124,8 @@ private enum abstract AutoObservableStatus(Int) {
   var Computed;
 }
 
-class AutoObservable<T> extends Invalidator
-  implements Invalidatable implements Derived implements ObservableObject<T> {
+class AutoObservable<T> extends Dispatcher
+  implements Observer implements Derived implements ObservableObject<T> {
 
   static var cur:Derived;
 
@@ -137,6 +137,7 @@ class AutoObservable<T> extends Invalidator
     }
   #end
   public var hot(default, null) = false;
+  final annex:Annex<{}>;
   var status = Dirty;
   var last:T = null;
   var subscriptions:Array<Subscription>;
@@ -157,6 +158,9 @@ class AutoObservable<T> extends Invalidator
     return revision;
   }
 
+  public function getAnnex()
+    return annex;
+
   function subsValid() {
     if (subscriptions == null)
       return false;
@@ -175,14 +179,13 @@ class AutoObservable<T> extends Invalidator
     return comparator;
 
   public function new(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end) {
-    super(#if tink_state.debug toString, pos #end);
+    super(active -> if (active) wakeup() else sleep() #if tink_state.debug , toString, pos #end);
     this.compute = compute;
     this.comparator = comparator;
-    this.list.onfill = () -> inline heatup();
-    this.list.ondrain = () -> inline cooldown();
+    this.annex = new Annex<{}>(this);
   }
 
-  function heatup() {
+  function wakeup() {
     getValue();
     getRevision();
     if (subscriptions != null)
@@ -190,7 +193,7 @@ class AutoObservable<T> extends Invalidator
     hot = true;
   }
 
-  function cooldown() {
+  function sleep() {
     hot = false;
     if (subscriptions != null)
       for (s in subscriptions) s.disconnect();
@@ -209,6 +212,19 @@ class AutoObservable<T> extends Invalidator
 
   static public inline function untracked<T>(fn:()->T)
     return computeFor(null, fn);
+
+
+  static public inline function needsTracking<V>(o:ObservableObject<V>):Bool
+    return switch cur {
+      case null: false;
+      case v: !v.isSubscribedTo(o);
+    }
+
+  static public function currentAnnex()
+    return switch cur {
+      case null: null;
+      case v: v.getAnnex();
+    }
 
   static public inline function track<V>(o:ObservableObject<V>):V {
     var ret = o.getValue();
@@ -262,11 +278,12 @@ class AutoObservable<T> extends Invalidator
           if (prevSubs != null) {
             for (s in prevSubs)
               if (!s.used) {
-                if (hot) s.disconnect();
-                dependencies.remove(s.source);
                 #if tink_state.debug
                   logger.unsubscribed(s.source, this);
                 #end
+                dependencies.remove(s.source);
+                if (hot) s.disconnect();
+                s.release();
               }
           }
         }
@@ -280,7 +297,7 @@ class AutoObservable<T> extends Invalidator
 
   function update(value) if (!sync) {
     last = value;
-    fire();
+    fire(this);
   }
 
   public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
@@ -289,7 +306,9 @@ class AutoObservable<T> extends Invalidator
         #if tink_state.debug
           logger.subscribed(source, this);
         #end
-        var sub:Subscription = cast new SubscriptionTo(source, cur, this);
+        var sub:Subscription = new Subscription(source, cur, this);
+        source.retain();
+        if (hot) sub.connect();
         dependencies.set(source, sub);
         subscriptions.push(sub);
       case v:
@@ -299,10 +318,16 @@ class AutoObservable<T> extends Invalidator
         }
     }
 
-  public function invalidate()
+  public function isSubscribedTo<R>(source:ObservableObject<R>)
+    return switch dependencies.get(source) {
+      case null: false;
+      case s: s.used;
+    }
+
+  public function notify(from)
     if (status == Computed) {
       status = Dirty;
-      fire();
+      fire(this);
     }
 
   #if tink_state.debug
@@ -312,5 +337,7 @@ class AutoObservable<T> extends Invalidator
 }
 
 private interface Derived {
+  function getAnnex():Annex<{}>;
+  function isSubscribedTo<R>(source:ObservableObject<R>):Bool;
   function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
 }

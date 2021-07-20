@@ -22,7 +22,7 @@ class TestArrays {
     function getLog()
       return log.join(',').replace('undefined', '-').replace('null', '-');
 
-    function report(name:String) return (v:Null<Int>) -> log.push('$name:$v');
+    function report(name:String) { return (v:Null<Int>) -> log.push('$name:$v'); }
 
     Observable.auto(() -> a.length).bind(report('l'), direct);
 
@@ -61,6 +61,38 @@ class TestArrays {
     asserts.assert(arr.length == 1);
     arr.set(10, true);
     asserts.assert(arr.length == 11);
+    return asserts.done();
+  }
+
+  public function issue49() {
+    final arr = new ObservableArray([for (i in 0...10) i]);
+
+    var computations = 0;
+
+    final sum = Observable.auto(() -> {
+      computations++;
+      arr[2] + arr[5];
+    });
+
+    function checkSum(?pos:haxe.PosInfos)
+      asserts.assert(sum.value == arr[2] + arr[5], null, pos);
+
+    checkSum();
+    asserts.assert(computations == 1);
+
+    checkSum();
+    asserts.assert(computations == 1);
+
+    arr[1] = 0;
+    checkSum();
+    asserts.assert(computations == 1);
+    asserts.assert(arr[1] == 0);
+
+    arr[2] = 123;
+    checkSum();
+    asserts.assert(computations == 2);
+
+
     return asserts.done();
   }
 
