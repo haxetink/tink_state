@@ -4,7 +4,7 @@ package tink.state.internal;
 abstract OrderedObjectMap<K:{}, V>(Impl<K, V>) {
   public var size(get, never):Int;
     inline function get_size()
-      return this.count;
+      return this.keyCount;
 
   public inline function new()
     this = new Impl<K, V>();
@@ -20,42 +20,44 @@ abstract OrderedObjectMap<K:{}, V>(Impl<K, V>) {
 
   @:op([]) public function set(key, value) {
     if (!this.exists(key))
-      this.keyOrder.push(key);
+      this.add(key);
     this.set(key, value);
     return value;
   }
 
   public inline function remove(key)
-    return this.remove(key) && this.substrac(key);
+    return this.remove(key) && this.subtract(key);
 
   public inline function forEach(f)
     for (k in this.compact()) f(get(k), k, (cast this:ObjectMap<K,V>));
 
   public inline function count()
-    return this.count;
+    return this.keyCount;
 
 }
 
 private class Impl<K:{}, V> extends haxe.ds.ObjectMap<K, V> {
   public final keyOrder:Array<K> = [];
-  public var count:Int = 0;
-  public inline function add(key:K)
-    count = keyOrder.push(key);
+  public var keyCount:Int = 0;
+  public inline function add(key:K) {
+    keyOrder.push(key);
+    keyCount++;
+  }
 
   public function compact() {
-    if (count > keyOrder.length) {
+    if (keyCount < keyOrder.length) {
       var pos = 0;
       for (k in keyOrder)
         if (k != null)
           keyOrder[pos++] = k;
-      keyOrder.resize(count);
+      keyOrder.resize(keyCount);
     }
     return keyOrder;
   }
 
   public function subtract(key:K) {
     keyOrder[keyOrder.indexOf(key)] = null;
-    count--;
+    keyCount--;
     return true;
   }
 }
