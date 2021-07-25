@@ -334,6 +334,9 @@ class AutoObservable<T> extends Dispatcher
   public function getDependencies()
     return cast dependencies.keys();
   #end
+
+  static public inline function create<T>(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end)
+    return new AutoObservable<T>(compute, comparator #if tink_state.debug , toString, pos #end);
 }
 
 private interface Derived {

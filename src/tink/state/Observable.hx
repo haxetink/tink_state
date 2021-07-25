@@ -196,7 +196,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     respectively. The future/promise will be automatically handled to update the value of this Observable.
   **/
   @:noUsing static public inline function auto<T>(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<T>
-    return new AutoObservable<T>(compute, comparator #if tink_state.debug , toString, pos #end);
+    return AutoObservable.create(compute, comparator #if tink_state.debug , toString, pos #end);
 
   /**
     Create a constant Observable object from a value. Const observables are lightweight objects
