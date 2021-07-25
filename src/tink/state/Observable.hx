@@ -195,7 +195,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     will take place and the type of the observable value will become `tink.state.Promised` or `tink.State.Promised.Predicted`
     respectively. The future/promise will be automatically handled to update the value of this Observable.
   **/
-  @:noUsing static public inline function auto<T>(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<T>
+  @:noUsing static public inline function auto<Data, Result>(compute:Computation<Data, Result>, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<Result>
     return AutoObservable.create(compute, comparator #if tink_state.debug , toString, pos #end);
 
   /**
