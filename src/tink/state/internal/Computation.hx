@@ -23,7 +23,6 @@ abstract Computation<Result>(ComputationObject<Result>) from ComputationObject<R
 
   @:from static function ofSyncWithLast<Data>(f:(last:Option<Data>)->Data):Computation<Data>
     return new SyncWithLast(f);
-
 }
 
 /**
@@ -46,7 +45,7 @@ private interface ComputationObject<Result> {
   function sleep():Void;
 }
 
-private abstract class StatefulBase<Result> implements ComputationObject<Result> {
+private class StatefulBase<Result> implements ComputationObject<Result> {
   var owner:AutoObservable<Result> = null;
   function new(?owner)
     this.owner = owner;
@@ -61,8 +60,10 @@ private abstract class StatefulBase<Result> implements ComputationObject<Result>
       default: cloneFor(owner);
     }
 
-  abstract function cloneFor(owner:AutoObservable<Result>):ComputationObject<Result>;
-  abstract public function getNext():Result;
+  function cloneFor(owner:AutoObservable<Result>):ComputationObject<Result>
+    return throw 'abstract';
+  public function getNext():Result
+    return throw 'abstract';
 
   public function wakeup():Void {}
   public function sleep():Void {}
@@ -77,13 +78,13 @@ private class Async<T> extends AsyncBase<T, Error, Outcome<T, Error>, Promise<T>
     this.get = get;
   }
 
-  function cloneFor(owner:AutoObservable<Promised<T>>):ComputationObject<Promised<T>>
+  override function cloneFor(owner:AutoObservable<Promised<T>>):ComputationObject<Promised<T>>
     return new Async(get, owner);
 
-  function pull():Promise<T>
+  override function pull():Promise<T>
     return get();
 
-  function wrap(raw:Outcome<T, Error>):Promised<T>
+  override function wrap(raw:Outcome<T, Error>):Promised<T>
     return switch raw {
       case Success(v):
         Done(v);
@@ -101,13 +102,13 @@ private class AsyncWithLast<T> extends AsyncBase<T, Error, Outcome<T, Error>, Pr
     this.get = get;
   }
 
-  function cloneFor(owner:AutoObservable<Promised<T>>):ComputationObject<Promised<T>>
+  override function cloneFor(owner:AutoObservable<Promised<T>>):ComputationObject<Promised<T>>
     return new AsyncWithLast(get, owner);
 
-  function pull():Promise<T>
+  override function pull():Promise<T>
     return get(last);
 
-  function wrap(raw:Outcome<T, Error>):Promised<T>
+  override function wrap(raw:Outcome<T, Error>):Promised<T>
     return switch raw {
       case Success(v):
         last = Some(v);
@@ -117,16 +118,18 @@ private class AsyncWithLast<T> extends AsyncBase<T, Error, Outcome<T, Error>, Pr
     }
 }
 
-abstract private class AsyncBase<T, E, Raw, Result:Future<Raw>> extends StatefulBase<PromisedWith<T, E>> {
+private class AsyncBase<T, E, Raw, Result:Future<Raw>> extends StatefulBase<PromisedWith<T, E>> {
 
   var result:Result;
   var link:CallbackLink;
   var sync = false;
 
-  abstract function pull():Result;
-  abstract function wrap(raw:Raw):PromisedWith<T, E>;
+  function pull():Result
+    return throw 'abstract';
+  function wrap(raw:Raw):PromisedWith<T, E>
+    return throw 'abstract';
 
-  public function getNext():PromisedWith<T, E> {
+  override public function getNext():PromisedWith<T, E> {
     var prev = result;
     result = pull();
 
@@ -184,10 +187,10 @@ private class SyncWithLast<T> extends StatefulBase<T> {
     this.get = get;
   }
 
-  function cloneFor(owner:AutoObservable<T>):ComputationObject<T>
+  override function cloneFor(owner:AutoObservable<T>):ComputationObject<T>
     return new SyncWithLast(get, owner);
 
-  public function getNext():T {
+  override public function getNext():T {
     var ret = get(last);
     last = Some(ret);
     return ret;
@@ -203,13 +206,13 @@ private class SafeAsync<T> extends AsyncBase<T, Noise, T, Future<T>> {
     this.get = get;
   }
 
-  function cloneFor(owner:AutoObservable<Predicted<T>>):ComputationObject<Predicted<T>>
+  override function cloneFor(owner:AutoObservable<Predicted<T>>):ComputationObject<Predicted<T>>
     return new SafeAsync(get, owner);
 
-  function pull():Future<T>
+  override function pull():Future<T>
     return get();
 
-  function wrap(raw:T):Predicted<T>
+  override function wrap(raw:T):Predicted<T>
     return Done(raw);
 }
 
@@ -222,13 +225,13 @@ private class SafeAsyncWithLast<T> extends AsyncBase<T, Noise, T, Future<T>> {
     this.get = get;
   }
 
-  function cloneFor(owner:AutoObservable<Predicted<T>>):ComputationObject<Predicted<T>>
+  override function cloneFor(owner:AutoObservable<Predicted<T>>):ComputationObject<Predicted<T>>
     return new SafeAsyncWithLast(get, owner);
 
-  function pull():Future<T>
+  override function pull():Future<T>
     return get(last);
 
-  function wrap(raw:T):Predicted<T> {
+  override function wrap(raw:T):Predicted<T> {
     last = Some(raw);
     return Done(raw);
   }
