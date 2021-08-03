@@ -101,6 +101,8 @@ class TestAuto {
         );
     });
 
+    final o = Observable.auto(() -> o.value);
+
     o.bind(function () {}, Scheduler.direct);
 
     asserts.assert(o.value.match(Loading));
