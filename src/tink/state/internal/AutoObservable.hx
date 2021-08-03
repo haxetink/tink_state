@@ -125,24 +125,38 @@ class AutoObservable<T> extends Dispatcher
 
     function doCompute() {
       status = Computed;
-      if (subscriptions != null)
-        for (s in subscriptions) s.used = false;
+      var prevSubs = subscriptions;
+      if (prevSubs != null)
+        for (s in prevSubs) s.used = false;
       subscriptions = [];
       last = computeFor(this, () -> computation.getNext());
 
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
+
+      if (prevSubs != null)
+        for (s in prevSubs)
+          if (!s.used) {
+            #if tink_state.debug
+              logger.unsubscribed(s.source, this);
+            #end
+            dependencies.remove(s.source);
+            if (hot) s.disconnect();
+            s.release();
+          }
+
       if (subscriptions.length == 0) dispose();
     }
 
-    var prevSubs = subscriptions,
-        count = 0;
+    var count = 0;
 
     while (!isValid()) {
       #if tink_state.debug
       logger.revalidating(this);
       #end
+      var prevSubs = subscriptions;
+
       if (++count == Observable.MAX_ITERATIONS)
         throw 'no result after ${Observable.MAX_ITERATIONS} attempts';
       else if (subscriptions != null) {
@@ -160,20 +174,7 @@ class AutoObservable<T> extends Dispatcher
           logger.revalidated(this, true);
           #end
         }
-        else {
-          doCompute();
-          if (prevSubs != null) {
-            for (s in prevSubs)
-              if (!s.used) {
-                #if tink_state.debug
-                  logger.unsubscribed(s.source, this);
-                #end
-                dependencies.remove(s.source);
-                if (hot) s.disconnect();
-                s.release();
-              }
-          }
-        }
+        else doCompute();
       }
       else doCompute();
     }
