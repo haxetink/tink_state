@@ -19,7 +19,7 @@ class AutoObservable<T> extends Dispatcher
   #end
   public var hot(default, null) = false;
   final annex:Annex<{}>;
-  var status = Dirty;
+  var status = Fresh;
   var last:T = null;
   var subscriptions:Array<Subscription>;
   var dependencies = new ObjectMap<ObservableObject<Dynamic>, Subscription>();
@@ -54,8 +54,14 @@ class AutoObservable<T> extends Dispatcher
     return true;
   }
 
+  public function swapComputation(c:Computation<T>) {
+    this.computation = c;
+    this.status = Fresh;
+    fire(this);
+  }
+
   public function isValid()
-    return status != Dirty && (hot || subsValid());
+    return status == Computed && (hot || subsValid());
 
   public function getComparator()
     return comparator;
@@ -155,11 +161,9 @@ class AutoObservable<T> extends Dispatcher
       #if tink_state.debug
       logger.revalidating(this);
       #end
-      var prevSubs = subscriptions;
-
       if (++count == Observable.MAX_ITERATIONS)
         throw 'no result after ${Observable.MAX_ITERATIONS} attempts';
-      else if (subscriptions != null) {
+      else if (status != Fresh) {
         var valid = true;
 
         for (s in subscriptions)
@@ -279,4 +283,5 @@ private class Subscription {
 private enum abstract AutoObservableStatus(Int) {
   var Dirty;
   var Computed;
+  var Fresh;
 }
