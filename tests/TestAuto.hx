@@ -101,6 +101,8 @@ class TestAuto {
         );
     });
 
+    o.bind(function () {}, Scheduler.direct);
+
     asserts.assert(o.value.match(Loading));
     asserts.assert(last.match(None));
     yield(12);

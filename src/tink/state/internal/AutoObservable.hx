@@ -5,12 +5,12 @@ import tink.state.debug.Logger.inst as logger;
 #end
 import tink.core.Annex;
 
-class AutoObservable<Result> extends Dispatcher
-  implements Observer implements Derived implements ObservableObject<Result> {
+@:allow(tink.state.internal)
+class AutoObservable<T> extends Dispatcher
+  implements Observer implements Derived implements ObservableObject<T> {
 
   static var cur:Derived;
 
-  final update:AutoObservable<Result>->Void;
   #if hotswap
     static var rev = new State(0);
     static function onHotswapLoad() {
@@ -20,11 +20,12 @@ class AutoObservable<Result> extends Dispatcher
   public var hot(default, null) = false;
   final annex:Annex<{}>;
   var status = Dirty;
-  var last:Result = null;
+  var last:T = null;
   var subscriptions:Array<Subscription>;
   var dependencies = new ObjectMap<ObservableObject<Dynamic>, Subscription>();
 
-  var comparator:Comparator<Result>;
+  final comparator:Comparator<T>;
+  var computation:Computation<T>;
 
   override function getRevision() {
     if (hot)
@@ -59,22 +60,24 @@ class AutoObservable<Result> extends Dispatcher
   public function getComparator()
     return comparator;
 
-  public function new(update, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end) {
+  public function new(computation:Computation<T>, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end) {
     super(active -> if (active) wakeup() else sleep() #if tink_state.debug , toString, pos #end);
-    this.update = update;
+    this.computation = computation.init(this);
     this.comparator = comparator;
     this.annex = new Annex<{}>(this);
   }
 
   function wakeup() {
-    getValue();
-    getRevision();
+    computation.wakeup();
+    hot = true;
     if (subscriptions != null)
       for (s in subscriptions) s.connect();
-    hot = true;
+    getValue();
+    getRevision();
   }
 
   function sleep() {
+    computation.sleep();
     hot = false;
     if (subscriptions != null)
       for (s in subscriptions) s.disconnect();
@@ -113,14 +116,20 @@ class AutoObservable<Result> extends Dispatcher
     return ret;
   }
 
-  public function getValue():Result {
+  function triggerAsync(v:T) {
+    last = v;
+    fire(this);
+  }
+
+  public function getValue():T {
 
     function doCompute() {
       status = Computed;
       if (subscriptions != null)
         for (s in subscriptions) s.used = false;
       subscriptions = [];
-      computeFor(this, () -> update(this));
+      last = computeFor(this, () -> computation.getNext());
+
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
@@ -205,94 +214,6 @@ class AutoObservable<Result> extends Dispatcher
   public function getDependencies()
     return cast dependencies.keys();
   #end
-
-  static public function create<Data, Result>(compute:Computation<Data, Result>, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<Result>
-    return new AutoObservable<Result>(
-      switch compute.kind() {
-        case Sync(f):
-
-          a -> a.last = cast f();
-
-        case SyncWithLast(f):
-
-          var last = None;
-          a -> last = Some(cast a.last = cast f(last));
-
-        case Async(f):
-
-          var ref = new CallbackLinkRef();
-          a -> {
-            var p = f();
-            ref.link = p.handle(
-              o -> {
-                a.last = switch o {
-                  case Success(v): Done(v);
-                  case Failure(e): Failed(e);
-                }
-                a.notify(a);
-              }
-            );
-            if (!p.status.match(Ready(_)))
-              a.last = Loading;
-          }
-
-        case AsyncWithLast(f):
-
-          var ref = new CallbackLinkRef(),
-              last = None;
-          a -> {
-            var p = f(last);
-            ref.link = p.handle(
-              o -> {
-                a.last = cast switch o {
-                  case Success(v):
-                    last = Some(v);
-                    Done(v);
-                  case Failure(e):
-                    Failed(e);
-                }
-                a.notify(a);
-              }
-            );
-            if (!p.status.match(Ready(_)))
-              a.last = Loading;
-          }
-
-        case SafeAsync(f):
-
-          var ref = new CallbackLinkRef();
-          a -> {
-            var p = f();
-            ref.link = p.handle(
-              v -> {
-                a.last = cast Done(v);
-                a.notify(a);
-              }
-            );
-            if (!p.status.match(Ready(_)))
-              a.last = Loading;
-          }
-
-        case SafeAsyncWithLast(f):
-
-          var ref = new CallbackLinkRef(),
-              last = None;
-          a -> {
-            var p = f(last);
-            ref.link = p.handle(
-              v -> {
-                last = Some(v);
-                a.last = cast Done(v);
-                a.notify(a);
-              }
-            );
-            if (!p.status.match(Ready(_)))
-              a.last = Loading;
-          }
-      },
-      comparator
-      #if tink_state.debug , toString, pos #end
-    );
 }
 
 private interface Derived {
