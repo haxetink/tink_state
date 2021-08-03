@@ -129,7 +129,7 @@ class TestArrays {
       .bind(() -> keysChanges++, direct);
 
     Observable.auto(() -> {
-      final first = 0;
+      var first = 0;
       for (v in a) {
         first += v;
         break;
@@ -163,7 +163,7 @@ class TestArrays {
   public function clear() {
     final o = new ObservableArray<Null<Int>>([1,2,3]);
 
-    final log = '';
+    var log = '';
 
     Observable.auto(() -> o.length).bind(v -> log += 'len:$v', direct);
     for(i in 0...o.length) o.entry(i).bind(v -> log += ',$i:$v', direct);

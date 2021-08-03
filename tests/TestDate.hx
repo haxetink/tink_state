@@ -15,7 +15,7 @@ class TestDate {
     final d = new ObservableDate(),
         log = [];
 
-    final watch = d.becomesOlderThan(1.seconds()).bind(log.push);
+    var watch = d.becomesOlderThan(1.seconds()).bind(log.push);
     watch &= d.becomesOlderThan(10.seconds()).bind(log.push);
 
     Observable.updateAll();

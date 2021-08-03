@@ -13,7 +13,7 @@ class TestBasic {
   public function donotFireEqual() {
     final s = new State(0),
         sLog = [];
-    final watch = s.observe().bind(sLog.push, (_, _) -> true, direct);
+    var watch = s.observe().bind(sLog.push, (_, _) -> true, direct);
 
     final o1Log = [],
         o1 = Observable.auto(() -> {
