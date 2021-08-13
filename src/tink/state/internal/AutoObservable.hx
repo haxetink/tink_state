@@ -19,7 +19,7 @@ class AutoObservable<T> extends Dispatcher
   #end
   public var hot(default, null) = false;
   public var value(get, never):T;
-    inline function get_value()
+    function get_value()
       return track(this);
 
   final annex:Annex<{}>;
