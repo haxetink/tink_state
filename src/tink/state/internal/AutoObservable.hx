@@ -203,7 +203,7 @@ class AutoObservable<T> extends Dispatcher
           sub.last;
         case v:
           if (!v.used) {
-            v.reuse(cur);
+            v.reuse(source.getValue());
             subscriptions.push(v);
           }
           v.last;
