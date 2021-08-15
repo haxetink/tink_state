@@ -134,13 +134,15 @@ class AutoObservable<T> extends Dispatcher
   public function getValue():T {
 
     function doCompute() {
-      status = Computed;
+      status = Computing;
       var prevSubs = subscriptions;
       if (prevSubs != null)
         for (s in prevSubs) s.used = false;
       subscriptions = [];
       last = computeFor(this, () -> computation.getNext());
 
+      if (status == Computing)
+        status = Computed;
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
@@ -205,8 +207,9 @@ class AutoObservable<T> extends Dispatcher
           if (!v.used) {
             v.reuse(source.getValue());
             subscriptions.push(v);
+            v.last;
           }
-          v.last;
+          else source.getValue();
       }
 
   public function isSubscribedTo<R>(source:ObservableObject<R>)
@@ -216,9 +219,13 @@ class AutoObservable<T> extends Dispatcher
     }
 
   public function notify<R>(from:ObservableObject<R>)
-    if (status == Computed) {
-      status = Dirty;
-      fire(this);
+    switch status {
+      case Computed:
+        status = Dirty;
+        fire(this);
+      case Computing:
+        status = Dirty;
+      default:
     }
 
   #if tink_state.debug
@@ -290,5 +297,6 @@ private class Subscription {
 private enum abstract AutoObservableStatus(Int) {
   var Dirty;
   var Computed;
+  var Computing;
   var Fresh;
 }
