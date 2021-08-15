@@ -119,12 +119,12 @@ class AutoObservable<T> extends Dispatcher
       case v: v.getAnnex();
     }
 
-  static public inline function track<V>(o:ObservableObject<V>):V {
-    var ret = o.getValue();
-    if (cur != null && o.canFire())
-      cur.subscribeTo(o, ret);
-    return ret;
-  }
+  static public inline function track<V>(o:ObservableObject<V>):V
+    return
+      if (cur != null && o.canFire())
+        cur.subscribeTo(o);
+      else
+        o.getValue();
 
   function triggerAsync(v:T) {
     last = v;
@@ -189,23 +189,25 @@ class AutoObservable<T> extends Dispatcher
     return last;
   }
 
-  public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
-    switch dependencies.get(source) {
-      case null:
-        #if tink_state.debug
-          logger.subscribed(source, this);
-        #end
-        var sub:Subscription = new Subscription(source, cur, this);
-        source.retain();
-        if (hot) sub.connect();
-        dependencies.set(source, sub);
-        subscriptions.push(sub);
-      case v:
-        if (!v.used) {
-          v.reuse(cur);
-          subscriptions.push(v);
-        }
-    }
+  public function subscribeTo<R>(source:ObservableObject<R>):R
+    return
+      switch dependencies.get(source) {
+        case null:
+          #if tink_state.debug
+            logger.subscribed(source, this);
+          #end
+          var sub:Subscription = new Subscription(source, hot, this);
+          source.retain();
+          dependencies.set(source, sub);
+          subscriptions.push(sub);
+          sub.last;
+        case v:
+          if (!v.used) {
+            v.reuse(cur);
+            subscriptions.push(v);
+          }
+          v.last;
+      }
 
   public function isSubscribedTo<R>(source:ObservableObject<R>)
     return switch dependencies.get(source) {
@@ -228,24 +230,25 @@ class AutoObservable<T> extends Dispatcher
 private interface Derived {
   function getAnnex():Annex<{}>;
   function isSubscribedTo<R>(source:ObservableObject<R>):Bool;
-  function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
+  function subscribeTo<R>(source:ObservableObject<R>):R;
 }
 
 
 private class Subscription {
 
   public final source:ObservableObject<Dynamic>;
-  var last:Any;
+  public var last(default, null):Any;
   var lastRev:Revision;
   final owner:Observer;
 
   public var used = true;
 
-  public function new(source, cur, owner) {
+  public function new(source, hot, owner) {
     this.source = source;
-    this.last = cur;
     this.lastRev = source.getRevision();
     this.owner = owner;
+    if (hot) connect();
+    this.last = source.getValue();
   }
 
   public inline function isValid()

@@ -9,16 +9,15 @@ class Binding<T> implements Observer implements Scheduler.Schedulable implements
   var last:Null<T> = null;
 
   static public function create<T>(o:ObservableObject<T>, cb, ?scheduler, comparator):CallbackLink {
-    var value = Observable.untracked(() -> o.getValue());
     return
-      if (o.canFire()) new Binding(o, value, cb, scheduler, comparator);
+      if (o.canFire()) new Binding(o, cb, scheduler, comparator);
       else {
-        cb.invoke(value);
+        cb.invoke(Observable.untracked(() -> o.getValue()));
         null;
       }
   }
 
-  function new(data, value, cb, ?scheduler, ?comparator) {
+  function new(data, cb, ?scheduler, ?comparator) {
     this.data = data;
     this.cb = cb;
     this.scheduler = switch scheduler {
@@ -27,7 +26,7 @@ class Binding<T> implements Observer implements Scheduler.Schedulable implements
     }
     this.comparator = data.getComparator().or(comparator);
     data.subscribe(this);
-    cb.invoke(this.last = value);
+    cb.invoke(this.last = Observable.untracked(() -> data.getValue()));
   }
 
   #if tink_state.debug
