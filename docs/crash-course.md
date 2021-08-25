@@ -48,7 +48,7 @@ class TodoList {
   public function add(description) {
     var todo = new TodoItem();
     todo.description.set(description);
-    items.set(items.concat([todo]));
+    items.value.set(items.concat([todo]));
     return todo;
   }
 
