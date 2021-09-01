@@ -22,7 +22,7 @@ class TestArrays {
     function getLog()
       return log.join(',').replace('undefined', '-').replace('null', '-');
 
-    function report(name:String) return (v:Null<Int>) -> log.push('$name:$v');
+    function report(name:String) { return (v:Null<Int>) -> log.push('$name:$v'); }
 
     Observable.auto(() -> a.length).bind(report('l'), direct);
 
@@ -64,6 +64,38 @@ class TestArrays {
     return asserts.done();
   }
 
+  public function issue49() {
+    final arr = new ObservableArray([for (i in 0...10) i]);
+
+    var computations = 0;
+
+    final sum = Observable.auto(() -> {
+      computations++;
+      arr[2] + arr[5];
+    });
+
+    function checkSum(?pos:haxe.PosInfos)
+      asserts.assert(sum.value == arr[2] + arr[5], null, pos);
+
+    checkSum();
+    asserts.assert(computations == 1);
+
+    checkSum();
+    asserts.assert(computations == 1);
+
+    arr[1] = 0;
+    checkSum();
+    asserts.assert(computations == 1);
+    asserts.assert(arr[1] == 0);
+
+    arr[2] = 123;
+    checkSum();
+    asserts.assert(computations == 2);
+
+
+    return asserts.done();
+  }
+
   public function iteration() {
     var counter = 0,
         a = new ObservableArray();
@@ -97,7 +129,7 @@ class TestArrays {
       .bind(() -> keysChanges++, direct);
 
     Observable.auto(() -> {
-      final first = 0;
+      var first = 0;
       for (v in a) {
         first += v;
         break;
@@ -131,7 +163,7 @@ class TestArrays {
   public function clear() {
     final o = new ObservableArray<Null<Int>>([1,2,3]);
 
-    final log = '';
+    var log = '';
 
     Observable.auto(() -> o.length).bind(v -> log += 'len:$v', direct);
     for(i in 0...o.length) o.entry(i).bind(v -> log += ',$i:$v', direct);

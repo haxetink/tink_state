@@ -3,133 +3,14 @@ package tink.state.internal;
 #if tink_state.debug
 import tink.state.debug.Logger.inst as logger;
 #end
+import tink.core.Annex;
 
-@:callable
-@:access(tink.state.internal.AutoObservable)
-private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
-  inline function new(f) this = f;
-
-  @:from static function asyncWithLast<T>(f:Option<T>->Promise<T>):Computation<Promised<T>> {
-    var link:CallbackLink = null,
-        last = None,
-        ret = Loading;
-    return new Computation((a, ?_) -> {
-      ret = Loading;
-      var prev = link;
-      link = f(last).handle(o -> a.update(ret = switch o {
-        case Success(v): last = Some(v); Done(v);
-        case Failure(e): Failed(e);
-      }));
-      prev.cancel();
-      return ret;
-    });
-  }
-
-  @:from static function async<T>(f:()->Promise<T>):Computation<Promised<T>> {
-    var link:CallbackLink = null,
-        ret = Loading;
-    return new Computation((a, ?_) -> {
-      ret = Loading;
-      var prev = link;
-      link = f().handle(o -> a.update(ret = switch o {
-        case Success(v): Done(v);
-        case Failure(e): Failed(e);
-      }));
-      prev.cancel();
-      return ret;
-    });
-  }
-
-  @:from static function safeAsync<T>(f:()->Future<T>):Computation<Promised.Predicted<T>> {
-    var link:CallbackLink = null,
-        ret = Loading;
-    return new Computation((a, ?_) -> {
-      ret = Loading;
-      var prev = link;
-      link = f().handle(v -> a.update(ret = Done(v)));
-      prev.cancel();
-      return ret;
-    });
-  }
-
-  @:from static inline function withLast<T>(f:Option<T>->T):Computation<T> {
-    var last = None;
-    return new Computation((_, ?_) -> {
-      var ret = f(last);
-      last = Some(ret);
-      return ret;
-    });
-  }
-
-  @:from static function sync<T>(f:()->T) {
-    return new Computation((_, ?_) -> f());
-  }
-}
-
-private typedef Subscription = SubscriptionTo<Any>;
-
-private class SubscriptionTo<T> {
-
-  public final source:ObservableObject<T>;
-  var last:T;
-  var lastRev:Revision;
-  var link:CallbackLink;
-  final owner:Invalidatable;
-
-  public var used = true;
-
-  public function new<X>(source, cur, owner:AutoObservable<X>) {
-    this.source = source;
-    this.last = cur;
-    this.lastRev = source.getRevision();
-    this.owner = owner;
-
-    if (owner.hot) connect();
-  }
-
-  public inline function isValid()
-    return source.getRevision() == lastRev;
-
-  public inline function hasChanged():Bool {
-    var nextRev = source.getRevision();
-    if (nextRev == lastRev) return false;
-    lastRev = nextRev;
-    var before = last;
-    last = source.getValue();
-    return !source.getComparator().eq(last, before);
-  }
-
-  public inline function reuse(value:T) {
-    used = true;
-    last = value;
-  }
-
-  public inline function disconnect():Void {
-    #if tink_state.debug
-      logger.disconnected(source, cast owner);
-    #end
-    link.cancel();
-  }
-
-  public inline function connect():Void {
-    #if tink_state.debug
-      logger.connected(source, cast owner);
-    #end
-    this.link = source.onInvalidate(owner);
-  }
-}
-
-private enum abstract AutoObservableStatus(Int) {
-  var Dirty;
-  var Computed;
-}
-
-class AutoObservable<T> extends Invalidator
-  implements Invalidatable implements Derived implements ObservableObject<T> {
+@:allow(tink.state.internal)
+class AutoObservable<T> extends Dispatcher
+  implements Observer implements Derived implements ObservableObject<T> {
 
   static var cur:Derived;
 
-  var compute:Computation<T>;
   #if hotswap
     static var rev = new State(0);
     static function onHotswapLoad() {
@@ -137,12 +18,18 @@ class AutoObservable<T> extends Invalidator
     }
   #end
   public var hot(default, null) = false;
-  var status = Dirty;
+  public var value(get, never):T;
+    function get_value()
+      return track(this);
+
+  final annex:Annex<{}>;
+  var status = Fresh;
   var last:T = null;
   var subscriptions:Array<Subscription>;
   var dependencies = new ObjectMap<ObservableObject<Dynamic>, Subscription>();
 
-  var comparator:Comparator<T>;
+  final comparator:Comparator<T>;
+  var computation:Computation<T>;
 
   override function getRevision() {
     if (hot)
@@ -157,6 +44,9 @@ class AutoObservable<T> extends Invalidator
     return revision;
   }
 
+  public function getAnnex()
+    return annex;
+
   function subsValid() {
     if (subscriptions == null)
       return false;
@@ -168,35 +58,42 @@ class AutoObservable<T> extends Invalidator
     return true;
   }
 
+  public function swapComputation(c:Computation<T>) {
+    this.computation = c;
+    this.status = Fresh;
+    fire(this);
+  }
+
   public function isValid()
-    return status != Dirty && (hot || subsValid());
+    return status == Computed && (hot || subsValid());
 
   public function getComparator()
     return comparator;
 
-  public function new(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end) {
-    super(#if tink_state.debug toString, pos #end);
-    this.compute = compute;
+  public function new(computation:Computation<T>, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end) {
+    super(active -> if (active) wakeup() else sleep() #if tink_state.debug , toString, pos #end);
+    this.computation = computation.init(this);
     this.comparator = comparator;
-    this.list.onfill = () -> inline heatup();
-    this.list.ondrain = () -> inline cooldown();
+    this.annex = new Annex<{}>(this);
   }
 
-  function heatup() {
-    getValue();
-    getRevision();
+  function wakeup() {
+    computation.wakeup();
+    hot = true;
     if (subscriptions != null)
       for (s in subscriptions) s.connect();
-    hot = true;
+    getValue();
+    getRevision();
   }
 
-  function cooldown() {
+  function sleep() {
+    computation.sleep();
     hot = false;
     if (subscriptions != null)
       for (s in subscriptions) s.disconnect();
   }
 
-  static public inline function computeFor<T>(o:Derived, fn:()->T) {
+  static public function computeFor<T>(o:Derived, fn:()->T) {
     var before = cur;
     cur = o;
     #if hotswap
@@ -208,33 +105,63 @@ class AutoObservable<T> extends Invalidator
   }
 
   static public inline function untracked<T>(fn:()->T)
-    return computeFor(null, fn);
+    return inline computeFor(null, fn);
 
-  static public inline function track<V>(o:ObservableObject<V>):V {
-    var ret = o.getValue();
-    if (cur != null && o.canFire())
-      cur.subscribeTo(o, ret);
-    return ret;
+  static public inline function needsTracking<V>(o:ObservableObject<V>):Bool
+    return switch cur {
+      case null: false;
+      case v: !v.isSubscribedTo(o);
+    }
+
+  static public function currentAnnex()
+    return switch cur {
+      case null: null;
+      case v: v.getAnnex();
+    }
+
+  static public inline function track<V>(o:ObservableObject<V>):V
+    return
+      if (cur != null && o.canFire())
+        cur.subscribeTo(o);
+      else
+        o.getValue();
+
+  function triggerAsync(v:T) {
+    last = v;
+    fire(this);
   }
 
   public function getValue():T {
 
     function doCompute() {
-      status = Computed;
-      if (subscriptions != null)
-        for (s in subscriptions) s.used = false;
+      status = Computing;
+      var prevSubs = subscriptions;
+      if (prevSubs != null)
+        for (s in prevSubs) s.used = false;
       subscriptions = [];
-      sync = true;
-      last = computeFor(this, () -> compute(this));
-      sync = false;
+      last = computeFor(this, () -> computation.getNext());
+
+      if (status == Computing)
+        status = Computed;
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
+
+      if (prevSubs != null)
+        for (s in prevSubs)
+          if (!s.used) {
+            #if tink_state.debug
+              logger.unsubscribed(s.source, this);
+            #end
+            dependencies.remove(s.source);
+            if (hot) s.disconnect();
+            s.release();
+          }
+
       if (subscriptions.length == 0) dispose();
     }
 
-    var prevSubs = subscriptions,
-        count = 0;
+    var count = 0;
 
     while (!isValid()) {
       #if tink_state.debug
@@ -242,7 +169,7 @@ class AutoObservable<T> extends Invalidator
       #end
       if (++count == Observable.MAX_ITERATIONS)
         throw 'no result after ${Observable.MAX_ITERATIONS} attempts';
-      else if (subscriptions != null) {
+      else if (status != Fresh) {
         var valid = true;
 
         for (s in subscriptions)
@@ -257,52 +184,48 @@ class AutoObservable<T> extends Invalidator
           logger.revalidated(this, true);
           #end
         }
-        else {
-          doCompute();
-          if (prevSubs != null) {
-            for (s in prevSubs)
-              if (!s.used) {
-                if (hot) s.disconnect();
-                dependencies.remove(s.source);
-                #if tink_state.debug
-                  logger.unsubscribed(s.source, this);
-                #end
-              }
-          }
-        }
+        else doCompute();
       }
       else doCompute();
     }
     return last;
   }
 
-  var sync = true;
+  public function subscribeTo<R>(source:ObservableObject<R>):R
+    return
+      switch dependencies.get(source) {
+        case null:
+          #if tink_state.debug
+            logger.subscribed(source, this);
+          #end
+          var sub:Subscription = new Subscription(source, hot, this);
+          source.retain();
+          dependencies.set(source, sub);
+          subscriptions.push(sub);
+          sub.last;
+        case v:
+          if (!v.used) {
+            v.reuse(source.getValue());
+            subscriptions.push(v);
+            v.last;
+          }
+          else source.getValue();
+      }
 
-  function update(value) if (!sync) {
-    last = value;
-    fire();
-  }
-
-  public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
-    switch dependencies.get(source) {
-      case null:
-        #if tink_state.debug
-          logger.subscribed(source, this);
-        #end
-        var sub:Subscription = cast new SubscriptionTo(source, cur, this);
-        dependencies.set(source, sub);
-        subscriptions.push(sub);
-      case v:
-        if (!v.used) {
-          v.reuse(cur);
-          subscriptions.push(v);
-        }
+  public function isSubscribedTo<R>(source:ObservableObject<R>)
+    return switch dependencies.get(source) {
+      case null: false;
+      case s: s.used;
     }
 
-  public function invalidate()
-    if (status == Computed) {
-      status = Dirty;
-      fire();
+  public function notify<R>(from:ObservableObject<R>)
+    switch status {
+      case Computed:
+        status = Dirty;
+        fire(this);
+      case Computing:
+        status = Dirty;
+      default:
     }
 
   #if tink_state.debug
@@ -312,5 +235,68 @@ class AutoObservable<T> extends Invalidator
 }
 
 private interface Derived {
-  function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void;
+  function getAnnex():Annex<{}>;
+  function isSubscribedTo<R>(source:ObservableObject<R>):Bool;
+  function subscribeTo<R>(source:ObservableObject<R>):R;
+}
+
+
+private class Subscription {
+
+  public final source:ObservableObject<Dynamic>;
+  public var last(default, null):Any;
+  var lastRev:Revision;
+  final owner:Observer;
+
+  public var used = true;
+
+  public function new(source, hot, owner) {
+    this.source = source;
+    this.lastRev = source.getRevision();
+    this.owner = owner;
+    if (hot) connect();
+    this.last = source.getValue();
+  }
+
+  public inline function isValid()
+    return source.getRevision() == lastRev;
+
+  public function hasChanged():Bool {
+    var nextRev = source.getRevision();
+    if (nextRev == lastRev) return false;
+    lastRev = nextRev;
+    var before = last;
+    last = source.getValue();
+    return !source.getComparator().eq(last, before);
+  }
+
+  public inline function reuse(value:Any) {
+    used = true;
+    last = value;
+  }
+
+  public inline function disconnect():Void {
+    #if tink_state.debug
+      logger.disconnected(source, cast owner);
+    #end
+    source.unsubscribe(owner);
+  }
+
+  public inline function connect():Void {
+    #if tink_state.debug
+      logger.connected(source, cast owner);
+    #end
+    source.subscribe(owner);
+  }
+
+  public inline function release() {
+    source.release();
+  }
+}
+
+private enum abstract AutoObservableStatus(Int) {
+  var Dirty;
+  var Computed;
+  var Computing;
+  var Fresh;
 }

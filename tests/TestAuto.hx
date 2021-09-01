@@ -101,6 +101,10 @@ class TestAuto {
         );
     });
 
+    final o = Observable.auto(() -> o.value);
+
+    o.bind(function () {});
+
     asserts.assert(o.value.match(Loading));
     asserts.assert(last.match(None));
     yield(12);
@@ -219,7 +223,7 @@ class TestAuto {
     final select = new State([for (i in 0...states.length) i % 3 == 0]);
 
     function add() {
-      final ret = 0;
+      var ret = 0;
       for (i => s in select.value)
         if (s) ret += states[i].value;
       return ret;

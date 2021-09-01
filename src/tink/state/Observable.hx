@@ -195,8 +195,8 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     will take place and the type of the observable value will become `tink.state.Promised` or `tink.State.Promised.Predicted`
     respectively. The future/promise will be automatically handled to update the value of this Observable.
   **/
-  @:noUsing static public inline function auto<T>(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<T>
-    return new AutoObservable<T>(compute, comparator #if tink_state.debug , toString, pos #end);
+  @:noUsing static public inline function auto<Result>(compute, ?comparator #if tink_state.debug , ?toString, ?pos:haxe.PosInfos #end):Observable<Result>
+    return new AutoObservable<Result>(compute, comparator #if tink_state.debug , toString, pos #end);
 
   /**
     Create a constant Observable object from a value. Const observables are lightweight objects
@@ -276,6 +276,9 @@ private class ConstObservable<T> implements ObservableObject<T> {
     #end
   }
 
+  function retain() {}
+  function release() {}
+
   public function getValue()
     return value;
 
@@ -297,18 +300,18 @@ private class ConstObservable<T> implements ObservableObject<T> {
     return EmptyIterator.DEPENDENCIES;
   #end
 
-  public function onInvalidate(i:Invalidatable):CallbackLink
-    return null;
+  public function subscribe(i:Observer) {}
+  public function unsubscribe(i:Observer) {}
 }
 
-private class SimpleObservable<T> extends Invalidator implements ObservableObject<T> {
+private class SimpleObservable<T> extends Dispatcher implements ObservableObject<T> {
 
   var _poll:Void->Measurement<T>;
   var _cache:Measurement<T> = null;
   var comparator:Comparator<T>;
 
   public function new(poll, ?comparator #if tink_state.debug , ?toString, ?pos #end) {
-    super(#if tink_state.debug toString, pos #end);
+    super(null #if tink_state.debug , toString, pos #end);
     this._poll = poll;
     this.comparator = comparator;
   }
@@ -321,7 +324,7 @@ private class SimpleObservable<T> extends Invalidator implements ObservableObjec
 
   function reset(_) {
     _cache = null;
-    fire();
+    fire(this);
   }
 
   function poll() {

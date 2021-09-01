@@ -16,8 +16,10 @@ class RunTests {
       new TestScheduler(),
       new TestProgress(),
       new issues.Issue51(),
+      new issues.Issue60(),
       new issues.Issue61(),
       new issues.Issue63(),
+      new issues.Issue73(),
     ])).handle(Runner.exit);
   }
 }

@@ -18,7 +18,8 @@ function measure(name, task, repeat = 1) {
   console.log(`${name} took ${(Date.now() - start) / repeat}ms (avg. of ${repeat} runs)`);
 }
 
-measure('create 10000 todos', () => createTodos(1000), 100);
+let count = 1000;
+measure(`creating ${count} todos`, () => createTodos(count), 100);
 
 {
   let todos = createTodos(1000);
@@ -40,24 +41,26 @@ measure('create 10000 todos', () => createTodos(1000), 100);
   }
 
   ['direct', 'batched', 'atomic'].forEach(mode => {
-    measure(`create 1000 todos, finish all [${mode}]`, () => {
-      let unfinishedTodoCount = computed(() => {
-        return todos.reduce((count, { done }) => done ? count : count + 1, 0);
-      });
+    let unfinishedTodoCount = computed(() => {
+      return todos.reduce((count, { done }) => done ? count : count + 1, 0);
+    });
 
-      let dispose =
-        (mode == 'batched')
-        ? autorun(() => unfinishedTodoCount.get(), {
-            scheduler: scheduler()
-          })
-        : unfinishedTodoCount.observe(x => {});
+    let dispose =
+      (mode == 'batched')
+      ? autorun(() => unfinishedTodoCount.get(), {
+          scheduler: scheduler()
+        })
+      : unfinishedTodoCount.observe(x => {});
+
+    measure(`toggling ${todos.length} todos [${mode}]`, () => {
 
       let update = (mode == 'atomic') ? transaction : f => f();
       update(() => {
         for (let item of todos)
           item.done = !item.done;
       });
-      dispose();
     }, { atomic: 1000, batched: 1000, direct: 10 }[mode]);
+
+    dispose();
   });
 }

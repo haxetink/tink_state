@@ -1,5 +1,6 @@
 package ;
 
+import tink.state.internal.ObjectMap;
 import tink.state.Scheduler.direct;
 import tink.state.*;
 
@@ -11,7 +12,7 @@ class TestMaps {
   public function new() {}
 
   public function testEntries() {
-    final o = new ObservableMap([5 => 0, 6 => 0]);
+    final o = ObservableMap.of([5 => 0, 6 => 0]);
 
     var a = [];
 
@@ -74,7 +75,7 @@ class TestMaps {
   }
 
   public function testIterators() {
-    final map = new ObservableMap<String, String>(new Map());
+    final map = new ObservableMap<String, String>();
     map.set('key', 'value');
 
     var count = 0;
@@ -108,6 +109,61 @@ class TestMaps {
     asserts.assert(counts.join(',') == '2,4,6');
 
     watch.cancel();
+
+    return asserts.done();
+  }
+
+  public function of() {
+    ObservableMap.of(new haxe.ds.IntMap()).set(1, 'foo');
+    ObservableMap.of(new haxe.ds.StringMap()).set('1', 'foo');
+    ObservableMap.of([{ foo: 213 } => '123']).set({ foo: 123 }, 'foo');
+
+    return asserts.done();
+  }
+
+  public function issue49() {
+    var o = ObservableMap.of([1 => 2]),
+        computations = 0;
+
+
+    final sum = Observable.auto(() -> {
+      computations++;
+      var ret = 0;
+      if (o.exists(2)) ret += o[2];
+      if (o.exists(3)) ret += o[3];
+      return ret;
+    });
+
+    asserts.assert(sum.value == 0);
+    asserts.assert(computations == 1);
+
+    asserts.assert(sum.value == 0);
+    asserts.assert(computations == 1);
+
+    o[5] = 5;
+
+    asserts.assert(sum.value == 0);
+    asserts.assert(computations == 1);
+
+    o[2] = 2;
+
+    asserts.assert(sum.value == 2);
+    asserts.assert(computations == 2);
+
+    o[3] = 3;
+
+    asserts.assert(sum.value == 5);
+    asserts.assert(computations == 3);
+
+    o[4] = 4;
+    o.remove(5);
+
+    asserts.assert(sum.value == 5);
+    asserts.assert(computations == 3);
+
+    o.remove(2);
+    asserts.assert(sum.value == 3);
+    asserts.assert(computations == 4);
 
     return asserts.done();
   }
