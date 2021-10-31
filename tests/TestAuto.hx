@@ -145,6 +145,18 @@ class TestAuto {
     return asserts.done();
   }
 
+  public function issue76() {
+
+    final p = Promise.trigger();
+    final o = Observable.auto(() -> p.asPromise());
+
+    var log = [];
+    o.bind(log.push, Scheduler.direct);
+    p.resolve(1);
+
+    asserts.assert(Std.string(log) == '[Loading,Done(1)]');
+    return asserts.done();
+  }
 
   public function donotFireEqualAuto() {
     final s = new State(1 << 5);

@@ -14,6 +14,7 @@ private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
         last = None,
         ret = Loading;
     return new Computation((a, ?_) -> {
+      a.waiting = true;
       ret = Loading;
       var prev = link;
       link = f(last).handle(o -> a.update(ret = switch o {
@@ -29,6 +30,7 @@ private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
     var link:CallbackLink = null,
         ret = Loading;
     return new Computation((a, ?_) -> {
+      a.waiting = true;
       ret = Loading;
       var prev = link;
       link = f().handle(o -> a.update(ret = switch o {
@@ -44,6 +46,7 @@ private abstract Computation<T>((a:AutoObservable<T>,?Noise)->T) {
     var link:CallbackLink = null,
         ret = Loading;
     return new Computation((a, ?_) -> {
+      a.waiting = true;
       ret = Loading;
       var prev = link;
       link = f().handle(v -> a.update(ret = Done(v)));
@@ -217,6 +220,7 @@ class AutoObservable<T> extends Invalidator
     return ret;
   }
 
+  var waiting = false;
   public function getValue():T {
 
     function doCompute() {
@@ -230,7 +234,7 @@ class AutoObservable<T> extends Invalidator
       #if tink_state.debug
       logger.revalidated(this, false);
       #end
-      if (subscriptions.length == 0) dispose();
+      if (subscriptions.length == 0 && !waiting) dispose();
     }
 
     var prevSubs = subscriptions,
@@ -279,8 +283,10 @@ class AutoObservable<T> extends Invalidator
   var sync = true;
 
   function update(value) if (!sync) {
+    waiting = false;
     last = value;
     fire();
+    if (subscriptions.length == 0) dispose();
   }
 
   public function subscribeTo<R>(source:ObservableObject<R>, cur:R):Void
