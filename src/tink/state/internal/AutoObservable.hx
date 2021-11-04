@@ -129,6 +129,7 @@ class AutoObservable<T> extends Dispatcher
   function triggerAsync(v:T) {
     last = v;
     fire(this);
+    if (subscriptions.length == 0) dispose();
   }
 
   public function getValue():T {
@@ -158,7 +159,7 @@ class AutoObservable<T> extends Dispatcher
             s.release();
           }
 
-      if (subscriptions.length == 0) dispose();
+      if (subscriptions.length == 0 && !computation.isPending()) dispose();
     }
 
     var count = 0;

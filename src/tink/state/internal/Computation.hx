@@ -41,6 +41,7 @@ abstract Computation<Result>(ComputationObject<Result>) from ComputationObject<R
 private interface ComputationObject<Result> {
   function init(owner:AutoObservable<Result>):ComputationObject<Result>;
   function getNext():Result;
+  function isPending():Bool;
   function wakeup():Void;
   function sleep():Void;
 }
@@ -65,12 +66,15 @@ private class StatefulBase<Result> implements ComputationObject<Result> {
   public function getNext():Result
     return throw 'abstract';
 
+  public function isPending():Bool
+    return false;
+
   public function wakeup():Void {}
   public function sleep():Void {}
 
 }
 
-private class Async<T> extends AsyncBase<T, Error, Outcome<T, Error>, Promise<T>> {
+private class Async<T> extends AsyncBase<T, Error, Outcome<T, Error>> {
   final get:()->Promise<T>;
 
   public function new(get, ?owner) {
@@ -93,7 +97,7 @@ private class Async<T> extends AsyncBase<T, Error, Outcome<T, Error>, Promise<T>
     }
 }
 
-private class AsyncWithLast<T> extends AsyncBase<T, Error, Outcome<T, Error>, Promise<T>> {
+private class AsyncWithLast<T> extends AsyncBase<T, Error, Outcome<T, Error>> {
   final get:(o:Option<T>)->Promise<T>;
   var last = None;
 
@@ -118,14 +122,15 @@ private class AsyncWithLast<T> extends AsyncBase<T, Error, Outcome<T, Error>, Pr
     }
 }
 
-private class AsyncBase<T, E, Raw, Result:Future<Raw>> extends StatefulBase<PromisedWith<T, E>> {
+private class AsyncBase<T, E, Raw> extends StatefulBase<PromisedWith<T, E>> {
 
-  var result:Result;
+  var result:Future<Raw>;
   var link:CallbackLink;
   var sync = false;
 
-  function pull():Result
+  function pull():Future<Raw>
     return throw 'abstract';
+
   function wrap(raw:Raw):PromisedWith<T, E>
     return throw 'abstract';
 
@@ -148,11 +153,14 @@ private class AsyncBase<T, E, Raw, Result:Future<Raw>> extends StatefulBase<Prom
   override function sleep()
     link.cancel();
 
-  inline function listen(r:Result) {
+  inline function listen(r:Future<Raw>) {
     sync = true;
     link = r.handle(o -> if (!sync) owner.triggerAsync(wrap(o)));
     sync = false;
   }
+
+  override function isPending():Bool
+    return !result.status.match(Ready(_));
 
   override function wakeup()
     switch result {
@@ -176,6 +184,8 @@ private class Sync<T> implements ComputationObject<T> {
 
   public function sleep() {}
   public function wakeup() {}
+  public function isPending():Bool
+    return false;
 }
 
 private class SyncWithLast<T> extends StatefulBase<T> {
@@ -198,7 +208,7 @@ private class SyncWithLast<T> extends StatefulBase<T> {
 }
 
 
-private class SafeAsync<T> extends AsyncBase<T, Noise, T, Future<T>> {
+private class SafeAsync<T> extends AsyncBase<T, Noise, T> {
   final get:()->Future<T>;
 
   public function new(get, ?owner) {
@@ -216,7 +226,7 @@ private class SafeAsync<T> extends AsyncBase<T, Noise, T, Future<T>> {
     return Done(raw);
 }
 
-private class SafeAsyncWithLast<T> extends AsyncBase<T, Noise, T, Future<T>> {
+private class SafeAsyncWithLast<T> extends AsyncBase<T, Noise, T> {
   final get:(o:Option<T>)->Future<T>;
   var last = None;
 
