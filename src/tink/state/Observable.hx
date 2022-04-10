@@ -172,12 +172,28 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
     Returned `CallbackLink` object can be used to cancel the binding.
   **/
-  static public function autorun(callback:()->Void, ?scheduler):CallbackLink {
+  static public function autorun(callback:Callback<CallbackLink>, ?scheduler):CallbackLink {
     var i = 0;
-    return auto(() -> {
-      callback();
+    var link:CallbackLink = null,
+        cancelled = false;
+
+    var cancel:CallbackLink = () -> {
+      cancelled = true;
+      link.cancel();
+    }
+
+    link = auto(() -> {
+      if (cancelled) return 0;
+      callback.invoke(cancel);
       i++;
     }).bind(ignore, null, scheduler);
+
+    return
+      if (cancelled) {
+        link.cancel();
+        null;
+      }
+      else link;
   }
 
   @:deprecated
