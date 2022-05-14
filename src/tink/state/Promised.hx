@@ -13,7 +13,7 @@ enum PromisedWith<T, E> {
 class PromisedTools {
   static public function next<A, B>(a:Promised<A>, f:Next<A, B>):Promise<B>
     return switch a {
-      case Loading: Promise.NEVER #if (tink_core < "2" && haxe_ver >= "4.2") .next(_ -> (null:B)) #end;
+      case Loading: Promise.never();
       case Failed(e): e;
       case Done(a): f(a);
     }
