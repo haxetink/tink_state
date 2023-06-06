@@ -1,17 +1,5 @@
 package tink.state;
 
-private typedef BindingOptions<T> = Deprecated<{
-  ?direct:Bool,
-  ?comparator:T->T->Bool,
-}>;
-
-@:forward
-abstract Deprecated<T>(T) {
-  @:deprecated
-  @:from static function of<X>(v:X):Deprecated<X>
-    return cast v;
-}
-
 /**
   Common representation of a piece of observable state. It can be read using the `value` property
   and bound to listen for changes using the `bind` method.
@@ -56,16 +44,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     You can customize this behaviour by passing a different `scheduler` and `comparator` instances
     to this function.
   **/
-  public function bind(
-    #if tink_state.legacy_binding_options ?options:BindingOptions<T>, #end
-    callback:Callback<T>, ?comparator:Comparator<T>, ?scheduler:Scheduler
-  ):CallbackLink {
-    #if tink_state.legacy_binding_options
-      if (options != null) {
-        comparator = options.comparator;
-        if (options.direct) scheduler = Scheduler.direct;
-      }
-    #end
+  public function bind(callback:Callback<T>, ?comparator:Comparator<T>, ?scheduler:Scheduler):CallbackLink {
     if (scheduler == null)
       scheduler = Observable.scheduler;
     return Binding.create(this, callback, scheduler, comparator);
@@ -120,18 +99,6 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   public function mapAsync<R>(f:Transform<T, Promise<R>>):Observable<Promised<R>>
     return Observable.auto(() -> f.apply(this.getValue()));
-
-  @:deprecated('use auto instead')
-  public function switchSync<R>(cases:Array<{ when: T->Bool, then: Lazy<Observable<R>> } > , dfault:Lazy<Observable<R>>):Observable<R>
-    return Observable.auto(() -> {
-      var v = value;
-      for (c in cases)
-        if (c.when(v)) {
-          dfault = c.then;
-          break;
-        }
-      return dfault.get().value;
-    });
 
   static var scheduler:Scheduler =
     #if macro
