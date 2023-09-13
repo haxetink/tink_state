@@ -152,4 +152,24 @@ class TestBasic {
 
     return asserts.done();
   }
+  
+  public function mapAsync() {
+    final s = new State(0);
+    final o:Observable<Int> = s;
+    final m = o.mapAsync(v -> Future.delay(0, v));
+    final fired = [];
+    m.bind(v -> fired.push(v));
+    haxe.Timer.delay(() -> {
+      s.set(1);
+      haxe.Timer.delay(() -> {
+        asserts.assert(Std.string(fired[0]) == 'Loading');
+        asserts.assert(Std.string(fired[1]) == 'Done(0)');
+        asserts.assert(Std.string(fired[2]) == 'Loading');
+        asserts.assert(Std.string(fired[3]) == 'Done(1)');
+        asserts.assert(fired.length == 4);
+        asserts.done();
+      }, 10);
+    }, 0);
+    return asserts;
+  }
 }
