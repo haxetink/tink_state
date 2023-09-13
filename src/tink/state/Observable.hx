@@ -119,10 +119,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
      return Observable.auto(() -> f(value, that.value));
 
   public function mapAsync<R>(f:Transform<T, Promise<R>>):Observable<Promised<R>>
-    return Observable.auto(() -> {
-      value; // HACK: force tracking
-      f.apply(value);
-    });
+    return Observable.auto(() -> f.apply(value));
 
   @:deprecated('use auto instead')
   public function switchSync<R>(cases:Array<{ when: T->Bool, then: Lazy<Observable<R>> } > , dfault:Lazy<Observable<R>>):Observable<R>
