@@ -46,7 +46,7 @@ class ObservableDate implements ObservableObject<Bool> {
         var state = new State(false);
         function schedule() {
           if (now == null) now = Date.now().getTime();
-          switch Std.int(now - stamp) {
+          switch Std.int(stamp - now) {
             case _ < 0 => true: // overflow
               now = null;
               haxe.Timer.delay(schedule, 1 << 30);
