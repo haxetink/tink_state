@@ -11,10 +11,10 @@ class ObservableDate implements ObservableObject<Bool> {
   public var date(default, null):Date;
   public var passed(get, never):Bool;
     inline function get_passed():Bool
-      return _observable.getValue();
+      return observe().value;
 
   public function canFire()
-    return passed;
+    return !_observable.getValue();
 
   public function getRevision()
     return _observable.getRevision();
