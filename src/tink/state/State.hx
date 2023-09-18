@@ -159,8 +159,10 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
     #end
 
     if (!comparator.eq(value, this.value)) {
-      this.value = value;
-      fire();
+      Scheduler.atomically(() -> {
+        this.value = value;
+        fire();
+      });
     }
     return value;
   }
