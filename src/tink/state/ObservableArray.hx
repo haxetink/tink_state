@@ -222,7 +222,7 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   public function copy()
     return calc(() -> entries.copy());
 
-  @:extern inline function update<T>(fn:Void->T) {
+  #if (haxe_ver < 4) @:extern #else extern #end inline function update<T>(fn:Void->T) {
     var ret = fn();
     if (valid) {
       valid = false;
@@ -231,7 +231,7 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
     return ret;
   }
 
-  @:extern inline function calc<T>(f:Void->T) {
+  #if (haxe_ver < 4) @:extern #else extern #end inline function calc<T>(f:Void->T) {
     valid = true;
     AutoObservable.track(this);
     return f();

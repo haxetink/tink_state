@@ -105,7 +105,7 @@ private class GuardedState<T> extends SimpleState<T> {
       if (!guardApplied) applyGuard();
       else value;
 
-  @:extern inline function applyGuard():T {
+    #if (haxe_ver < 4) @:extern #else extern #end inline function applyGuard():T {
     this.guardApplied = true;
     return value = guard(value);
   }

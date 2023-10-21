@@ -145,7 +145,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
 
   static public var isUpdating(default, null):Bool = false;
 
-  @:extern static inline function performUpdate<T>(fn:Void->T) {
+  #if (haxe_ver < 4) @:extern #else extern #end static inline function performUpdate<T>(fn:Void->T) {
     var wasUpdating = isUpdating;
     isUpdating = true;
     return Error.tryFinally(fn, () -> isUpdating = wasUpdating);
