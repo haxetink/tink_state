@@ -158,12 +158,13 @@ private class SimpleState<T> extends Invalidator implements StateObject<T> {
       warn('Updating state in a binding');
     #end
 
-    if (!comparator.eq(value, this.value)) {
-      Scheduler.atomically(() -> {
+    Scheduler.atomically(() -> 
+      if (!comparator.eq(value, this.value)) {
         this.value = value;
         fire();
-      });
-    }
+      }
+    );
+  
     return value;
   }
 
