@@ -36,7 +36,7 @@ class TestScheduler {
 
     final log = [];
 
-    final watch = s1.observe().bind(v -> {
+    var watch = s1.observe().bind(v -> {
       s2.set('foo($v)');
       s3.set('bar($v)');
     });
