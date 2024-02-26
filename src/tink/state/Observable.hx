@@ -78,14 +78,16 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
     return Observable.auto(() -> f(value, that.value));
 
   public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, ?condition:T->Bool):Future<T>
-    return getNext(options,
-      if (condition == null) Some
-      else v -> if (condition(v)) Some(v) else None
-    );
+    return
+      if (condition == null) {
+        var i = 0;
+        getNext({ butNotNow: true, hires: options?.hires ?? false }, v -> if (i++ == 0) None else Some(v));
+      }
+      else getNext(options, v -> if (condition(v)) Some(v) else None);
 
   public function getNext<R>(?options:{ ?butNotNow: Bool, ?hires:Bool }, select:T->Option<R>):Future<R> {
     var ret = Future.trigger(),
-        waiting = options != null && options.butNotNow;
+        waiting = options?.butNotNow;
 
     var link = bind(value -> {
       var out = select(value);
@@ -95,7 +97,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
         case Some(value): ret.trigger(value);
         case None:
       }
-    }, if (options != null && options.hires) Scheduler.direct else null);
+    }, if (options?.hires) Scheduler.direct else null);
 
     ret.handle(link.cancel);
 
