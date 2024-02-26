@@ -1,4 +1,3 @@
--cp src
 -cp tests
 -D no-deprecation-warnings
 -lib tink_unittest

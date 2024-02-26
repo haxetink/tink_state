@@ -1,9 +1,9 @@
 package;
 
-import tink.state.Scheduler.direct;
-import tink.state.Promised;
-import tink.state.Observable;
 import tink.state.*;
+import tink.state.Observable;
+import tink.state.Promised;
+import tink.state.Scheduler.direct;
 
 using tink.CoreApi;
 
@@ -89,9 +89,9 @@ class TestAuto {
     function inc()
       counter.set(counter.value + 1);
 
-    var last = None;
+    var last:Option<{ t:Int, c:Int }> = None;
 
-    final o = Observable.auto(l -> {
+    final o = Observable.auto((l:Option<{ t:Int, c:Int }>) -> {
       final t = new FutureTrigger();
       last = l;
       triggers.push(t);
@@ -231,7 +231,7 @@ class TestAuto {
     final select = new State([for (i in 0...states.length) i % 3 == 0]);
 
     function add() {
-      final ret = 0;
+      var ret = 0;
       for (i => s in select.value)
         if (s) ret += states[i].value;
       return ret;
