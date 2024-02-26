@@ -1,7 +1,7 @@
 package;
 
-import tink.state.Scheduler.direct;
 import tink.state.*;
+import tink.state.Scheduler.direct;
 
 using tink.CoreApi;
 
@@ -126,6 +126,11 @@ class TestBasic {
 
     asserts.assert(fired == 4);
 
+    await(o.nextTime({ hires: true, }));
+    set(0);
+
+    asserts.assert(fired == 5);
+
     return asserts.done();
   }
 
@@ -152,7 +157,7 @@ class TestBasic {
 
     return asserts.done();
   }
-  
+
   public function mapAsync() {
     final s = new State(0);
     final o:Observable<Int> = s;

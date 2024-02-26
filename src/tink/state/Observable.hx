@@ -77,8 +77,11 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
     return Observable.auto(() -> f(value, that.value));
 
-  public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, check:T->Bool):Future<T>
-    return getNext(options, v -> if (check(v)) Some(v) else None);
+  public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, ?condition:T->Bool):Future<T>
+    return getNext(options,
+      if (condition == null) Some
+      else v -> if (condition(v)) Some(v) else None
+    );
 
   public function getNext<R>(?options:{ ?butNotNow: Bool, ?hires:Bool }, select:T->Option<R>):Future<R> {
     var ret = Future.trigger(),
