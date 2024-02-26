@@ -77,6 +77,14 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
   public function combine<A, R>(that:Observable<A>, f:T->A->R):Observable<R>
     return Observable.auto(() -> f(value, that.value));
 
+  /**
+   * Be careful with `butNotNow`, its semantics are a bit counter-intuitive:
+   * If the condition returns true for the current value, it will skip the current value,
+   * then all future values as long as the condition keeps returning true,
+   * then the first and all consecutive future values for which the condition returns false.
+   * Example: If the condition is `v -> v > 0`, and the values sequence is [ 0, 10, 20, -1, -2, 42 ],
+   * the future will resolve to 42.
+   */
   public function nextTime(?options:{ ?butNotNow: Bool, ?hires:Bool }, ?condition:T->Bool):Future<T>
     return
       if (condition == null) {
@@ -85,6 +93,7 @@ abstract Observable<T>(ObservableObject<T>) from ObservableObject<T> to Observab
       }
       else getNext(options, v -> if (condition(v)) Some(v) else None);
 
+  // Be careful with `butNotNow`, its semantics has the same peculiarity as when using `nextTime`, see the comments above.
   public function getNext<R>(?options:{ ?butNotNow: Bool, ?hires:Bool }, select:T->Option<R>):Future<R> {
     var ret = Future.trigger(),
         waiting = options?.butNotNow;
