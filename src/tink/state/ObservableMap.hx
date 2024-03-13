@@ -171,7 +171,7 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   public function getComparator()
     return neverEqual;
 
-  @:extern inline function update<T>(fn:Void->T) {
+  #if (haxe_ver < 4) @:extern #else extern #end inline function update<T>(fn:Void->T) {
     var ret = fn();
     if (valid) {
       valid = false;
@@ -180,7 +180,7 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
     return ret;
   }
 
-  @:extern inline function calc<T>(f:Void->T) {
+  #if (haxe_ver < 4) @:extern #else extern #end inline function calc<T>(f:Void->T) {
     valid = true;
     AutoObservable.track(this);
     return f();
