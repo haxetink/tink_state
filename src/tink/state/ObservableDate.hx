@@ -38,16 +38,13 @@ class ObservableDate implements ObservableObject<Bool> {
 
     this.date = date;
 
-    var now = Date.now().getTime(),
-        stamp = date.getTime();
-
-    var passed = now >= stamp;
+    var delta = Std.int(Date.now().getTime() - date.getTime());
 
     _observable =
-      if (passed) PASSED;
+      if (delta <= 0) PASSED;
       else {
         var state = new State(false);
-        haxe.Timer.delay(() -> state.set(true), Std.int(stamp - now));
+        haxe.Timer.delay(() -> state.set(true), delta);
         state;
       }
   }
