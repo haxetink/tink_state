@@ -250,10 +250,8 @@ class AutoObservable<T> extends Invalidator
         var valid = true;
 
         for (s in subscriptions)
-          if (s.hasChanged()) {
+          if (s.hasChanged()) 
             valid = false;
-            break;
-          }
 
         if (valid) {
           status = Computed;
