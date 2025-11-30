@@ -11,7 +11,7 @@ class ObservableDate implements ObservableObject<Bool> {
   public var date(default, null):Date;
   public var passed(get, never):Bool;
     inline function get_passed():Bool
-      return _observable.getValue();
+      return AutoObservable.track(_observable);
 
   public function canFire()
     return passed;
@@ -38,13 +38,14 @@ class ObservableDate implements ObservableObject<Bool> {
 
     this.date = date;
 
-    var delta = Std.int(Date.now().getTime() - date.getTime());
-
+    final deltaf = date.getTime() - Date.now().getTime();
+    final deltai = Std.int(deltaf);
+    
     _observable =
-      if (delta <= 0) PASSED;
+      if (deltaf <= 0 || deltai <= 0) PASSED;
       else {
         var state = new State(false);
-        haxe.Timer.delay(() -> state.set(true), delta);
+        haxe.Timer.delay(() -> state.set(true), deltai);
         state;
       }
   }
