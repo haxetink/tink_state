@@ -216,7 +216,7 @@ private class ArrayImpl<T> extends Invalidator implements ArrayView<T> {
   function neverEqual(a, b)
     return false;
 
-  public function getComparator()
+  public function getComparator():Comparator<ArrayView<T>>
     return neverEqual;
 
   public function copy()
@@ -288,7 +288,7 @@ private class DerivedView<T> implements ArrayView<T> {
   function neverEqual(a, b)
     return false;
 
-  public function getComparator()
+  public function getComparator():Comparator<ArrayView<T>>
     return neverEqual;
 
   public function iterator()

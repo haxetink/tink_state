@@ -98,7 +98,7 @@ private class Derived<K, V> implements MapView<K, V> {
   function neverEqual(a, b)
     return false;
 
-  public function getComparator()
+  public function getComparator():Comparator<MapView<K, V>>
     return neverEqual;
 
   #if tink_state.debug
@@ -168,10 +168,10 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   function neverEqual(a, b)
     return false;
 
-  public function getComparator()
+  public function getComparator():Comparator<MapView<K, V>>
     return neverEqual;
 
-  @:extern inline function update<T>(fn:Void->T) {
+  extern inline function update<T>(fn:Void->T) {
     var ret = fn();
     if (valid) {
       valid = false;
@@ -180,7 +180,7 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
     return ret;
   }
 
-  @:extern inline function calc<T>(f:Void->T) {
+  extern inline function calc<T>(f:Void->T) {
     valid = true;
     AutoObservable.track(this);
     return f();

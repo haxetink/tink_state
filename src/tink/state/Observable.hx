@@ -296,7 +296,7 @@ private class ConstObservable<T> implements ObservableObject<T> {
   public function isValid()
     return true;
 
-  public function getComparator()
+  public function getComparator():Comparator<T>
     return null;
 
   #if tink_state.debug
