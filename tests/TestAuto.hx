@@ -104,7 +104,7 @@ class TestAuto {
 
     var last = None;
 
-    final o = Observable.auto(l -> {
+    final o = Observable.auto((l:Option<{ c: Int, t: Int }>) -> {
       final t = new FutureTrigger();
       last = l;
       triggers.push(t);
