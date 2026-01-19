@@ -172,6 +172,10 @@ private class SimpleState<T> extends Dispatcher implements StateObject<T> {
     #end
 
     if (!comparator.eq(value, this.value)) {
+      switch @:privateAccess Update.cur {
+        case null:
+        case u: u.set(this, this.value, value);
+      }
       this.value = value;
       fire(this);
     }
