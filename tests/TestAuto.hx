@@ -258,4 +258,27 @@ class TestAuto {
 
     return asserts.done();
   }
+
+  public function releaseSourcesDroppedOnLastCompute() {
+    var observed = false;
+    final source = new State(1, alive -> observed = alive);
+    var reads = true;
+    final o = Observable.auto(() -> if (reads) source.value else 0);
+
+    // batched: with direct the recompute runs before the observable cools down
+    final watch = o.bind(_ -> {});
+    Observable.updateAll();
+    asserts.assert(observed);
+
+    reads = false;
+    source.set(2);
+    Observable.updateAll();
+    asserts.assert(o.value == 0);
+    asserts.assert(!observed);
+
+    watch.cancel();
+    asserts.assert(!observed);
+
+    return asserts.done();
+  }
 }
