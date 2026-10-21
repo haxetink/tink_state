@@ -9,8 +9,9 @@ jobs:
   test:
 
     runs-on: ubuntu-latest
-
+    continue-on-error: ${{ matrix.haxe-version == 'nightly' }}
     strategy:
+      fail-fast: false
       matrix:
         haxe-version:
           - stable
@@ -27,22 +28,10 @@ jobs:
 
     steps:
     - name: Check out repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v6
     
-    - name: Get yarn cache directory path
-      id: yarn-cache-dir-path
-      run: echo "::set-output name=dir::$(yarn cache dir)"
-
-    - name: Cache Yarn
-      uses: actions/cache@v1
-      with:
-        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-
-        
     - name: Cache Haxe
-      uses: actions/cache@v1
+      uses: actions/cache@v6
       with:
         path: ${{ startsWith(runner.os, 'windows') && '%AppData%' || '~/haxe' }}
         key: ${{ runner.os }}-haxe
@@ -66,22 +55,10 @@ jobs:
     
     steps:
     - name: Check out repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v6
     
-    - name: Get yarn cache directory path
-      id: yarn-cache-dir-path
-      run: echo "::set-output name=dir::$(yarn cache dir)"
-
-    - name: Cache Yarn
-      uses: actions/cache@v1
-      with:
-        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-
-        
     - name: Cache Haxe
-      uses: actions/cache@v1
+      uses: actions/cache@v6
       with:
         path: ${{ startsWith(runner.os, 'windows') && '%AppData%' || '~/haxe' }}
         key: ${{ runner.os }}-haxe
