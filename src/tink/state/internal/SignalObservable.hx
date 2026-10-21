@@ -19,10 +19,11 @@ class SignalObservable<T> implements ObservableObject<T> {
   public function new(get, changed:Signal<Noise>, ?toString:(id:Int)->String #if tink_state.debug , ?pos:haxe.PosInfos #end) {
     this.get = get;
     this.changed = changed;
-    this.changed.handle(_ -> if (valid) {
-      revision = new Revision();
-      valid = false;
-    });
+    #if js
+    if (Weak.supported) Weak.registry.register(this, handleWeakly(this, changed));
+    else
+    #end
+    this.changed.handle(_ -> markChanged());
     #if tink_state.debug
       this._toString = switch toString {
         case null: id -> 'SignalObservable#$id(${pos.fileName}:${pos.lineNumber})';
@@ -30,6 +31,24 @@ class SignalObservable<T> implements ObservableObject<T> {
       }
     #end
   }
+
+  #if js
+  // The handler is never cancelled, so holding the observable strongly would keep it alive as long as the signal.
+  // Static, so the closure cannot share a context with one that captures `this`.
+  static function handleWeakly<T>(o:SignalObservable<T>, changed:Signal<Noise>):CallbackLink {
+    final self = new js.lib.WeakRef(o);
+    return changed.handle(_ -> switch self.deref() {
+      case null:
+      case o: o.markChanged();
+    });
+  }
+  #end
+
+  function markChanged()
+    if (valid) {
+      revision = new Revision();
+      valid = false;
+    }
 
   #if tink_state.debug
   static var counter = 0;
@@ -80,3 +99,16 @@ class SignalObservable<T> implements ObservableObject<T> {
     return EmptyIterator.DEPENDENCIES;
   #end
 }
+
+#if js
+private class Weak {
+  static public final supported:Bool = js.Syntax.typeof(js.Lib.global.WeakRef) != 'undefined' && js.Syntax.typeof(js.Lib.global.FinalizationRegistry) != 'undefined';
+  static public final registry:FinalizationRegistry<CallbackLink> = if (supported) new FinalizationRegistry((link:CallbackLink) -> link.cancel()) else null;
+}
+
+@:native('FinalizationRegistry')
+private extern class FinalizationRegistry<H> {
+  function new(cleanup:H->Void);
+  function register(target:{}, held:H):Void;
+}
+#end
