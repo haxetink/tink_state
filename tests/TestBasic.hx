@@ -10,6 +10,27 @@ class TestBasic {
 
   public function new() {}
 
+  public function observedThroughTwoPaths() {
+    function check(source:Observable<Int>, set:Int->Void) {
+      final forwarded = State.compound(source, _ -> {});
+      final both = new State(true);
+      final derived = Observable.auto(() -> if (both.value) source.value + forwarded.value else forwarded.value);
+      final log = [];
+      derived.bind(v -> log.push(v), direct);
+      both.set(false);
+      set(2);
+      return log.join(',');
+    }
+
+    final s = new State(1);
+    asserts.assert(check(s, s.set) == '2,1,2');
+
+    final s = new State(1);
+    asserts.assert(check(Observable.auto(() -> s.value), s.set) == '2,1,2');
+
+    return asserts.done();
+  }
+
   public function donotFireEqual() {
     final s = new State(0),
         sLog = [];
@@ -176,8 +197,8 @@ class TestBasic {
         asserts.assert(Std.string(fired[3]) == 'Done(1)');
         asserts.assert(fired.length == 4);
         asserts.done();
-      }, 10);
-    }, 0);
+      }, 50);
+    }, 50); // not 0: sys event loops may run this before the delayed Done(0) is delivered
     return asserts;
   }
 }

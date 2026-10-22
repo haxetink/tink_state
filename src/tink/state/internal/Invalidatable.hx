@@ -11,9 +11,9 @@ interface Invalidatable {
 
 class Invalidator implements OwnedDisposable {
   var revision = new Revision();
-  final observers = new ObjectMap<Invalidatable, Bool>();
   final list = new CallbackList();//TODO: get rid of the list ... currently primarily here to guarantee stable callback order
   #if tink_state.debug
+  final observers = new Array<Invalidatable>();
   static var counter = 0;
   final id = counter++;
   final _toString:()->String;
@@ -35,12 +35,14 @@ class Invalidator implements OwnedDisposable {
       return list.disposed;
 
   public function ondispose(d:()->Void)
-    list.ondispose(d);
+    #if (tink_core >= "3") return #end list.ondispose(d);
 
 
   public inline function dispose() {
     list.dispose();
-    observers.clear();
+    #if tink_state.debug
+    observers.resize(0);
+    #end
   }
 
   public function canFire()
@@ -51,25 +53,24 @@ class Invalidator implements OwnedDisposable {
 
   public function onInvalidate(i:Invalidatable):CallbackLink
     return
-      if (observers.get(i) || list.disposed) null;
-      else {
-        observers.set(i, true);
-        list.add(
-          #if tink_state.debug
-            _ -> {
-              if (Std.is(this, ObservableObject))
-                tink.state.debug.Logger.inst.triggered(cast this, i);
-              i.invalidate();
-            }
-          #else
-            _ -> i.invalidate()
-          #end
-        ) & () -> observers.remove(i);
-      }
+      #if tink_state.debug
+        switch list.add(_ -> {
+          if (Std.is(this, ObservableObject))
+            tink.state.debug.Logger.inst.triggered(cast this, i);
+          i.invalidate();
+        }) {
+          case null: null;
+          case link:
+            observers.push(i);
+            link & () -> observers.remove(i);
+        }
+      #else
+        list.add(_ -> i.invalidate());
+      #end
 
   #if tink_state.debug
   public function getObservers()
-    return observers.keys();
+    return observers.iterator();
   #end
 
   function fire() {
