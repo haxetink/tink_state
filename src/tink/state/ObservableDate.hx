@@ -35,7 +35,7 @@ class ObservableDate implements ObservableObject<Bool> {
 
     this.date = date;
 
-    var now = Date.now().getTime(),
+    var now:Null<Float> = Date.now().getTime(),
         stamp = date.getTime();
 
     var passed = now >= stamp;

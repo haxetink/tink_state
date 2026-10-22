@@ -176,8 +176,8 @@ class TestBasic {
         asserts.assert(Std.string(fired[3]) == 'Done(1)');
         asserts.assert(fired.length == 4);
         asserts.done();
-      }, 10);
-    }, 0);
+      }, 50);
+    }, 50); // not 0: sys event loops may run this before the delayed Done(0) is delivered
     return asserts;
   }
 }
