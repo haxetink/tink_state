@@ -201,7 +201,7 @@ class AutoObservable<T> extends Invalidator
           if (prevSubs != null) {
             for (s in prevSubs)
               if (!s.used) {
-                if (hot) s.disconnect();
+                s.disconnect();
                 dependencies.remove(s.source);
                 #if tink_state.debug
                   logger.unsubscribed(s.source, this);
