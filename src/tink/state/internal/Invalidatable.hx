@@ -35,7 +35,7 @@ class Invalidator implements OwnedDisposable {
       return list.disposed;
 
   public function ondispose(d:()->Void)
-    list.ondispose(d);
+    #if (tink_core >= "3") return #end list.ondispose(d);
 
 
   public inline function dispose() {
