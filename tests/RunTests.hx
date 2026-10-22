@@ -18,6 +18,7 @@ class RunTests {
       new TestArrays(),
       new TestScheduler(),
       new TestProgress(),
+      new TestSignalObservable(),
       new issues.Issue51(),
       new issues.Issue61(),
       new issues.Issue63(),
