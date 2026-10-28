@@ -165,6 +165,11 @@ private class MapImpl<K, V> extends Invalidator implements MapView<K, V> impleme
   public function clear():Void
     update(() -> { entries.clear(); null; });
 
+  #if haxe5
+  public function size():Int
+    return calc(() -> entries.size());
+  #end
+
   function neverEqual(a, b)
     return false;
 
